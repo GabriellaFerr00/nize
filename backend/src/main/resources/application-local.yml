@@ -1,0 +1,6 @@
+# Local MySQL. Credentials come from environment variables, never from the repository.
+spring:
+  datasource:
+    url: ${NIZE_DB_URL:jdbc:mysql://localhost:3306/nize?createDatabaseIfNotExist=true}
+    username: ${NIZE_DB_USER:root}
+    password: ${NIZE_DB_PASSWORD:}

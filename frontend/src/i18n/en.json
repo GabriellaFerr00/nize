@@ -1,0 +1,95 @@
+{
+  "app": {
+    "name": "Nize",
+    "tagline": "Your monthly finances, made simple"
+  },
+  "nav": {
+    "label": "Main navigation",
+    "month": "Month",
+    "overview": "Overview",
+    "categories": "Categories",
+    "cards": "Cards",
+    "people": "People",
+    "settings": "Settings"
+  },
+  "language": {
+    "label": "Language",
+    "pt": "Português",
+    "en": "English"
+  },
+  "pages": {
+    "month": "Month",
+    "overview": "Yearly overview",
+    "categories": "Categories",
+    "cards": "Cards",
+    "people": "People",
+    "settings": "Settings",
+    "soon": "This screen will be built in the next steps."
+  },
+  "notFound": {
+    "title": "Page not found",
+    "back": "Back to start"
+  },
+  "errors": {
+    "INVALID_CREDENTIALS": "Incorrect email or password.",
+    "EMAIL_ALREADY_REGISTERED": "This email is already registered.",
+    "INVALID_RESET_TOKEN": "This recovery link is invalid or has expired. Request a new one.",
+    "VALIDATION_ERROR": "Please check the data you entered.",
+    "UNKNOWN_YEAR": "That year does not exist in your account.",
+    "NETWORK": "Could not reach the server. Please try again.",
+    "UNKNOWN": "Something went wrong. Please try again."
+  },
+  "auth": {
+    "fields": {
+      "name": "Name",
+      "email": "Email",
+      "password": "Password",
+      "newPassword": "New password"
+    },
+    "errors": {
+      "nameRequired": "Enter your name.",
+      "email": "Enter a valid email.",
+      "passwordRequired": "Enter your password.",
+      "password": {
+        "required": "Enter a password.",
+        "tooShort": "The password must have at least 8 characters.",
+        "tooLong": "The password can have at most 72 characters."
+      }
+    },
+    "signIn": {
+      "title": "Sign in",
+      "submit": "Sign in",
+      "forgot": "Forgot my password",
+      "toSignUp": "Create an account"
+    },
+    "signUp": {
+      "title": "Create account",
+      "submit": "Create account",
+      "toSignIn": "I already have an account"
+    },
+    "forgot": {
+      "title": "Recover password",
+      "help": "Enter your email and we will send a link to create a new password.",
+      "submit": "Send link",
+      "sent": "If this email has an account, we sent the recovery link. It is valid for 30 minutes.",
+      "back": "Back to sign in"
+    },
+    "reset": {
+      "title": "Create new password",
+      "submit": "Save new password",
+      "done": "Password changed. Sign in with your new password.",
+      "requestNew": "Request a new link"
+    },
+    "signOut": "Sign out"
+  },
+  "onboarding": {
+    "title": "Welcome to Nize, {{name}}!",
+    "intro": "In a few steps you start tracking your month.",
+    "steps": {
+      "log": "Add your fixed expenses, card expenses and income on the month screen.",
+      "position": "See your balance and what is missing or left over by the 15th and by the 30th.",
+      "setup": "Adjust categories, cards and people whenever you like, under Categories, Cards and People."
+    },
+    "dismiss": "Got it"
+  }
+}

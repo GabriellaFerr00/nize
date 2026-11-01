@@ -1,0 +1,95 @@
+{
+  "app": {
+    "name": "Nize",
+    "tagline": "Suas finanças do mês, sem complicação"
+  },
+  "nav": {
+    "label": "Navegação principal",
+    "month": "Mês",
+    "overview": "Panorama",
+    "categories": "Categorias",
+    "cards": "Cartões",
+    "people": "Pessoas",
+    "settings": "Ajustes"
+  },
+  "language": {
+    "label": "Idioma",
+    "pt": "Português",
+    "en": "English"
+  },
+  "pages": {
+    "month": "Mês",
+    "overview": "Panorama anual",
+    "categories": "Categorias",
+    "cards": "Cartões",
+    "people": "Pessoas",
+    "settings": "Configurações",
+    "soon": "Esta tela será construída nas próximas etapas."
+  },
+  "notFound": {
+    "title": "Página não encontrada",
+    "back": "Voltar ao início"
+  },
+  "errors": {
+    "INVALID_CREDENTIALS": "E-mail ou senha incorretos.",
+    "EMAIL_ALREADY_REGISTERED": "Este e-mail já está cadastrado.",
+    "INVALID_RESET_TOKEN": "Este link de recuperação é inválido ou expirou. Peça um novo.",
+    "VALIDATION_ERROR": "Confira os dados informados.",
+    "UNKNOWN_YEAR": "Esse ano não existe na sua conta.",
+    "NETWORK": "Não foi possível falar com o servidor. Tente de novo.",
+    "UNKNOWN": "Algo deu errado. Tente de novo."
+  },
+  "auth": {
+    "fields": {
+      "name": "Nome",
+      "email": "E-mail",
+      "password": "Senha",
+      "newPassword": "Nova senha"
+    },
+    "errors": {
+      "nameRequired": "Informe seu nome.",
+      "email": "Informe um e-mail válido.",
+      "passwordRequired": "Informe sua senha.",
+      "password": {
+        "required": "Informe uma senha.",
+        "tooShort": "A senha precisa ter pelo menos 8 caracteres.",
+        "tooLong": "A senha pode ter no máximo 72 caracteres."
+      }
+    },
+    "signIn": {
+      "title": "Entrar",
+      "submit": "Entrar",
+      "forgot": "Esqueci minha senha",
+      "toSignUp": "Criar uma conta"
+    },
+    "signUp": {
+      "title": "Criar conta",
+      "submit": "Criar conta",
+      "toSignIn": "Já tenho conta"
+    },
+    "forgot": {
+      "title": "Recuperar senha",
+      "help": "Informe seu e-mail e enviaremos um link para criar uma nova senha.",
+      "submit": "Enviar link",
+      "sent": "Se este e-mail tiver uma conta, enviamos o link de recuperação. Ele vale por 30 minutos.",
+      "back": "Voltar para entrar"
+    },
+    "reset": {
+      "title": "Criar nova senha",
+      "submit": "Salvar nova senha",
+      "done": "Senha alterada. Entre com a nova senha.",
+      "requestNew": "Pedir um novo link"
+    },
+    "signOut": "Sair"
+  },
+  "onboarding": {
+    "title": "Bem-vinda ao Nize, {{name}}!",
+    "intro": "Em poucos passos você começa a acompanhar o seu mês.",
+    "steps": {
+      "log": "Lance seus gastos fixos, de cartão e suas entradas na tela do mês.",
+      "position": "Veja o saldo e quanto falta ou sobra até o dia 15 e até o dia 30.",
+      "setup": "Ajuste categorias, cartões e pessoas quando quiser, em Categorias, Cartões e Pessoas."
+    },
+    "dismiss": "Entendi"
+  }
+}

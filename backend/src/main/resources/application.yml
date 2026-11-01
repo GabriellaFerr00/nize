@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: nize-backend
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+
+nize:
+  jwt:
+    # Required, at least 32 bytes. Never commit a real value; set NIZE_JWT_SECRET in the environment.
+    secret: ${NIZE_JWT_SECRET:}
+    expiration: 1h
+  password-reset:
+    expiration: 30m
