@@ -3,6 +3,7 @@ import { ApiError } from '../api/client'
 
 const KNOWN_CODES = [
   'INVALID_CREDENTIALS',
+  'TOO_MANY_ATTEMPTS',
   'EMAIL_ALREADY_REGISTERED',
   'INVALID_RESET_TOKEN',
   'VALIDATION_ERROR',

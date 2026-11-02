@@ -1,0 +1,91 @@
+# Nize-specific semgrep rules (security.yml runs them with the OWASP/Java/TS/JWT registry packs).
+# ERROR blocks the deploy; WARNING opens an issue.
+rules:
+  - id: nize-react-dangerously-set-inner-html
+    languages: [typescript]
+    severity: ERROR
+    message: dangerouslySetInnerHTML lets any stored text run as script and steal the JWT in localStorage (D-12).
+    pattern: <$EL dangerouslySetInnerHTML={...} />
+    paths: { include: [frontend/src] }
+
+  - id: nize-dom-html-sink
+    languages: [typescript]
+    severity: ERROR
+    message: Writing HTML into the DOM is an XSS sink; render text through React instead.
+    pattern-either:
+      - pattern: $X.innerHTML = $Y
+      - pattern: $X.outerHTML = $Y
+      - pattern: $X.insertAdjacentHTML(...)
+      - pattern: document.write(...)
+      - pattern: eval(...)
+      - pattern: new Function(...)
+    paths: { include: [frontend/src, frontend/functions] }
+
+  - id: nize-math-random
+    languages: [typescript]
+    severity: WARNING
+    message: Math.random is not for anything secret; use crypto.getRandomValues.
+    pattern: Math.random()
+    paths: { include: [frontend/src, frontend/functions] }
+
+  - id: nize-java-util-random
+    languages: [java]
+    severity: ERROR
+    message: java.util.Random is predictable; tokens and secrets need SecureRandom.
+    pattern-either:
+      - pattern: new java.util.Random(...)
+      - pattern: new Random(...)
+      - pattern: java.util.concurrent.ThreadLocalRandom.current()
+      - pattern: ThreadLocalRandom.current()
+    paths: { include: [backend/src/main] }
+
+  - id: nize-weak-hash
+    languages: [java]
+    severity: ERROR
+    message: MD5/SHA-1 are broken; passwords use BCrypt (NFR-005).
+    pattern-either:
+      - pattern: MessageDigest.getInstance("MD5")
+      - pattern: MessageDigest.getInstance("SHA-1")
+      - pattern: MessageDigest.getInstance("SHA1")
+    paths: { include: [backend/src/main] }
+
+  - id: nize-weak-password-encoder
+    languages: [java]
+    severity: ERROR
+    message: Passwords must be hashed with BCrypt (NFR-005), never plain or with a fast digest.
+    pattern-either:
+      - pattern: NoOpPasswordEncoder.getInstance()
+      - pattern: new MessageDigestPasswordEncoder(...)
+      - pattern: new StandardPasswordEncoder(...)
+      - pattern: new Md4PasswordEncoder(...)
+      - pattern: new LdapShaPasswordEncoder(...)
+    paths: { include: [backend/src/main] }
+
+  - id: nize-user-id-from-request
+    languages: [java]
+    severity: ERROR
+    message: The user id comes only from the token (CurrentUser.id()), never from the request (D-6).
+    pattern-regex: '@(RequestParam|PathVariable|RequestHeader|CookieValue)(\([^)]*\))?\s+(final\s+)?[\w<>.]+\s+userId\b'
+    paths: { include: [backend/src/main] }
+
+  - id: nize-sql-concatenation
+    languages: [java]
+    severity: ERROR
+    message: Build SQL/JPQL with parameters, never by concatenating input (SQL injection).
+    pattern-either:
+      - pattern: $EM.createQuery("..." + $X, ...)
+      - pattern: $EM.createQuery("..." + $X)
+      - pattern: $EM.createNativeQuery("..." + $X, ...)
+      - pattern: $EM.createNativeQuery("..." + $X)
+      - pattern: $JDBC.query("..." + $X, ...)
+      - pattern: $JDBC.queryForList("..." + $X, ...)
+      - pattern: $JDBC.update("..." + $X, ...)
+      - pattern: $JDBC.execute("..." + $X)
+    paths: { include: [backend/src/main] }
+
+  - id: nize-jwt-decoder-without-validation
+    languages: [java]
+    severity: ERROR
+    message: The JWT decoder must keep issuer and exp validation (D-5).
+    pattern: $D.setJwtValidator(token -> ...)
+    paths: { include: [backend/src/main] }

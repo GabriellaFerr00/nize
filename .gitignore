@@ -5,3 +5,13 @@ frontend/dist/
 .vscode/
 *.log
 .env
+
+# Never commit database dumps, backups, spreadsheets or env files (checked by security.yml)
+*.dump
+*.bak
+*.csv
+*.sql
+!backend/src/main/resources/db/migration/*.sql
+!scripts/ci/*.sql
+.env.*
+!.env.example

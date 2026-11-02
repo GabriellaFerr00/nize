@@ -1,0 +1,510 @@
+# Security pipeline (design.md "CI/CD", docs/ci-cd.md). Runs inside both deploy pipelines (gate),
+# on PRs that touch sensitive code, weekly and on demand. Nothing here touches production.
+# Gate: critical/high findings fail the job (and so block the deploy); medium/low are collected
+# into one GitHub issue. Scanners run from images pinned by digest.
+name: Security
+
+on:
+  pull_request:
+    paths:
+      - backend/src/main/java/br/com/nize/security/**
+      - backend/src/main/java/br/com/nize/api/**
+      - backend/src/main/java/br/com/nize/repository/**
+      - backend/src/main/java/br/com/nize/service/**
+      - backend/src/main/resources/db/migration/**
+      - backend/Dockerfile
+      - backend/pom.xml
+      - frontend/src/api/**
+      - frontend/package.json
+      - frontend/package-lock.json
+      - frontend/public/_headers
+      - frontend/functions/**
+      - .github/workflows/**
+  schedule:
+    - cron: "17 6 * * 1" # Mondays 06:17 UTC: catches new CVEs in unchanged code
+  workflow_dispatch:
+    inputs:
+      scope:
+        type: choice
+        options: [all, backend, frontend]
+        default: all
+  workflow_call:
+    inputs:
+      scope:
+        type: string
+        default: all
+      run_tests:
+        description: Run the backend test suite and DB checks (the pipelines already ran them)
+        type: boolean
+        default: true
+    secrets:
+      NIZE_DB_ROOT_PASSWORD_TEST:
+        required: false
+
+permissions:
+  contents: read
+
+env:
+  # Pull requests from forks get a read-only token and no secrets: nothing is uploaded from them.
+  IS_FORK: ${{ github.event.pull_request.head.repo.fork == true }}
+  TRIVY_IMAGE: aquasec/trivy:0.76.1@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c
+  SEMGREP_IMAGE: semgrep/semgrep:1.183.0@sha256:2e45517a85e13a9cca14a2a00df6bb48affd66b8ebfae1b0991cd57578362fb0
+  GITLEAKS_IMAGE: zricethezav/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
+  TRUFFLEHOG_IMAGE: trufflesecurity/trufflehog:3.99.7@sha256:0d003fc3abc4e1565eca8462b992001314de51451e96e3c44de80d116794d5d1
+  ZAP_IMAGE: ghcr.io/zaproxy/zaproxy:stable@sha256:030d3df57735dacbb83464854758e674dd9ad01d79d12a129a8e58b1fd384238
+
+jobs:
+  secrets-and-data:
+    name: Secrets, personal data and forbidden files (full history)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: gitleaks (whole history)
+        id: gitleaks
+        run: |
+          status=0
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/repo" "$GITLEAKS_IMAGE" git /repo \
+            --config /repo/.gitleaks.toml --redact --no-banner \
+            --report-format sarif --report-path /repo/gitleaks.sarif || status=$?
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+      - uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        if: always() && env.IS_FORK != 'true' && hashFiles('gitleaks.sarif') != ''
+        with:
+          sarif_file: gitleaks.sarif
+          category: gitleaks
+      - name: trufflehog (whole history, verified and unknown secrets)
+        run: |
+          docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -v "$PWD:/repo" "$TRUFFLEHOG_IMAGE" \
+            git file:///repo --results=verified,unknown --fail --no-update
+      - name: CPF and card numbers (Luhn) in tracked files
+        run: python3 -I scripts/ci/check_pii.py
+      - name: No dumps, backups, CSV or env files tracked
+        run: scripts/ci/check-forbidden-files.sh
+      - name: gitleaks gate
+        if: steps.gitleaks.outputs.status != '0'
+        run: |
+          echo "::error::gitleaks found secrets (see Code Scanning / the step above)"
+          exit 1
+
+  semgrep:
+    name: semgrep (OWASP Top 10, Java, TS/React, JWT, Nize rules)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Scan
+        run: |
+          docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -v "$PWD:/src" -w /src "$SEMGREP_IMAGE" \
+            semgrep scan --metrics=off --quiet \
+            --config .semgrep/ --config p/owasp-top-ten --config p/java --config p/typescript \
+            --config p/react --config p/jwt --config p/secrets \
+            --exclude frontend/package-lock.json --exclude '**/node_modules/**' --exclude '**/dist/**' --exclude '**/target/**' \
+            --sarif-output=/src/semgrep.sarif --json-output=/src/semgrep.json
+      - uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        if: always() && env.IS_FORK != 'true' && hashFiles('semgrep.sarif') != ''
+        with:
+          sarif_file: semgrep.sarif
+          category: semgrep
+      - name: Gate (ERROR/HIGH block; the rest goes to the findings issue)
+        run: |
+          mkdir -p findings
+          python3 -I - <<'PY'
+          import json, sys
+          results = json.load(open("semgrep.json"))["results"]
+          blocking = [r for r in results if r["extra"]["severity"].upper() in ("ERROR", "HIGH", "CRITICAL")]
+          other = [r for r in results if r not in blocking]
+          with open("findings/semgrep.md", "w") as f:
+              for r in other:
+                  f.write(f"- semgrep `{r['check_id'].split('.')[-1]}` {r['path']}:{r['start']['line']}\n")
+          for r in blocking:
+              print(f"::error file={r['path']},line={r['start']['line']}::{r['check_id']}: {r['extra']['message'][:200]}")
+          print(f"semgrep: {len(blocking)} blocking, {len(other)} medium/low")
+          sys.exit(1 if blocking else 0)
+          PY
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: findings-semgrep
+          path: findings/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  codeql:
+    name: CodeQL (${{ matrix.language }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        language: >-
+          ${{ fromJSON(inputs.scope == 'backend' && '["java-kotlin"]'
+              || inputs.scope == 'frontend' && '["javascript-typescript"]'
+              || '["java-kotlin","javascript-typescript"]') }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        if: matrix.language == 'java-kotlin'
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+      - uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.language == 'java-kotlin' && 'manual' || 'none' }}
+          queries: security-extended
+      - name: Build (Maven)
+        if: matrix.language == 'java-kotlin'
+        working-directory: backend
+        run: ./mvnw -B -ntp -q -DskipTests -Djacoco.skip=true package
+      - uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          category: codeql-${{ matrix.language }}
+          output: codeql-results
+          upload: ${{ env.IS_FORK == 'true' && 'never' || 'always' }}
+      - name: Gate (security-severity >= 7.0 blocks)
+        run: |
+          mkdir -p findings
+          python3 -I - "${{ matrix.language }}" <<'PY'
+          import glob, json, sys
+          lang, blocking, other = sys.argv[1], [], []
+          for path in glob.glob("codeql-results/*.sarif"):
+              for run in json.load(open(path))["runs"]:
+                  rules = {r["id"]: r for r in run["tool"]["driver"].get("rules", [])}
+                  for res in run.get("results", []):
+                      sev = float(rules.get(res["ruleId"], {}).get("properties", {}).get("security-severity", 0) or 0)
+                      loc = res["locations"][0]["physicalLocation"]
+                      where = f'{loc["artifactLocation"]["uri"]}:{loc.get("region", {}).get("startLine", 0)}'
+                      (blocking if sev >= 7.0 else other).append((res["ruleId"], where, sev))
+          with open(f"findings/codeql-{lang}.md", "w") as f:
+              for rule, where, sev in other:
+                  f.write(f"- CodeQL `{rule}` ({sev}) {where}\n")
+          for rule, where, sev in blocking:
+              print(f"::error::CodeQL {rule} (security-severity {sev}) at {where}")
+          print(f"CodeQL {lang}: {len(blocking)} blocking, {len(other)} medium/low")
+          sys.exit(1 if blocking else 0)
+          PY
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: findings-codeql-${{ matrix.language }}
+          path: findings/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  deps-backend:
+    name: Dependencies (Maven, trivy)
+    if: inputs.scope != 'frontend'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: trivy fs report (SARIF + medium/low list)
+        run: |
+          mkdir -p findings
+          docker run --rm -v "$PWD/backend:/src:ro" -v "$PWD:/out" "$TRIVY_IMAGE" fs --quiet --scanners vuln \
+            --format sarif --output /out/trivy-maven.sarif /src
+          docker run --rm -v "$PWD/backend:/src:ro" "$TRIVY_IMAGE" fs --quiet --scanners vuln \
+            --severity MEDIUM,LOW --format json /src > trivy-maven-medium.json
+          python3 -I - > findings/trivy-maven.md <<'PY'
+          import json
+          for r in json.load(open("trivy-maven-medium.json")).get("Results") or []:
+              for v in r.get("Vulnerabilities") or []:
+                  print(f"- Maven `{v['PkgName']}` {v['VulnerabilityID']} ({v['Severity']})")
+          PY
+      - uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        if: always() && env.IS_FORK != 'true' && hashFiles('trivy-maven.sarif') != ''
+        with:
+          sarif_file: trivy-maven.sarif
+          category: trivy-maven
+      - name: Gate (critical/high block)
+        run: |
+          docker run --rm -v "$PWD/backend:/src:ro" "$TRIVY_IMAGE" fs --quiet --scanners vuln \
+            --exit-code 1 --ignore-unfixed --severity CRITICAL,HIGH /src
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: findings-trivy-maven
+          path: findings/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  deps-frontend:
+    name: Dependencies (npm audit)
+    if: inputs.scope != 'backend'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+      - name: Medium/low list
+        run: |
+          mkdir -p ../findings
+          npm audit --json --package-lock-only > "$RUNNER_TEMP/npm-audit.json" 2>/dev/null || true
+          python3 -I - "$RUNNER_TEMP/npm-audit.json" > ../findings/npm.md <<'PY'
+          import json, sys
+          for name, d in json.load(open(sys.argv[1])).get("vulnerabilities", {}).items():
+              if d["severity"] in ("moderate", "low"):
+                  print(f"- npm `{name}` ({d['severity']})")
+          PY
+      - name: Gate (high/critical block)
+        run: npm audit --audit-level=high --package-lock-only
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: findings-npm
+          path: findings/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  frontend-headers:
+    name: CSP and security headers (static)
+    if: inputs.scope != 'backend'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check frontend/public/_headers and _redirects
+        run: |
+          python3 -I - <<'PY'
+          import re, sys
+          text = open("frontend/public/_headers").read()
+          root = text.split("/*", 1)[1].split("\n/", 1)[0]
+          headers = {k.strip().lower(): v.strip() for k, v in re.findall(r"^\s+([\w-]+):\s*(.+)$", root, re.M)}
+          errors = []
+          for h in ("content-security-policy", "strict-transport-security", "x-content-type-options", "referrer-policy", "x-frame-options"):
+              if h not in headers: errors.append(f"missing {h}")
+          csp = dict((d.split()[0], d.split()[1:]) for d in headers.get("content-security-policy", "").split(";") if d.strip())
+          if csp.get("script-src") != ["'self'"]: errors.append(f"script-src must be exactly 'self', got {csp.get('script-src')}")
+          if csp.get("connect-src") != ["'self'"]: errors.append("connect-src must be 'self' (the API is proxied, D-15)")
+          if csp.get("object-src") != ["'none'"]: errors.append("object-src must be 'none'")
+          if csp.get("frame-ancestors") != ["'none'"]: errors.append("frame-ancestors must be 'none'")
+          if any("unsafe" in v for vals in csp.values() for v in vals if vals is not csp.get("style-src")): errors.append("unsafe-* outside style-src")
+          if "max-age=" not in headers.get("strict-transport-security", ""): errors.append("HSTS without max-age")
+          if "/* /index.html 200" not in " ".join(open("frontend/public/_redirects").read().split()):
+              errors.append("_redirects lacks the SPA fallback")
+          for e in errors: print(f"::error file=frontend/public/_headers::{e}")
+          sys.exit(1 if errors else 0)
+          PY
+
+  dast:
+    name: DAST (API in profile h2 + ZAP baseline)
+    if: inputs.scope != 'frontend'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+      - name: Start the API (h2, synthetic data, per-run secret)
+        working-directory: backend
+        run: |
+          secret=$(openssl rand -hex 32); echo "::add-mask::$secret"; echo "NIZE_JWT_SECRET=$secret" >> "$GITHUB_ENV"
+          ./mvnw -B -ntp -q -DskipTests -Djacoco.skip=true package
+          NIZE_JWT_SECRET="$secret" nohup java -jar target/nize-backend-*.jar --spring.profiles.active=h2 \
+            > "$RUNNER_TEMP/app.log" 2>&1 &
+          echo "APP_PID=$!" >> "$GITHUB_ENV"
+      - name: Wait for the API
+        run: scripts/ci/api-smoke.sh http://localhost:8080 120
+      - name: DAST checks (headers, CORS, SQLi probes, errors, cents, IDOR, enumeration)
+        run: scripts/ci/dast-checks.sh http://localhost:8080
+      - name: ZAP baseline (authenticated as a synthetic user)
+        id: zap
+        run: |
+          password="Zap-$(openssl rand -hex 12)"; echo "::add-mask::$password"
+          email="zap-$RANDOM@example.test"
+          curl -fsS -X POST -H 'Content-Type: application/json' \
+            -d "{\"name\":\"Zap\",\"email\":\"$email\",\"password\":\"$password\"}" http://localhost:8080/api/auth/register >/dev/null
+          token=$(curl -fsS -X POST -H 'Content-Type: application/json' \
+            -d "{\"email\":\"$email\",\"password\":\"$password\"}" http://localhost:8080/api/auth/login | jq -r .token)
+          echo "::add-mask::$token"
+          mkdir -p zap && cp .zap/rules.tsv zap/ && chmod 777 zap
+          status=0
+          docker run --rm --network host -v "$PWD/zap:/zap/wrk:rw" \
+            -e ZAP_AUTH_HEADER=Authorization -e ZAP_AUTH_HEADER_VALUE="Bearer $token" -e ZAP_AUTH_HEADER_SITE=localhost \
+            "$ZAP_IMAGE" zap-baseline.py -t http://localhost:8080/api/me -c rules.tsv -I \
+            -J zap-report.json -r zap-report.html || status=$?
+          # 0 = clean, 2 = warnings only (-I), 1 = a FAIL rule fired, 3 = ZAP error
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          mkdir -p findings
+          python3 -I - > findings/zap.md <<'PY' || true
+          import json
+          for site in json.load(open("zap/zap-report.json")).get("site", []):
+              for a in site.get("alerts", []):
+                  if a["riskcode"] in ("1", "2"):
+                      print(f"- ZAP {a['pluginid']} {a['name']} (risk {a['riskdesc']})")
+          PY
+      - name: Stop the API and check its log for secrets
+        if: always() && env.APP_PID != ''
+        run: |
+          kill "$APP_PID" 2>/dev/null || true
+          sleep 3
+          scripts/ci/check-logs.sh "$RUNNER_TEMP/app.log" "$NIZE_JWT_SECRET"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: zap-report
+          path: zap/zap-report.*
+          if-no-files-found: ignore
+          retention-days: 14
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: findings-zap
+          path: findings/
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: ZAP gate
+        if: steps.zap.outputs.status == '1' || steps.zap.outputs.status == '3'
+        run: |
+          echo "::error::ZAP baseline failed (status ${{ steps.zap.outputs.status }}); see the zap-report artifact"
+          exit 1
+
+  db-security:
+    name: Migrations and DB privileges (throwaway MySQL)
+    # In the pipelines the integration job runs these same checks; forks have no secrets.
+    if: inputs.scope != 'frontend' && inputs.run_tests != false && github.event.pull_request.head.repo.fork != true
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.4.13@sha256:a0225d1ea6631c8bc2385dc4c2faba17bbf1834ecf369e1659a9a382bd8d5dd7
+        env:
+          MYSQL_ROOT_PASSWORD: ${{ secrets.NIZE_DB_ROOT_PASSWORD_TEST }}
+        ports:
+          - 127.0.0.1:3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 --silent"
+          --health-interval 5s --health-timeout 5s --health-retries 30
+    env:
+      MYSQL_ROOT_PASSWORD: ${{ secrets.NIZE_DB_ROOT_PASSWORD_TEST }}
+      NIZE_DB_MIGRATION_USER: nize_migrator
+      NIZE_DB_USER: nize_app
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+      - name: Per-run passwords
+        run: |
+          echo "MYSQL_CONTAINER=${{ job.services.mysql.id }}" >> "$GITHUB_ENV"
+          for name in NIZE_DB_MIGRATION_PASSWORD NIZE_DB_PASSWORD; do
+            value=$(openssl rand -hex 24); echo "::add-mask::$value"; echo "$name=$value" >> "$GITHUB_ENV"
+          done
+      - run: scripts/ci/mysql-setup.sh
+      - name: Migrate from zero, then again (nothing pending), then validate
+        working-directory: backend
+        env:
+          FLYWAY_URL: jdbc:mysql://127.0.0.1:3306/nize?sslMode=REQUIRED
+          FLYWAY_USER: ${{ env.NIZE_DB_MIGRATION_USER }}
+          FLYWAY_PASSWORD: ${{ env.NIZE_DB_MIGRATION_PASSWORD }}
+        run: |
+          ./mvnw -B -ntp -q flyway:migrate
+          ./mvnw -B -ntp flyway:migrate | tee "$RUNNER_TEMP/second.log"
+          grep -qiE 'up to date|no migration necessary' "$RUNNER_TEMP/second.log" \
+            || { echo "::error::second migrate was not a no-op"; exit 1; }
+          ./mvnw -B -ntp -q flyway:validate
+      - name: Schema rules
+        run: |
+          out=$(docker exec -i -e MYSQL_PWD="$MYSQL_ROOT_PASSWORD" "$MYSQL_CONTAINER" mysql -uroot -N < scripts/ci/check-schema.sql)
+          if [ -n "$out" ]; then echo "::error::schema rule violations"; echo "$out"; exit 1; fi
+      - run: scripts/ci/check-runtime-privileges.sh
+
+  security-tests:
+    name: Security tests (JUnit, ArchUnit, isolation)
+    if: inputs.scope != 'frontend' && inputs.run_tests != false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+      - name: Full suite (auth, JWT, rate limits, isolation, ArchUnit, secrets in logs)
+        working-directory: backend
+        run: ./mvnw -B -ntp test
+
+  findings-issue:
+    name: Medium/low findings → issue
+    needs: [secrets-and-data, semgrep, codeql, deps-backend, deps-frontend, frontend-headers, dast, db-security, security-tests]
+    if: always() && github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: findings-*
+          path: findings
+          merge-multiple: true
+      - name: Open or update the findings issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          shopt -s nullglob
+          files=(findings/*.md)
+          body=$(cat "${files[@]}" 2>/dev/null | sort -u)
+          if [ -z "$body" ]; then echo "No medium/low findings."; exit 0; fi
+          count=$(wc -l <<<"$body")
+          echo "::warning::$count medium/low security findings (see the issue)"
+          title="Security findings (medium/low)"
+          text=$(printf 'Run: %s\n\n%s\n' "$RUN_URL" "$body")
+          number=$(gh issue list --state open --search "in:title \"$title\"" --json number --jq '.[0].number // empty')
+          if [ -n "$number" ]; then
+            gh issue comment "$number" --body "$text"
+          else
+            gh issue create --title "$title" --body "$text"
+          fi

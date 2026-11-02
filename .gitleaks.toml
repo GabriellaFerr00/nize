@@ -1,0 +1,38 @@
+# gitleaks: default rules plus Nize-specific ones. Runs over the whole git history (security.yml).
+title = "nize"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "nize-jdbc-url-with-password"
+description = "JDBC URL carrying a password"
+regex = '''jdbc:mysql://[^\s'"]*(password|pwd)=[^&\s'"]+'''
+keywords = ["jdbc:mysql"]
+
+[[rules]]
+id = "nize-jwt-secret-value"
+description = "NIZE_JWT_SECRET assigned a literal value"
+regex = '''NIZE_JWT_SECRET\s*[=:]\s*['"]?[A-Za-z0-9+/=_-]{32,}'''
+keywords = ["nize_jwt_secret"]
+
+[[rules]]
+id = "nize-cpf"
+description = "Formatted CPF (personal data must never be committed)"
+regex = '''\b\d{3}\.\d{3}\.\d{3}-\d{2}\b'''
+keywords = ["-"]
+
+[[rules]]
+id = "nize-card-number"
+description = "Card number with separators (Luhn is checked by scripts/ci/check_pii.py)"
+regex = '''\b(?:4\d{3}|5[1-5]\d{2}|2[2-7]\d{2}|6\d{3}|3[47]\d{2})[ -]\d{4}[ -]\d{4}[ -]\d{3,4}\b'''
+
+[allowlist]
+description = "Test-only values that are public on purpose"
+regexes = [
+  '''test-only-secret-test-only-secret-0123456789''',
+  '''(?i)change-?me''',
+]
+paths = [
+  '''frontend/package-lock\.json''',
+]

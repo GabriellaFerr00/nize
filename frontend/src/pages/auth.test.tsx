@@ -68,6 +68,17 @@ describe('sign in', () => {
     expect(getStoredToken()).toBeNull()
   })
 
+  it('explains when the API blocks too many attempts (REQ-047)', async () => {
+    stubApi({ 'POST /api/auth/login': { status: 429, body: { code: 'TOO_MANY_ATTEMPTS', fields: {} } } })
+    renderApp('/sign-in')
+    await userEvent.type(await screen.findByLabelText('E-mail'), 'ana@example.com')
+    await userEvent.type(screen.getByLabelText('Senha'), 'right-password')
+    await userEvent.click(screen.getByRole('button', { name: 'Entrar' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Muitas tentativas.')
+    expect(getStoredToken()).toBeNull()
+  })
+
   it('validates empty fields without calling the API', async () => {
     const calls = stubApi({})
     renderApp('/sign-in')
