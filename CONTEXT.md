@@ -4,9 +4,9 @@
 
 ## ⚡ Resume from here
 
-**Active task:** Phase 3.5 (CI/CD e segurança) implementada localmente, SEM commit/push. Falta: (1) a usuária revisar `docs/ci-cd.md` (TASK-059); (2) ela criar Environments/secrets/contas (Aiven, Cloudflare, Render) seguindo `docs/ci-cd.md` §5 ANTES do primeiro push dos workflows; (3) TASK-060: validar em `ci/pipeline-test` via workflow_dispatch. Depois: aplicar V3/V4 no MySQL local (TASK-023) e Phase 4 (TASK-030).
-**Phase:** Phase 3.5 — TASK-051..058 [x], 059 [~], 060 [ ]. Back 240+ testes, cobertura 96% (rules 100%); front 86 testes, 96% linhas. actionlint, hadolint, shellcheck, trivy (imagem e Dockerfile), gitleaks e semgrep limpos localmente.
-**Status:** Nada commitado nesta sessão. `CICD_PROMPT.md` (pedido da usuária) segue não rastreado.
+**Active task:** Phase 3.5 — pipeline verde no PR #1 (`ci/pipeline-test` → `main`): Backend, Frontend (preview no Cloudflare), Integration tests (back MySQL + front E2E) e Security. Falta (TASK-060): merge do PR → imagem no GHCR → usuária deixa o pacote público e cria o serviço `nize-api` no Render (docs/ci-cd.md §5) → cadastra `RENDER_SERVICE_ID` (secret do production), `API_URL` (variável do repositório), variáveis do Render e `API_ORIGIN` no Cloudflare → aprova o deploy. TASK-059 aguarda revisão do `docs/ci-cd.md`. Depois: TASK-023 (V3/V4 no MySQL local) e Phase 4.
+**Phase:** Phase 3.5 — TASK-051..058 [x], 059 [~], 060 [~]. Workflows: um por tema (design 0.2.2); deploy espera Security e Integration tests do mesmo commit (job gate).
+**Status:** Branch `ci/pipeline-test` enviada, PR #1 aberto. `CICD_PROMPT.md` fica fora do repositório (pedido da usuária).
 **Blocker (if any):** contas e segredos externos só a usuária pode criar.
 Para rodar o app é preciso `export NIZE_JWT_SECRET=<>=32 bytes>` (os testes usam um valor fixo no pom). Repositório: https://github.com/GabriellaFerr00/nize (público, branch `main`; autor local `Gabriella <86236510+GabriellaFerr00@users.noreply.github.com>`; `gh` em `~/tools/gh/bin`, credencial só neste repo). Para scripts que sobem servidores, NÃO usar `pkill -f` com texto que apareça no próprio comando (derruba o shell); usar PID/porta. Toolchain: `export JAVA_HOME=~/tools/jdk25 PATH=~/tools/jdk25/bin:$PATH`; usar `cd backend && ./mvnw test` (Maven Wrapper). Docker funciona no WSL (sem buildx; scanners rodam por imagem). Não há `jq` local.
 

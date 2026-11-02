@@ -136,8 +136,8 @@ Nomes em inglês: ver "Nomenclatura em inglês" em `design.md` (os termos em por
   - _Verify_: `actionlint` sem erros; scripts SQL/shell rodados contra o MySQL local quando possível.
 - [~] **TASK-059** [NFR-010]: `.env.example` e `docs/ci-cd.md` (fluxo, segredos, checklist Cloudflare/Render/Aiven, rollback, rotação, cold start, achados).
   - _Verify_: revisão da usuária (pendente).
-- [ ] **TASK-060** [NFR-010]: Validar o pipeline em `ci/pipeline-test` por `workflow_dispatch` depois de cadastrar os segredos (precisa da usuária: contas e push).
-  - _Verify_: todos os jobs verdes até o preview do front; deploy de produção só após aprovação.
+- [~] **TASK-060** [NFR-010]: Validar o pipeline em `ci/pipeline-test` por `workflow_dispatch` depois de cadastrar os segredos (precisa da usuária: contas e push).
+  - _Verify_: todos os jobs verdes até o preview do front (OK no PR #1 em 2026-11-02); deploy de produção só após aprovação (pendente: serviço no Render e merge na `main`).
 
 ---
 
