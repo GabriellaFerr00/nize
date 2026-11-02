@@ -32,6 +32,10 @@ description = "Test-only values that are public on purpose"
 regexes = [
   '''test-only-secret-test-only-secret-0123456789''',
   '''(?i)change-?me''',
+  # Synthetic passwords of the tests/E2E/DAST users (never real accounts).
+  '''E2e-synthetic-pass-1''',
+  '''Never-logged-pass-7''',
+  '''Wrong-pass-123''',
 ]
 paths = [
   '''frontend/package-lock\.json''',
