@@ -37,7 +37,14 @@
     "VALIDATION_ERROR": "Please check the data you entered.",
     "UNKNOWN_YEAR": "That year does not exist in your account.",
     "NETWORK": "Could not reach the server. Please try again.",
-    "UNKNOWN": "Something went wrong. Please try again."
+    "UNKNOWN": "Something went wrong. Please try again.",
+    "CATEGORY_NAME_TAKEN": "A category with this name already exists this year.",
+    "CARD_NAME_TAKEN": "A card with this name already exists this year.",
+    "PERSON_NAME_TAKEN": "A person with this name already exists this year.",
+    "CATEGORY_IN_USE": "This category still has expenses.",
+    "YEAR_ALREADY_EXISTS": "That year already exists in your account.",
+    "INVALID_YEAR": "Enter a year between 2000 and 2100.",
+    "NOT_FOUND": "We could not find this item. Refresh the page."
   },
   "auth": {
     "fields": {
@@ -91,5 +98,62 @@
       "setup": "Adjust categories, cards and people whenever you like, under Categories, Cards and People."
     },
     "dismiss": "Got it"
+  },
+  "catalog": {
+    "year": "Year",
+    "inactive": "Inactive",
+    "edit": "Edit",
+    "activate": "Reactivate",
+    "deactivate": "Deactivate",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "save": "Save",
+    "dueOn": "Due every day {{day}}",
+    "fields": {
+      "name": "Name",
+      "description": "Description (optional)",
+      "dueDay": "Due day (1 to 31)"
+    },
+    "errors": {
+      "nameRequired": "Enter a name.",
+      "nameTooLong": "The name can have at most 80 characters.",
+      "descriptionTooLong": "The description can have at most 255 characters.",
+      "dueDay": "Enter a day from 1 to 31."
+    },
+    "categories": {
+      "new": "New category",
+      "edit": "Edit category",
+      "empty": "No categories this year."
+    },
+    "cards": {
+      "new": "New card",
+      "edit": "Edit card",
+      "empty": "No cards this year. Add yours to record credit expenses."
+    },
+    "people": {
+      "new": "New person",
+      "edit": "Edit person",
+      "empty": "No people this year. Add whoever uses your card, like your mother."
+    },
+    "deleteTitle": "Delete category",
+    "deleteQuestion": "Delete the category \"{{name}}\"? This cannot be undone.",
+    "inUseTitle": "Category in use",
+    "inUse_one": "The category \"{{name}}\" has {{count}} expense and cannot be deleted.",
+    "inUse_other": "The category \"{{name}}\" has {{count}} expenses and cannot be deleted.",
+    "inUseQuestion": "Do you want to change those expenses first? The category stays as it is.",
+    "changeExpenses": "Change expenses"
+  },
+  "settings": {
+    "general": "Preferences",
+    "saved": "Settings saved.",
+    "currentYear": "Current year",
+    "currentYearHelp": "The year that opens by default on the screens.",
+    "autoInstallments": "Automatic installments",
+    "autoInstallmentsHelp": "When you record an installment purchase, Nize creates one installment per month.",
+    "newYear": "New year",
+    "newYearHelp": "Creates the year copying categories, cards and people from the previous year. Older years stay editable.",
+    "yearNumber": "Year",
+    "createYear": "Create year",
+    "yearCreated": "Year {{year}} created."
   }
 }

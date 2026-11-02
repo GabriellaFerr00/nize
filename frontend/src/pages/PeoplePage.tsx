@@ -1,5 +1,5 @@
-import { PagePlaceholder } from '../components/PagePlaceholder'
+import { CatalogManager } from '../components/CatalogManager'
 
 export function PeoplePage() {
-  return <PagePlaceholder titleKey="pages.people" />
+  return <CatalogManager kind="people" fields={{}} />
 }

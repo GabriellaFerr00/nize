@@ -1,5 +1,5 @@
 # design.md
-> Nize — Version 0.1.5 (MVP web) — 2026-11-01
+> Nize — Version 0.1.6 (MVP web) — 2026-11-01
 
 ## Architecture Overview
 Monorepo com dois módulos independentes: `backend` (API REST) e `frontend` (SPA). **Toda regra de cálculo vive só no back-end** (totais, saldo, posição por quinzena, parcelas, carga do mês, saldo próprio, porcentagens). O front apenas exibe o que a API devolve e nunca recalcula valores. Como back (Java) e front (TypeScript) não compartilham código, o "pacote de regras compartilhado" do PDF vira o pacote Java `br.com.nize.rules`, puro (sem Spring, sem JPA), testado antes do código.
@@ -184,25 +184,25 @@ Restrições: UNIQUE (`grupo_parcela_id`, `parcela_atual`) onde não nulos; `par
 **Valores derivados (não persistidos, NFR-002)**: total de gastos, total de fixos, saldo, posição dia 15/30, saldo próprio, resumos e porcentagens.
 
 ## Categorias de fábrica
-Semeadas em `categoria` para cada ano novo (REQ-010). A usuária pode renomear, desativar, criar e excluir (REQ-011/012). As descrições abaixo vêm da aba "Categorias" da planilha e devem ser reescritas com texto próprio antes do deploy (REQ-045).
+Semeadas em `category` para cada ano novo (REQ-010). A usuária pode renomear, desativar, criar e excluir (REQ-011/012). Os nomes seguem a lista do produto; as descrições têm texto próprio do Nize (REQ-045). O código guarda esta lista em `DefaultCategories`; se mudar aqui, mude lá (e vice-versa).
 
 | # | Nome | Descrição |
 |---|---|---|
-| 1 | Mercado | Alimentos, bebidas, itens de limpeza da casa etc. comprados no mercado |
-| 2 | Necessidades | Itens de farmácia, de higiene pessoal (desodorante, shampoo, papel higiênico) ou da casa |
-| 3 | Eletrônicos | Computador, celular, notebook, conserto de eletrônicos, relógio |
-| 4 | Assinaturas | Prime, Netflix, Google + etc. |
-| 5 | Roupa | Roupas, blusinhas na Shein, sapatos, qualquer vestimenta |
-| 6 | Beleza | Maquiagem, manicure, salão, cremes específicos para o cabelo |
-| 7 | Presentes | Presentes para amigos, familiares e namorados/namoradas |
-| 8 | Saúde | Suplementos, academia, consultas ao médico |
-| 9 | Despesas eventuais | Gastos eventuais como consultas médicas não planejadas, veterinários, conserto do carro etc. |
-| 10 | Desenvolvimento | Cursos, livros, planners e o que impulsiona o desenvolvimento pessoal |
-| 11 | Uber/transporte | Uber e transporte, como gasolina |
-| 12 | IFood/restaurante | Restaurantes e comida de delivery |
-| 13 | Lazer | Festas, cinema, teatro, aniversários etc. |
-| 14 | Aluguel | Custos com moradia |
-| 15 | Contas | Internet, água, luz, condomínio, IPTU etc. |
+| 1 | Mercado | Despensa e geladeira cheias: feira, supermercado e itens de limpeza do lar. |
+| 2 | Necessidades | Itens do dia a dia que não podem faltar: farmácia, higiene pessoal e pequenas coisas da casa. |
+| 3 | Eletrônicos | Aparelhos e acessórios tecnológicos, além de consertos e manutenção deles. |
+| 4 | Assinaturas | Serviços cobrados todo mês ou todo ano, como streaming, música e aplicativos. |
+| 5 | Roupa | Roupas, calçados e acessórios para vestir, em loja física ou online. |
+| 6 | Beleza | Cuidados com a aparência: salão, unhas, maquiagem e produtos para pele e cabelo. |
+| 7 | Presentes | Mimos e lembranças para quem você gosta, em aniversários e datas especiais. |
+| 8 | Saúde | Cuidados com o corpo e a mente: academia, suplementos, consultas e exames. |
+| 9 | Despesas eventuais | Imprevistos e gastos que não se repetem todo mês: conserto do carro, veterinário, consulta fora do plano. |
+| 10 | Desenvolvimento | Investimento em aprender e crescer: cursos, livros, agendas e materiais de estudo. |
+| 11 | Uber/transporte | Deslocamentos: aplicativos de corrida, transporte público e combustível. |
+| 12 | IFood/restaurante | Refeições fora de casa: restaurantes, lanchonetes e pedidos por aplicativo. |
+| 13 | Lazer | Diversão e encontros: festas, cinema, teatro, passeios e comemorações. |
+| 14 | Aluguel | Valor mensal da moradia: aluguel ou prestação do imóvel. |
+| 15 | Contas | Contas da casa que chegam todo mês: internet, água, luz, condomínio e IPTU. |
 
 ## Regras de cálculo (pacote `br.com.nize.rules`)
 | Regra | Definição | REQ |
@@ -322,3 +322,4 @@ groupId `br.com.nize`, artifactId `nize-backend`, pacote raiz `br.com.nize`.
 | 0.1.3 | 2026-11-01 | Backend no padrão Initializr: Maven Wrapper (`mvnw`), `.gitattributes`, `HELP.md` |
 | 0.1.4 | 2026-11-01 | Rotas do front em inglês; estrutura do front: `pages/`, `components/`, `api/`, `styles/`, `i18n/` |
 | 0.1.5 | 2026-11-01 | D-12 (token em localStorage), rota `/reset-password`, pastas `lib/` e `test/` do front |
+| 0.1.6 | 2026-11-01 | Descrições das 15 categorias reescritas com texto próprio (REQ-045); lista guardada em `DefaultCategories` |

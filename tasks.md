@@ -58,28 +58,28 @@ Nomes em inglês: ver "Nomenclatura em inglês" em `design.md` (os termos em por
 *Goal*: Usuária mantém seus cadastros por ano, com a regra de exclusão e a cópia para o novo ano.
 *Antes de começar*: nada pendente (lista das 15 categorias resolvida em `design.md`).
 
-- [ ] **TASK-013** [REQ-010, REQ-011, REQ-013, REQ-014]: Migração V2 com `categoria`, `cartao`, `pessoa` (únicos por usuária/ano/nome).
-  - _Output_: `V2__cadastros.sql`.
-  - _Verify_: app sobe nos dois perfis; inserir nome repetido no mesmo ano falha.
-- [ ] **TASK-014** [REQ-010]: Semente das categorias de fábrica com descrição, criadas no cadastro e no novo ano.
+- [x] **TASK-013** [REQ-010, REQ-011, REQ-013, REQ-014]: Migração V2 com `categoria`, `cartao`, `pessoa` (únicos por usuária/ano/nome).
+  - _Output_: `V2__catalog.sql` (tabelas `category`, `card`, `person`).
+  - _Verify_: app sobe nos dois perfis; inserir nome repetido no mesmo ano falha. Verificado em 2026-11-01: H2 (44 testes) e MySQL 8.4 (V2 aplicada).
+- [x] **TASK-014** [REQ-010]: Semente das categorias de fábrica com descrição, criadas no cadastro e no novo ano.
   - _Output_: serviço de semente e testes.
   - _Verify_: conta nova tem as 15 categorias no ano vigente.
-- [ ] **TASK-015** [REQ-011, REQ-004]: CRUD de categorias (criar, renomear, descrever, desativar) com testes de isolamento.
+- [x] **TASK-015** [REQ-011, REQ-004]: CRUD de categorias (criar, renomear, descrever, desativar) com testes de isolamento.
   - _Output_: serviço, controller, testes.
   - _Verify_: desativada some da lista de ativas; usuária B recebe 404.
-- [ ] **TASK-016** [REQ-013, REQ-004]: CRUD de cartões com `dia_vencimento` 1–31.
+- [x] **TASK-016** [REQ-013, REQ-004]: CRUD de cartões com `dia_vencimento` 1–31.
   - _Output_: serviço, controller, testes.
   - _Verify_: dia 0 e 32 rejeitados; isolamento ok.
-- [ ] **TASK-017** [REQ-014, REQ-004]: CRUD de pessoas.
+- [x] **TASK-017** [REQ-014, REQ-004]: CRUD de pessoas.
   - _Output_: serviço, controller, testes.
   - _Verify_: desativar mantém o registro; isolamento ok.
-- [ ] **TASK-018** [REQ-012]: Teste primeiro, depois exclusão de categoria: sem lançamentos exclui; com lançamentos devolve 409 com a quantidade, e a categoria continua existindo. (A checagem de lançamentos usa um contrato que a Phase 3 implementa.)
+- [x] **TASK-018** [REQ-012]: Teste primeiro, depois exclusão de categoria: sem lançamentos exclui; com lançamentos devolve 409 com a quantidade, e a categoria continua existindo. (A checagem de lançamentos usa um contrato que a Phase 3 implementa.)
   - _Output_: testes dos 2 cenários do PDF, serviço, `DELETE /api/categorias/{id}`.
   - _Verify_: cenários "Categoria com lançamentos não é excluída direto" e "Categoria sem lançamentos é excluída" passam.
-- [ ] **TASK-019** [REQ-007, REQ-008]: Criar novo ano copiando categorias, cartões e pessoas (`POST /api/anos/{ano}`), e listar anos.
+- [x] **TASK-019** [REQ-007, REQ-008]: Criar novo ano copiando categorias, cartões e pessoas (`POST /api/anos/{ano}`), e listar anos.
   - _Output_: serviço, endpoints, testes.
   - _Verify_: editar a lista de 2027 não altera 2026; criar ano existente → erro.
-- [ ] **TASK-020** [REQ-044, REQ-007]: Telas de Categorias, Cartões, Pessoas e Configurações (com criação de novo ano), incluindo o diálogo de exclusão de categoria.
+- [x] **TASK-020** [REQ-044, REQ-007]: Telas de Categorias, Cartões, Pessoas e Configurações (com criação de novo ano), incluindo o diálogo de exclusão de categoria.
   - _Output_: 4 páginas.
   - _Verify_: Vitest básico; fluxo manual de criar, desativar e excluir.
 

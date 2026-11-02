@@ -1,0 +1,87 @@
+package br.com.nize.service;
+
+import br.com.nize.domain.Card;
+import br.com.nize.domain.Category;
+import br.com.nize.domain.Person;
+import br.com.nize.domain.UserYear;
+import br.com.nize.domain.UserYearId;
+import br.com.nize.repository.CardRepository;
+import br.com.nize.repository.CategoryRepository;
+import br.com.nize.repository.PersonRepository;
+import br.com.nize.repository.SettingsRepository;
+import br.com.nize.repository.UserYearRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+/** Years of a user and the creation of a new year from the previous one (REQ-007, REQ-008). */
+@Service
+public class YearService {
+
+    static final int MIN_YEAR = 2000;
+    static final int MAX_YEAR = 2100;
+
+    public record YearInfo(int year, boolean current) {
+    }
+
+    private final UserYearRepository years;
+    private final SettingsRepository settings;
+    private final CategoryRepository categories;
+    private final CardRepository cards;
+    private final PersonRepository people;
+    private final CategorySeeder categorySeeder;
+
+    public YearService(UserYearRepository years, SettingsRepository settings, CategoryRepository categories,
+                       CardRepository cards, PersonRepository people, CategorySeeder categorySeeder) {
+        this.years = years;
+        this.settings = settings;
+        this.categories = categories;
+        this.cards = cards;
+        this.people = people;
+        this.categorySeeder = categorySeeder;
+    }
+
+    @Transactional(readOnly = true)
+    public List<YearInfo> list(Long userId) {
+        int current = settings.findById(userId).orElseThrow().getCurrentYear();
+        return years.findYearNumbers(userId).stream().map(y -> new YearInfo(y, y == current)).toList();
+    }
+
+    /**
+     * Creates the year and copies categories, cards and people (with their active flag) from the closest
+     * earlier year. With no earlier year it starts from the factory categories. Copies are independent rows.
+     */
+    @Transactional
+    public int create(Long userId, int year) {
+        if (year < MIN_YEAR || year > MAX_YEAR) {
+            throw new InvalidYearException(year);
+        }
+        if (years.existsById(new UserYearId(userId, year))) {
+            throw new YearAlreadyExistsException(year);
+        }
+        years.saveAndFlush(new UserYear(userId, year));
+
+        Integer source = years.findClosestEarlierYear(userId, year).orElse(null);
+        if (source == null) {
+            categorySeeder.seedFactoryCategories(userId, year);
+            return year;
+        }
+        categories.saveAll(categories.findByUserIdAndYearNumberOrderByIdAsc(userId, source).stream().map(c -> {
+            Category copy = new Category(userId, year, c.getName(), c.getDescription());
+            copy.update(c.getName(), c.getDescription(), c.isActive());
+            return copy;
+        }).toList());
+        cards.saveAll(cards.findByUserIdAndYearNumberOrderByIdAsc(userId, source).stream().map(c -> {
+            Card copy = new Card(userId, year, c.getName(), c.getDueDay());
+            copy.update(c.getName(), c.getDueDay(), c.isActive());
+            return copy;
+        }).toList());
+        people.saveAll(people.findByUserIdAndYearNumberOrderByIdAsc(userId, source).stream().map(p -> {
+            Person copy = new Person(userId, year, p.getName());
+            copy.update(p.getName(), p.isActive());
+            return copy;
+        }).toList());
+        return year;
+    }
+}

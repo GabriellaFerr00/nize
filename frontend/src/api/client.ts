@@ -5,12 +5,15 @@ export class ApiError extends Error {
   status: number
   code: string
   fields: Record<string, string>
+  /** How many records block the action (e.g. expenses using a category), when the API says so. */
+  count?: number
 
-  constructor(status: number, code: string, fields: Record<string, string> = {}) {
+  constructor(status: number, code: string, fields: Record<string, string> = {}, count?: number) {
     super(code)
     this.status = status
     this.code = code
     this.fields = fields
+    this.count = count
   }
 }
 
@@ -35,8 +38,8 @@ export async function apiRequest<T = void>(path: string, options: RequestOptions
   const data: unknown = text ? JSON.parse(text) : undefined
 
   if (!response.ok) {
-    const error = (data ?? {}) as { code?: string; fields?: Record<string, string> }
-    throw new ApiError(response.status, error.code ?? 'UNKNOWN', error.fields ?? {})
+    const error = (data ?? {}) as { code?: string; fields?: Record<string, string>; count?: number }
+    throw new ApiError(response.status, error.code ?? 'UNKNOWN', error.fields ?? {}, error.count)
   }
   return data as T
 }

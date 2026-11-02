@@ -22,16 +22,19 @@ public class RegistrationService {
     private final SettingsRepository settings;
     private final UserYearRepository years;
     private final PasswordEncoder passwordEncoder;
+    private final CategorySeeder categorySeeder;
 
     public RegistrationService(AppUserRepository users, SettingsRepository settings,
-                               UserYearRepository years, PasswordEncoder passwordEncoder) {
+                               UserYearRepository years, PasswordEncoder passwordEncoder,
+                               CategorySeeder categorySeeder) {
         this.users = users;
         this.settings = settings;
         this.years = years;
         this.passwordEncoder = passwordEncoder;
+        this.categorySeeder = categorySeeder;
     }
 
-    /** Creates the user, its settings and the current year (REQ-001). */
+    /** Creates the user, its settings, the current year and the factory categories (REQ-001, REQ-010). */
     @Transactional
     public AppUser register(String name, String email, String rawPassword) {
         String normalizedEmail = normalizeEmail(email);
@@ -48,6 +51,7 @@ public class RegistrationService {
         int currentYear = Year.now().getValue();
         settings.save(new Settings(user.getId(), currentYear, true));
         years.save(new UserYear(user.getId(), currentYear));
+        categorySeeder.seedFactoryCategories(user.getId(), currentYear);
         return user;
     }
 

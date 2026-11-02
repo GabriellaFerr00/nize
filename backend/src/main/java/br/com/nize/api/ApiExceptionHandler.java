@@ -1,9 +1,16 @@
 package br.com.nize.api;
 
+import br.com.nize.service.CardNameTakenException;
+import br.com.nize.service.CategoryInUseException;
+import br.com.nize.service.CategoryNameTakenException;
 import br.com.nize.service.EmailAlreadyRegisteredException;
 import br.com.nize.service.InvalidCredentialsException;
+import br.com.nize.service.InvalidYearException;
 import br.com.nize.service.InvalidResetTokenException;
+import br.com.nize.service.PersonNameTakenException;
+import br.com.nize.service.ResourceNotFoundException;
 import br.com.nize.service.UnknownYearException;
+import br.com.nize.service.YearAlreadyExistsException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -18,6 +25,10 @@ import java.util.Map;
 class ApiExceptionHandler {
 
     record ErrorResponse(String code, Map<String, String> fields) {
+    }
+
+    /** Conflict that also tells the user how many records block the action. */
+    record InUseResponse(String code, Map<String, String> fields, long count) {
     }
 
     @ExceptionHandler(EmailAlreadyRegisteredException.class)
@@ -40,6 +51,42 @@ class ApiExceptionHandler {
     @ExceptionHandler(UnknownYearException.class)
     ResponseEntity<ErrorResponse> unknownYear() {
         return ResponseEntity.badRequest().body(new ErrorResponse("UNKNOWN_YEAR", Map.of()));
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    ResponseEntity<ErrorResponse> notFound() {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ErrorResponse("NOT_FOUND", Map.of()));
+    }
+
+    @ExceptionHandler(CategoryNameTakenException.class)
+    ResponseEntity<ErrorResponse> categoryNameTaken() {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorResponse("CATEGORY_NAME_TAKEN", Map.of()));
+    }
+
+    @ExceptionHandler(CardNameTakenException.class)
+    ResponseEntity<ErrorResponse> cardNameTaken() {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorResponse("CARD_NAME_TAKEN", Map.of()));
+    }
+
+    @ExceptionHandler(PersonNameTakenException.class)
+    ResponseEntity<ErrorResponse> personNameTaken() {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorResponse("PERSON_NAME_TAKEN", Map.of()));
+    }
+
+    @ExceptionHandler(CategoryInUseException.class)
+    ResponseEntity<InUseResponse> categoryInUse(CategoryInUseException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new InUseResponse("CATEGORY_IN_USE", Map.of(), e.getExpenseCount()));
+    }
+
+    @ExceptionHandler(YearAlreadyExistsException.class)
+    ResponseEntity<ErrorResponse> yearAlreadyExists() {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorResponse("YEAR_ALREADY_EXISTS", Map.of()));
+    }
+
+    @ExceptionHandler(InvalidYearException.class)
+    ResponseEntity<ErrorResponse> invalidYear() {
+        return ResponseEntity.badRequest().body(new ErrorResponse("INVALID_YEAR", Map.of()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

@@ -7,6 +7,13 @@ const KNOWN_CODES = [
   'INVALID_RESET_TOKEN',
   'VALIDATION_ERROR',
   'UNKNOWN_YEAR',
+  'CATEGORY_NAME_TAKEN',
+  'CARD_NAME_TAKEN',
+  'PERSON_NAME_TAKEN',
+  'CATEGORY_IN_USE',
+  'YEAR_ALREADY_EXISTS',
+  'INVALID_YEAR',
+  'NOT_FOUND',
 ]
 
 /** Translates an error thrown by the API client into a user-facing message. */

@@ -87,6 +87,7 @@ Front-end (a partir da raiz):
 - Usuária autenticada: use `CurrentUser.id()` (`security`); DTOs de entrada nunca têm `userId`. Linha de outra usuária → 404 (não 403).
 - Erros da API: JSON `{code, fields}` com códigos estáveis em inglês (`EMAIL_ALREADY_REGISTERED`, `INVALID_CREDENTIALS`, `INVALID_RESET_TOKEN`, `UNKNOWN_YEAR`, `VALIDATION_ERROR`); o front traduz. Todos tratados em `ApiExceptionHandler`.
 - Senha: 8–72 caracteres, BCrypt; nunca logada nem devolvida. Login e recuperação não revelam se o e-mail existe.
+- Cadastros por ano seguem o molde `Category*`/`Card*`/`Person*`: repositório com `userId` em toda consulta, `YearGuard` para o ano, `ResourceNotFoundException` → 404, nome único ignorando maiúsculas por ano (409 `*_NAME_TAKEN`), `PUT` com `active` obrigatório, `?active=true` na listagem.
 - Teste de isolamento de todo endpoint de dados: estender `IsolationTestBase` (`as(user, request)`, `assertOnlyOwnerCanAccess`).
 - `ArchitectureTest` (ArchUnit): campo monetário (nome com `amount`, `cents`, `valor`, `total`, `balance`...) nunca `double`/`float`/`BigDecimal`; `rules` sem Spring/JPA. Se criar um campo monetário com nome novo, acrescente-o à regex `MONEY_NAME`.
 - Regras de cálculo: teste primeiro (cenários do PDF), classe pura em `br.com.nize.rules`.
@@ -99,7 +100,8 @@ Front-end (a partir da raiz):
 - Chamadas à API só por `src/api/client.ts` (`apiRequest`); sessão em `src/api/session.ts` (`localStorage`, D-12). Cache de consultas é limpo ao entrar, sair e em 401.
 - Rotas do front em inglês (`/month/:yyyyMm`, `/overview/:year`, `/sign-in`...). Rotas protegidas ficam sob `RequireAuth`.
 - Tema e cores só como tokens em `src/styles/index.css` (`@theme`); sem cores soltas. Layout: menu lateral ≥ 768px, barra inferior abaixo; sem rolagem horizontal.
-- Testes: `renderApp(path, {signedIn})` e `stubApi({...})` em `src/test/renderApp.tsx`.
+- Testes: `renderApp(path, {signedIn})` e `stubApi({...})` em `src/test/renderApp.tsx` (o objeto de respostas é lido a cada chamada: altere-o para simular o refetch).
+- Cadastros por ano (categorias, cartões, pessoas): reutilizar `CatalogManager` + `catalogApi`; ano da tela via `useSelectedYear` (`?year=`, padrão = ano vigente).
 
 **Armadilhas deste ambiente**
 - Nunca usar `pkill -f`/`pgrep -f` com texto que apareça no próprio comando (derruba o shell): encerrar servidores por PID ou porta.

@@ -1,5 +1,5 @@
-import { PagePlaceholder } from '../components/PagePlaceholder'
+import { CatalogManager } from '../components/CatalogManager'
 
 export function CategoriesPage() {
-  return <PagePlaceholder titleKey="pages.categories" />
+  return <CatalogManager kind="categories" fields={{ description: true }} canDelete />
 }
