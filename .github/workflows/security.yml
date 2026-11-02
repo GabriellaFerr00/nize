@@ -1,48 +1,33 @@
-# Security pipeline (design.md "CI/CD", docs/ci-cd.md). Runs inside both deploy pipelines (gate),
-# on PRs that touch sensitive code, weekly and on demand. Nothing here touches production.
+# Security (design.md "CI/CD", docs/ci-cd.md). Runs on every push/PR that touches code, weekly and on
+# demand; the Backend and Frontend deploys wait for it (gate). Nothing here touches production.
 # Gate: critical/high findings fail the job (and so block the deploy); medium/low are collected
 # into one GitHub issue. Scanners run from images pinned by digest.
 name: Security
 
 on:
+  push:
+    branches: [main]
+    paths: &security-paths
+      - backend/**
+      - frontend/**
+      - scripts/ci/**
+      - .github/**
+      - .semgrep/**
+      - .zap/**
+      - .gitleaks.toml
   pull_request:
-    paths:
-      - backend/src/main/java/br/com/nize/security/**
-      - backend/src/main/java/br/com/nize/api/**
-      - backend/src/main/java/br/com/nize/repository/**
-      - backend/src/main/java/br/com/nize/service/**
-      - backend/src/main/resources/db/migration/**
-      - backend/Dockerfile
-      - backend/pom.xml
-      - frontend/src/api/**
-      - frontend/package.json
-      - frontend/package-lock.json
-      - frontend/public/_headers
-      - frontend/functions/**
-      - .github/workflows/**
+    branches: [main]
+    paths: *security-paths
   schedule:
     - cron: "17 6 * * 1" # Mondays 06:17 UTC: catches new CVEs in unchanged code
   workflow_dispatch:
-    inputs:
-      scope:
-        type: choice
-        options: [all, backend, frontend]
-        default: all
-  workflow_call:
-    inputs:
-      scope:
-        type: string
-        default: all
-      run_tests:
-        description: Run the backend test suite and DB checks (the pipelines already ran them)
-        type: boolean
-        default: true
-    secrets:
-      NIZE_DB_ROOT_PASSWORD_TEST:
-        required: false
 
 permissions:
   contents: read
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   # Pull requests from forks get a read-only token and no secrets: nothing is uploaded from them.
@@ -154,10 +139,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: >-
-          ${{ fromJSON(inputs.scope == 'backend' && '["java-kotlin"]'
-              || inputs.scope == 'frontend' && '["javascript-typescript"]'
-              || '["java-kotlin","javascript-typescript"]') }}
+        language: [java-kotlin, javascript-typescript]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -215,7 +197,6 @@ jobs:
 
   deps-backend:
     name: Dependencies (Maven, trivy)
-    if: inputs.scope != 'frontend'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -270,7 +251,6 @@ jobs:
 
   deps-frontend:
     name: Dependencies (npm audit)
-    if: inputs.scope != 'backend'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     defaults:
@@ -305,7 +285,6 @@ jobs:
 
   frontend-headers:
     name: CSP and security headers (static)
-    if: inputs.scope != 'backend'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -337,7 +316,6 @@ jobs:
 
   dast:
     name: DAST (API in profile h2 + ZAP baseline)
-    if: inputs.scope != 'frontend'
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
@@ -414,84 +392,9 @@ jobs:
           echo "::error::ZAP baseline failed (status ${{ steps.zap.outputs.status }}); see the zap-report artifact"
           exit 1
 
-  db-security:
-    name: Migrations and DB privileges (throwaway MySQL)
-    # In the pipelines the integration job runs these same checks; forks have no secrets.
-    # github.workflow is the caller's name when called; "Security" means it runs on its own.
-    if: inputs.scope != 'frontend' && (github.workflow == 'Security' || inputs.run_tests) && github.event.pull_request.head.repo.fork != true
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    services:
-      mysql:
-        image: mysql:8.4.13@sha256:a0225d1ea6631c8bc2385dc4c2faba17bbf1834ecf369e1659a9a382bd8d5dd7
-        env:
-          MYSQL_ROOT_PASSWORD: ${{ secrets.NIZE_DB_ROOT_PASSWORD_TEST }}
-        ports:
-          - 127.0.0.1:3306:3306
-        options: >-
-          --health-cmd "mysqladmin ping -h 127.0.0.1 --silent"
-          --health-interval 5s --health-timeout 5s --health-retries 30
-    env:
-      MYSQL_ROOT_PASSWORD: ${{ secrets.NIZE_DB_ROOT_PASSWORD_TEST }}
-      NIZE_DB_MIGRATION_USER: nize_migrator
-      NIZE_DB_USER: nize_app
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
-        with:
-          distribution: temurin
-          java-version: "25"
-          cache: maven
-          cache-dependency-path: backend/pom.xml
-      - name: Per-run passwords
-        run: |
-          echo "MYSQL_CONTAINER=${{ job.services.mysql.id }}" >> "$GITHUB_ENV"
-          for name in NIZE_DB_MIGRATION_PASSWORD NIZE_DB_PASSWORD; do
-            value=$(openssl rand -hex 24); echo "::add-mask::$value"; echo "$name=$value" >> "$GITHUB_ENV"
-          done
-      - run: scripts/ci/mysql-setup.sh
-      - name: Migrate from zero, then again (nothing pending), then validate
-        working-directory: backend
-        env:
-          FLYWAY_URL: jdbc:mysql://127.0.0.1:3306/nize?sslMode=REQUIRED
-          FLYWAY_USER: ${{ env.NIZE_DB_MIGRATION_USER }}
-          FLYWAY_PASSWORD: ${{ env.NIZE_DB_MIGRATION_PASSWORD }}
-        run: |
-          ./mvnw -B -ntp -q flyway:migrate
-          ./mvnw -B -ntp flyway:migrate | tee "$RUNNER_TEMP/second.log"
-          grep -qiE 'up to date|no migration necessary' "$RUNNER_TEMP/second.log" \
-            || { echo "::error::second migrate was not a no-op"; exit 1; }
-          ./mvnw -B -ntp -q flyway:validate
-      - name: Schema rules
-        run: |
-          out=$(docker exec -i -e MYSQL_PWD="$MYSQL_ROOT_PASSWORD" "$MYSQL_CONTAINER" mysql -uroot -N < scripts/ci/check-schema.sql)
-          if [ -n "$out" ]; then echo "::error::schema rule violations"; echo "$out"; exit 1; fi
-      - run: scripts/ci/check-runtime-privileges.sh
-
-  security-tests:
-    name: Security tests (JUnit, ArchUnit, isolation)
-    if: inputs.scope != 'frontend' && (github.workflow == 'Security' || inputs.run_tests)
-    runs-on: ubuntu-24.04
-    timeout-minutes: 25
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
-        with:
-          distribution: temurin
-          java-version: "25"
-          cache: maven
-          cache-dependency-path: backend/pom.xml
-      - name: Full suite (auth, JWT, rate limits, isolation, ArchUnit, secrets in logs)
-        working-directory: backend
-        run: ./mvnw -B -ntp test
-
   findings-issue:
     name: Medium/low findings → issue
-    needs: [secrets-and-data, semgrep, codeql, deps-backend, deps-frontend, frontend-headers, dast, db-security, security-tests]
+    needs: [secrets-and-data, semgrep, codeql, deps-backend, deps-frontend, frontend-headers, dast]
     if: always() && github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 5

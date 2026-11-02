@@ -1,19 +1,25 @@
-# Frontend pipeline (reusable). Order: lint + tests + coverage + build → integration (E2E) and
-# security in parallel → Cloudflare Pages (preview on branches, production on main) → smoke.
-name: Frontend pipeline
+# Frontend (design.md "CI/CD"): lint + tests + coverage + build → gate (Security and Integration
+# tests of this commit passed) → Cloudflare Pages (preview on PRs, production on main) → smoke.
+name: Frontend
 
 on:
-  workflow_call:
-    secrets:
-      NIZE_DB_ROOT_PASSWORD_TEST:
-        description: Root password of the throwaway MySQL container used by the E2E job
-        required: true
-      # Environment secrets ("staging" and "production"), read directly by the deploy job.
-      CLOUDFLARE_API_TOKEN: { required: false }
-      CLOUDFLARE_ACCOUNT_ID: { required: false }
+  push:
+    branches: [main]
+    paths: &frontend-paths
+      - frontend/**
+      - scripts/ci/**
+      - .github/workflows/frontend.yml
+  pull_request:
+    branches: [main]
+    paths: *frontend-paths
+  workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: frontend-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -55,39 +61,33 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
-  integration:
-    name: Integration
+  gate:
+    name: Gate (Security and Integration tests passed)
     needs: build
-    # Pull requests from forks get no secrets (the throwaway MySQL needs one): build and security only.
+    # Forks get no secrets: no preview deploy for them.
     if: github.event.pull_request.head.repo.fork != true
-    uses: ./.github/workflows/integration-tests.yml
-    with:
-      include_h2_suite: false
-    secrets:
-      NIZE_DB_ROOT_PASSWORD_TEST: ${{ secrets.NIZE_DB_ROOT_PASSWORD_TEST }}
-
-  security:
-    name: Security
-    needs: build
-    uses: ./.github/workflows/security.yml
+    runs-on: ubuntu-24.04
+    timeout-minutes: 70
     permissions:
       contents: read
-      security-events: write
-      issues: write
       actions: read
-    with:
-      scope: frontend
-      run_tests: false
-    secrets:
-      NIZE_DB_ROOT_PASSWORD_TEST: ${{ secrets.NIZE_DB_ROOT_PASSWORD_TEST }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Wait for the other workflows of this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # On a pull request the other workflows run on the PR head commit.
+          COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: scripts/ci/wait-for-workflows.sh "$COMMIT" "Security" "Integration tests"
 
   deploy:
     name: Cloudflare Pages
-    needs: [integration, security]
-    if: github.event.pull_request.head.repo.fork != true
+    needs: gate
     runs-on: ubuntu-24.04
     timeout-minutes: 20
-    # main → production (required reviewers); any other branch → preview in "staging".
+    # main → production (required reviewers); pull requests and other branches → preview in "staging".
     environment:
       name: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
       url: ${{ steps.publish.outputs.url }}
@@ -101,8 +101,10 @@ jobs:
           path: frontend/dist
       - name: Branch name for Cloudflare
         id: branch
+        env:
+          BRANCH: ${{ github.head_ref || github.ref_name }}
         # Never interpolate a raw branch name into a command: keep only safe characters.
-        run: echo "name=$(printf '%s' "$GITHUB_REF_NAME" | tr -c 'A-Za-z0-9._-' '-')" >> "$GITHUB_OUTPUT"
+        run: echo "name=$(printf '%s' "$BRANCH" | tr -c 'A-Za-z0-9._-' '-')" >> "$GITHUB_OUTPUT"
       - name: Publish
         id: wrangler
         uses: cloudflare/wrangler-action@953926a2e2182532811c01a25e53647d93bf07c0 # v4.1.3
@@ -130,7 +132,7 @@ jobs:
         run: scripts/ci/frontend-smoke.sh "$SITE_URL" true
       - name: Rollback notes
         if: always()
-        run: |
-          echo "- Rollback: Cloudflare → Workers & Pages → $CF_PROJECT → Deployments → previous → Rollback, or re-run this workflow on an older commit (docs/ci-cd.md)." >> "$GITHUB_STEP_SUMMARY"
         env:
           CF_PROJECT: ${{ vars.CF_PAGES_PROJECT }}
+        run: |
+          echo "- Rollback: Cloudflare → Workers & Pages → $CF_PROJECT → Deployments → previous → Rollback, or re-run this workflow on an older commit (docs/ci-cd.md)." >> "$GITHUB_STEP_SUMMARY"

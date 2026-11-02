@@ -1,10 +1,10 @@
 # CLAUDE.md
-> Nize — Spec version 0.2.1
+> Nize — Spec version 0.2.2
 
 ═══════════════════════════════════════════════════════════
 SPEC DRIVEN DEVELOPMENT — PROJECT CONSTITUTION
 Project: Nize
-Version: 0.2.1
+Version: 0.2.2
 ═══════════════════════════════════════════════════════════
 
 This project uses Spec Driven Development. All work is

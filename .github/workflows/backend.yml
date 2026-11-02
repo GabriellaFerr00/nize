@@ -1,23 +1,26 @@
-# Backend pipeline (reusable). Order: build + tests + coverage → integration (MySQL, E2E) and
-# security in parallel → image + trivy → [main only, approval] Flyway migration → Render → smoke.
-name: Backend pipeline
+# Backend (design.md "CI/CD"): build + tests + coverage → image + trivy → [main] gate (Security and
+# Integration tests of this commit passed) → approval → Flyway migration → Render → smoke.
+name: Backend
 
 on:
-  workflow_call:
-    secrets:
-      NIZE_DB_ROOT_PASSWORD_TEST:
-        description: Root password of the throwaway MySQL container used by the tests
-        required: true
-      # Secrets of the GitHub Environment "production": read directly by the deploy job (which
-      # declares the environment), never passed by the caller. Declared here for linters.
-      NIZE_DB_MIGRATION_URL: { required: false }
-      NIZE_DB_MIGRATION_USER: { required: false }
-      NIZE_DB_MIGRATION_PASSWORD: { required: false }
-      RENDER_API_KEY: { required: false }
-      RENDER_SERVICE_ID: { required: false }
+  push:
+    branches: [main]
+    paths: &backend-paths
+      - backend/**
+      - scripts/ci/**
+      - .github/workflows/backend.yml
+  pull_request:
+    branches: [main]
+    paths: *backend-paths
+  workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  # Never cancel a run that may be halfway through a migration or deploy.
+  group: backend-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   TRIVY_IMAGE: aquasec/trivy:0.76.1@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c
@@ -40,7 +43,7 @@ jobs:
           java-version: "25"
           cache: maven
           cache-dependency-path: backend/pom.xml
-      - name: Verify (unit, API and architecture tests, JaCoCo limits)
+      - name: Verify (rules, API, security, isolation and architecture tests; JaCoCo limits)
         env:
           # Percent, set in Settings → Variables; 80 when unset (NFR-010).
           COVERAGE_MIN: ${{ vars.COVERAGE_MIN || '80' }}
@@ -63,35 +66,9 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
-  integration:
-    name: Integration
-    needs: build
-    # Pull requests from forks get no secrets (the throwaway MySQL needs one): build and security only.
-    if: github.event.pull_request.head.repo.fork != true
-    uses: ./.github/workflows/integration-tests.yml
-    with:
-      include_h2_suite: false # the build job already ran the H2 API suite
-    secrets:
-      NIZE_DB_ROOT_PASSWORD_TEST: ${{ secrets.NIZE_DB_ROOT_PASSWORD_TEST }}
-
-  security:
-    name: Security
-    needs: build
-    uses: ./.github/workflows/security.yml
-    permissions:
-      contents: read
-      security-events: write
-      issues: write
-      actions: read
-    with:
-      scope: backend
-      run_tests: false # the build job already ran the security tests
-    secrets:
-      NIZE_DB_ROOT_PASSWORD_TEST: ${{ secrets.NIZE_DB_ROOT_PASSWORD_TEST }}
-
   image:
     name: Docker image + trivy
-    needs: [integration, security]
+    needs: build
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     permissions:
@@ -120,6 +97,7 @@ jobs:
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD:/out" "$TRIVY_IMAGE" image \
             --quiet --format sarif --output /out/trivy-image.sarif "$IMAGE"
       - uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        if: github.event.pull_request.head.repo.fork != true
         with:
           sarif_file: trivy-image.sarif
           category: trivy-image
@@ -142,9 +120,27 @@ jobs:
           echo "image=$(docker inspect --format '{{index .RepoDigests 0}}' "$IMAGE")" >> "$GITHUB_OUTPUT"
           docker logout ghcr.io
 
+  gate:
+    name: Gate (Security and Integration tests passed)
+    needs: image
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 70
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Wait for the other workflows of this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: scripts/ci/wait-for-workflows.sh "$GITHUB_SHA" "Security" "Integration tests"
+
   deploy:
     name: Migrate, deploy and smoke (production)
-    needs: image
+    needs: [image, gate]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 40

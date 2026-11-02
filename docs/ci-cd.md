@@ -3,39 +3,33 @@
 Pipeline no GitHub Actions (design.md "CI/CD", D-13 a D-18; NFR-010). Hospedagem de teste, gratuita:
 **Cloudflare Pages** (front), **Render** com imagem Docker do **GHCR** (back) e **Aiven for MySQL** (banco).
 
-```
-push na main / Pull Request para a main / workflow_dispatch(target)
-        │
-   changes (dorny/paths-filter) ── .github/workflows/** e scripts/ci/** disparam os dois
-        │
- ┌──────┴────────────────────────────────┐
- ▼ Backend (backend-deploy.yml)           ▼ Frontend (frontend-deploy.yml) — espera o back se os dois mudaram
- build: mvnw verify (H2, ArchUnit,         build: npm ci, lint, typecheck, Vitest ≥ 80%, build
-        JaCoCo ≥ 80% global e rules)         │
-   ├─ integration-tests.yml ─┐              ├─ integration-tests.yml ─┐
-   └─ security.yml (backend) ┘              └─ security.yml (frontend)┘
-        ▼                                         ▼
- image: docker build → trivy config/image  deploy: main → production (aprovação)
-        → push GHCR por digest (só main)           outra branch → preview (staging)
-        ▼                                         ▼
- deploy (Environment production, aprovação) smoke: headers, /sign-in → index.html, /api via proxy
-   Flyway migrate (usuário de migração, TLS) → falhou? para aqui
-   Render API: deploy do digest, espera "live"
-   smoke: /actuator/health com espera de cold start + contrato {code, fields}
+Um workflow por tema, cada um disparado só quando o seu código muda (push e Pull Request para a `main`), e manualmente em Actions → *Run workflow*:
 
- security.yml também roda em PR (caminhos sensíveis), toda segunda 06:17 UTC e manualmente.
+```
+ Backend (backend.yml)            Frontend (frontend.yml)         Integration tests          Security (security.yml)
+ backend/** · scripts/ci/**       frontend/** · scripts/ci/**     (integration-tests.yml)    back, front, .github, configs
+                                                                  1 job por lado             + toda segunda 06:17 UTC
+ build: mvnw verify               build: lint, typecheck,
+   (H2, segurança, ArchUnit,        Vitest ≥ 80%, build           back: MySQL 8.4            gitleaks + trufflehog
+    JaCoCo ≥ 80%)                        │                         migração (DDL) x2         PII / arquivos proibidos
+      ▼                                  ▼                         esquema + privilégios     semgrep, CodeQL (Java, JS)
+ image: docker + trivy            gate ◄─────────────┐             app prod (só DML)         trivy no jar, npm audit
+   push GHCR (só main)                 │             │             smoke + fluxo da API      headers do front
+      ▼                                ▼             │            front: E2E Playwright      DAST + ZAP (back local)
+ gate ◄── espera Security e       Cloudflare Pages   │                   │                          │
+      │   Integration tests       PR → preview       └───────────────────┴──────────────────────────┘
+      ▼   do mesmo commit         main → produção       (o gate espera estes dois terminarem com sucesso)
+ production (aprovação)           (aprovação)
+ Flyway → Render → smoke          smoke
 ```
 
-## 1. Detecção e ordem
+## 1. Disparos e ordem
 
-- `push` na `main`: compara com o commit anterior. **Pull Request para a `main`**: compara com a base do PR. `workflow_dispatch` em outra branch: compara com a `main`.
-- Em Pull Request: roda tudo menos produção (imagem sem push, sem migração, sem deploy do back) e publica o **preview** do front em `staging`. PR de fork: só build e segurança, sem segredos.
-- O botão *Run workflow* (`workflow_dispatch`) só existe depois que o workflow está na `main`; antes disso, valide por Pull Request.
-- Disparo manual: Actions → **CI/CD** → *Run workflow* → escolha a branch e `target`:
-  `auto` (detecta), `backend`, `frontend` ou `both`. Na própria `main`, `auto` não acha diferença: use `backend`/`frontend`/`both`.
-- Em branch que não é a `main`: o back roda tudo até a imagem (sem push, sem migração, sem deploy); o front publica um **preview** no Environment `staging`.
-- `concurrency` por branch, sem cancelar: uma migração ou deploy nunca é interrompido no meio.
-- Quando back e front mudam juntos, a integração roda duas vezes (uma por pipeline). Custa só tempo de runner, e manter os pipelines independentes é mais simples.
+- Cada workflow tem filtro `paths`: mudou só o back → rodam Backend, Integration tests e Security; mudou só o front → Frontend, Integration tests e Security; mudou só `.semgrep/` → só Security.
+- **Gate**: workflows separados não podem usar `needs` entre si. O job *gate* do Backend e do Frontend (`scripts/ci/wait-for-workflows.sh`) espera Security e Integration tests **do mesmo commit** terminarem com sucesso; só então o deploy pede aprovação. Se um deles falhar, não há deploy.
+- Em Pull Request: Backend vai até a imagem (sem push, migração ou deploy); Frontend publica o **preview** em `staging` depois do gate. PR de fork: sem segredos, então sem Integration tests e sem preview.
+- Disparo manual: Actions → escolha o workflow → *Run workflow* → branch. Só aparece depois que o workflow está na `main`; antes disso, valide por Pull Request.
+- `concurrency` por branch: Backend e Frontend nunca cancelam um run em andamento (migração/deploy); Security e Integration tests cancelam o run anterior do mesmo PR.
 
 ## 2. Testes antes de qualquer deploy
 
@@ -43,8 +37,8 @@ push na main / Pull Request para a main / workflow_dispatch(target)
 |---|---|---|
 | `./mvnw verify` | build do back | testes de regras, API (H2), isolamento (`IsolationTestBase`), ArchUnit, segurança; cobertura JaCoCo ≥ `COVERAGE_MIN` (global) e `COVERAGE_RULES_MIN` (`br.com.nize.rules`) |
 | `npm run test:coverage` | build do front | Vitest com cobertura ≥ `COVERAGE_MIN` (linhas, branches, funções) |
-| `mysql-e2e` | integration-tests.yml | MySQL 8.4 real; Flyway com o usuário de migração (duas vezes, idempotente); regras do esquema; usuário da aplicação **sem DDL**; app no perfil `prod` (Flyway desligado, TLS); smoke; **Playwright** (cadastro → lançamento → login); log sem segredos |
-| `api-h2` | integration-tests.yml (manual) | a mesma suíte de API do build, para rodar isolada |
+| `backend` | Integration tests (se o back mudou) | MySQL 8.4 real; Flyway com o usuário de migração (duas vezes, idempotente); regras do esquema; usuário da aplicação **sem DDL**; app no perfil `prod` (Flyway desligado, TLS); smoke; **fluxo completo da API** (`api-flow.sh`: cadastro, catálogo, lançamentos, parcelas, novo ano); log sem segredos |
+| `frontend` | Integration tests (se o front mudou) | **Playwright** no site construído, com a CSP de produção, contra a API no perfil `h2` (cadastro → lançamento → login); log sem segredos |
 
 Só dados sintéticos (`*@example.test`, senhas geradas por execução). Nada roda contra produção.
 
@@ -55,18 +49,16 @@ Só dados sintéticos (`*@example.test`, senhas geradas por execução). Nada ro
 | secrets-and-data | gitleaks + trufflehog (histórico inteiro), `check_pii.py` (CPF, cartão com Luhn), `check-forbidden-files.sh` | qualquer achado | — |
 | semgrep | OWASP Top 10, Java, TS, React, JWT, secrets + `.semgrep/nize.yml` | ERROR/HIGH | WARNING/INFO |
 | codeql | `java-kotlin` (build manual Maven) e `javascript-typescript`, `security-extended` | security-severity ≥ 7.0 | < 7.0 |
-| deps-backend | trivy fs (`pom.xml`) | CRITICAL/HIGH com correção | MEDIUM/LOW |
+| deps-backend | trivy no jar construído (as bibliotecas que vão para produção) | CRITICAL/HIGH com correção | MEDIUM/LOW |
 | deps-frontend | `npm audit` | high/critical | moderate/low |
 | frontend-headers | checagem estática de `_headers`/`_redirects` | CSP fraca, header faltando | — |
 | dast | `dast-checks.sh` + ZAP baseline autenticado, contra o back local (perfil `h2`) | regra FAIL do `.zap/rules.tsv`, qualquer checagem DAST | avisos do ZAP |
-| db-security | MySQL descartável: migração do zero e de novo, esquema, privilégios | qualquer falha | — |
-| security-tests | `./mvnw test` | qualquer falha | — |
 | image (no pipeline do back) | trivy config + image | CRITICAL/HIGH com correção | (SARIF no Code Scanning) |
 
 - Resultados SARIF ficam em **Security → Code scanning**, por categoria (`gitleaks`, `semgrep`, `codeql-*`, `trivy-maven`, `trivy-image`).
 - Médios e baixos viram um comentário na issue aberta **"Security findings (medium/low)"** (criada se não existir). Revise semanalmente.
 - Falso positivo: semgrep → `// nosemgrep: <rule-id>` com justificativa; gitleaks → `allowlist` em `.gitleaks.toml`; ZAP → mude a regra em `.zap/rules.tsv`. Sempre em PR revisado.
-- Em PR de fork: sem segredos, token só leitura, nada é enviado ao Code Scanning, `db-security` é pulado. `pull_request_target` não é usado.
+- Em PR de fork: sem segredos, token só leitura, nada é enviado ao Code Scanning. `pull_request_target` não é usado.
 
 ### O que os testes de segurança cobrem
 - **Autenticação**: e-mail inexistente e senha errada dão a mesma resposta e levam o mesmo tempo (BCrypt contra hash fictício); recuperação responde 202 sempre, token de uso único com expiração; BCrypt com custo ≥ 10; JWT `alg: none`, adulterado, de outro emissor, sem `exp` ou expirado → 401; o app não sobe sem `NIZE_JWT_SECRET` de 32+ bytes.
@@ -161,9 +153,9 @@ npm --prefix frontend run test:coverage && npm --prefix frontend run build
 
 Sem merge na `main`:
 1. `git switch -c ci/pipeline-test && git push -u origin ci/pipeline-test`.
-2. Abra um Pull Request de `ci/pipeline-test` para `main`: o CI/CD roda sozinho. Depois que os workflows estiverem na `main`, também dá para usar Actions → **CI/CD** → *Run workflow* → branch, `target: both`.
+2. Abra um Pull Request de `ci/pipeline-test` para `main`: Backend, Frontend, Integration tests e Security rodam sozinhos (cada um só se o seu código mudou).
 3. Esperado: back verde até *Docker image + trivy* (sem push nem deploy); front publica o preview em `staging` e o smoke passa (precisa do `API_ORIGIN` de *Preview* apontando para uma API no ar).
-4. Actions → **Security** → *Run workflow* (`scope: all`): roda também `db-security` e `security-tests`.
+4. Os testes de segurança JUnit rodam no build do Backend; as checagens de migração e privilégios do banco, em Integration tests.
 5. Depois do merge na `main`, aprove o Environment `production` (back e front).
 
 ## 7. Rollback
