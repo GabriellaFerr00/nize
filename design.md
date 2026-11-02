@@ -1,5 +1,5 @@
 # design.md
-> Nize — Version 0.2.0 (MVP web) — 2026-11-01
+> Nize — Version 0.2.1 (MVP web) — 2026-11-01
 
 ## Architecture Overview
 Monorepo com dois módulos independentes: `backend` (API REST) e `frontend` (SPA). **Toda regra de cálculo vive só no back-end** (totais, saldo, posição por quinzena, parcelas, carga do mês, saldo próprio, porcentagens). O front apenas exibe o que a API devolve e nunca recalcula valores. Como back (Java) e front (TypeScript) não compartilham código, o "pacote de regras compartilhado" do PDF vira o pacote Java `br.com.nize.rules`, puro (sem Spring, sem JPA), testado antes do código.
@@ -346,7 +346,7 @@ groupId `br.com.nize`, artifactId `nize-backend`, pacote raiz `br.com.nize`.
 - Testes de segurança: `ArchitectureTest` (dinheiro, `rules` puro, DTO de entrada sem `userId`, repositórios de dados com `userId`) e `IsolationCoverageTest` (todo controller de dados tem teste que estende `IsolationTestBase`).
 
 ## CI/CD
-GitHub Actions (detalhes em `docs/ci-cd.md`; NFR-010). `ci-cd.yml` roda em push na `main` e `workflow_dispatch` (`target`: auto/backend/frontend/both), detecta mudanças (`backend/**`, `frontend/**`; `.github/**` dispara os dois) e chama os pipelines:
+GitHub Actions (detalhes em `docs/ci-cd.md`; NFR-010). `ci-cd.yml` roda em push na `main`, em Pull Request para a `main` (valida antes do merge; publica só o preview do front; PR de fork roda só build e segurança, sem segredos) e `workflow_dispatch` (`target`: auto/backend/frontend/both), detecta mudanças (`backend/**`, `frontend/**`; `.github/**` dispara os dois) e chama os pipelines:
 - **Back**: `mvnw verify` (testes + JaCoCo ≥ 80% global e em `rules`) → integração MySQL 8.4 (migração com usuário de migração, app no perfil `prod` com usuário só DML, smoke, E2E Playwright) → segurança → imagem Docker + trivy → push GHCR → (só `main`, Environment `production` com aprovação) Flyway no Aiven → deploy hook do Render → smoke.
 - **Front**: `npm ci`, lint, Vitest com cobertura ≥ 80%, build → integração (E2E) → segurança → Cloudflare Pages: branch ≠ `main` publica preview (Environment `staging`); `main` publica produção (Environment `production`) → smoke.
 - **Segurança** (`security.yml`, também em PR, semanal e manual): gitleaks e trufflehog no histórico, PII/arquivos proibidos, semgrep, CodeQL, trivy (dependências, imagem, Dockerfile), npm audit, ZAP baseline e checagens DAST contra o back local (perfil `h2`), checagens do esquema e dos privilégios no MySQL efêmero. Críticos/altos bloqueiam; médios/baixos viram aviso e issue.
@@ -380,4 +380,5 @@ GitHub Actions (detalhes em `docs/ci-cd.md`; NFR-010). `ci-cd.yml` roda em push 
 | 0.1.7 | 2026-11-01 | Fixo pode ser no crédito (tipo e forma de pagamento independentes); regras de consistência do lançamento; Open Questions da Phase 3 resolvidas |
 | 0.1.8 | 2026-11-01 | `month` reservado no H2: coluna `month_ref`; data do lançamento `expense_date` |
 | 0.1.9 | 2026-11-01 | Carga do mês: continua parcelas à mão (grupo próprio) e respeita a permissão de parcelas automáticas |
+| 0.2.1 | 2026-11-02 | `ci-cd.yml` também roda em Pull Request para a `main` (o `workflow_dispatch` só existe depois que o workflow está na `main`) |
 | 0.2.0 | 2026-11-01 | CI/CD e hospedagem (D-13 a D-18): perfil `prod` sem Flyway no boot, usuários de banco separados, TLS, proxy `/api` no Cloudflare Pages, limite de tentativas, Actuator health, `DisabledEmailSender`; File Structure com workflows, Dockerfile, scripts e docs |

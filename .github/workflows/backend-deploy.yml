@@ -66,6 +66,8 @@ jobs:
   integration:
     name: Integration
     needs: build
+    # Pull requests from forks get no secrets (the throwaway MySQL needs one): build and security only.
+    if: github.event.pull_request.head.repo.fork != true
     uses: ./.github/workflows/integration-tests.yml
     with:
       include_h2_suite: false # the build job already ran the H2 API suite

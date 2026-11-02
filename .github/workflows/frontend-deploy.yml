@@ -58,6 +58,8 @@ jobs:
   integration:
     name: Integration
     needs: build
+    # Pull requests from forks get no secrets (the throwaway MySQL needs one): build and security only.
+    if: github.event.pull_request.head.repo.fork != true
     uses: ./.github/workflows/integration-tests.yml
     with:
       include_h2_suite: false
@@ -82,6 +84,7 @@ jobs:
   deploy:
     name: Cloudflare Pages
     needs: [integration, security]
+    if: github.event.pull_request.head.repo.fork != true
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     # main → production (required reviewers); any other branch → preview in "staging".

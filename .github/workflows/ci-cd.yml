@@ -5,6 +5,9 @@ name: CI/CD
 on:
   push:
     branches: [main]
+  # Validates every change before the merge: tests, security, image (not pushed) and a front preview.
+  pull_request:
+    branches: [main]
   workflow_dispatch:
     inputs:
       target:
@@ -26,6 +29,9 @@ jobs:
     name: Detect changes
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read # paths-filter lists the PR files through the API
     outputs:
       backend: ${{ steps.decide.outputs.backend }}
       frontend: ${{ steps.decide.outputs.frontend }}
@@ -38,7 +44,7 @@ jobs:
         id: filter
         uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         with:
-          # On a branch dispatch, compare with main; on push, with the previous commit.
+          # Dispatch on a branch: compare with main. Push: previous commit. Pull request: the PR base.
           base: ${{ github.event_name == 'workflow_dispatch' && 'main' || '' }}
           filters: |
             backend:

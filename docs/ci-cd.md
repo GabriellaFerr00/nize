@@ -4,7 +4,7 @@ Pipeline no GitHub Actions (design.md "CI/CD", D-13 a D-18; NFR-010). Hospedagem
 **Cloudflare Pages** (front), **Render** com imagem Docker do **GHCR** (back) e **Aiven for MySQL** (banco).
 
 ```
-push na main / workflow_dispatch(target)
+push na main / Pull Request para a main / workflow_dispatch(target)
         │
    changes (dorny/paths-filter) ── .github/workflows/** e scripts/ci/** disparam os dois
         │
@@ -28,7 +28,9 @@ push na main / workflow_dispatch(target)
 
 ## 1. Detecção e ordem
 
-- `push` na `main`: compara com o commit anterior. `workflow_dispatch` em outra branch: compara com a `main`.
+- `push` na `main`: compara com o commit anterior. **Pull Request para a `main`**: compara com a base do PR. `workflow_dispatch` em outra branch: compara com a `main`.
+- Em Pull Request: roda tudo menos produção (imagem sem push, sem migração, sem deploy do back) e publica o **preview** do front em `staging`. PR de fork: só build e segurança, sem segredos.
+- O botão *Run workflow* (`workflow_dispatch`) só existe depois que o workflow está na `main`; antes disso, valide por Pull Request.
 - Disparo manual: Actions → **CI/CD** → *Run workflow* → escolha a branch e `target`:
   `auto` (detecta), `backend`, `frontend` ou `both`. Na própria `main`, `auto` não acha diferença: use `backend`/`frontend`/`both`.
 - Em branch que não é a `main`: o back roda tudo até a imagem (sem push, sem migração, sem deploy); o front publica um **preview** no Environment `staging`.
@@ -159,7 +161,7 @@ npm --prefix frontend run test:coverage && npm --prefix frontend run build
 
 Sem merge na `main`:
 1. `git switch -c ci/pipeline-test && git push -u origin ci/pipeline-test`.
-2. Actions → **CI/CD** → *Run workflow* → branch `ci/pipeline-test`, `target: both`.
+2. Abra um Pull Request de `ci/pipeline-test` para `main`: o CI/CD roda sozinho. Depois que os workflows estiverem na `main`, também dá para usar Actions → **CI/CD** → *Run workflow* → branch, `target: both`.
 3. Esperado: back verde até *Docker image + trivy* (sem push nem deploy); front publica o preview em `staging` e o smoke passa (precisa do `API_ORIGIN` de *Preview* apontando para uma API no ar).
 4. Actions → **Security** → *Run workflow* (`scope: all`): roda também `db-security` e `security-tests`.
 5. Depois do merge na `main`, aprove o Environment `production` (back e front).
