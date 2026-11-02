@@ -129,7 +129,9 @@ jobs:
       - name: Smoke test (headers, SPA fallback, /api proxy)
         env:
           SITE_URL: ${{ steps.publish.outputs.url }}
-        run: scripts/ci/frontend-smoke.sh "$SITE_URL" true
+          # The /api proxy is checked once the API exists (repository variable API_URL is set).
+          CHECK_API: ${{ vars.API_URL != '' }}
+        run: scripts/ci/frontend-smoke.sh "$SITE_URL" "$CHECK_API"
       - name: Rollback notes
         if: always()
         env:

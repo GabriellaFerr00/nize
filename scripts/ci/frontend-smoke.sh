@@ -4,7 +4,12 @@ set -euo pipefail
 site="${1:?site url}"; check_api="${2:-true}"
 fail() { echo "::error::$*"; exit 1; }
 
-headers=$(curl -fsS --max-time 30 -D - -o /tmp/nize-index.html "$site/")
+# A fresh deployment can answer 5xx (e.g. 522) for a short while: retry up to 2 minutes.
+for attempt in $(seq 1 12); do
+  if headers=$(curl -fsS --max-time 30 -D - -o /tmp/nize-index.html "$site/"); then break; fi
+  (( attempt == 12 )) && fail "$site/ did not answer 200 within 2 minutes"
+  echo "waiting for $site to propagate ..."; sleep 10
+done
 for h in content-security-policy strict-transport-security x-content-type-options referrer-policy; do
   grep -qi "^$h:" <<<"$headers" || fail "missing header $h on $site/"
 done

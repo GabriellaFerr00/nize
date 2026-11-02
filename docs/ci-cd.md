@@ -86,7 +86,7 @@ Nunca grave valores em arquivo. `.env.example` lista só os nomes.
 | `CF_PAGES_PROJECT` | variable | repositório | `nize` |
 | `COVERAGE_MIN` | variable | repositório | `80` (opcional; padrão 80) |
 | `COVERAGE_RULES_MIN` | variable | repositório | `80` (opcional; padrão 80) |
-| `API_URL` | variable | `production` | `https://nize-api.onrender.com` (URL real do serviço) |
+| `API_URL` | variable | repositório | `https://nize-api.onrender.com` (URL real do serviço). Enquanto não existir, o smoke do front não testa o `/api` |
 
 **Render → nize-api → Environment** (não ficam no GitHub): `NIZE_JWT_SECRET`, `NIZE_DB_URL`
 (`jdbc:mysql://<host>:<porta>/nize?sslMode=REQUIRED`), `NIZE_DB_USER` (`nize_app`), `NIZE_DB_PASSWORD`.
@@ -136,7 +136,7 @@ Limites atuais do plano free (conferido em 2026-11-01 em aiven.io/docs/products/
 1. Rode o pipeline do back uma vez na `main`, ou com `target: backend`. O job *image* publica `ghcr.io/gabriellaferr00/nize-backend:<sha>`. O job *deploy* fica esperando aprovação: **não aprove ainda**.
 2. GitHub → Packages → `nize-backend` → Package settings → **Change visibility → Public**. A imagem não contém segredos e o código já é público. Alternativa: deixar privada e cadastrar no Render uma credencial de registry com um token `read:packages`.
 3. Render → New → **Web Service** → *Existing image* → `ghcr.io/gabriellaferr00/nize-backend:<sha>`. Nome **`nize-api`**, instância **Free**, *Health Check Path* `/actuator/health`, *Auto-Deploy* **desligado** (quem faz o deploy é o pipeline). Cadastre as variáveis de ambiente do Render da seção 4. Gere o `NIZE_JWT_SECRET` com `openssl rand -base64 48`.
-4. Anote o `srv-...` (está na URL do serviço) em `RENDER_SERVICE_ID`. Em Account Settings → API Keys, crie a `RENDER_API_KEY`. Preencha `API_URL`.
+4. Anote o `srv-...` (está na URL do serviço) em `RENDER_SERVICE_ID`. Em Account Settings → API Keys, crie a `RENDER_API_KEY`. Cadastre a variável de **repositório** `API_URL` (Settings → Secrets and variables → Actions → Variables).
 5. Volte ao run do passo 1 e aprove o `production`.
 
 ## 6. Validação
