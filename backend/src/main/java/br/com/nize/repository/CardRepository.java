@@ -18,4 +18,6 @@ public interface CardRepository extends JpaRepository<Card, Long> {
     boolean existsByUserIdAndYearNumberAndNameIgnoreCase(Long userId, int yearNumber, String name);
 
     boolean existsByUserIdAndYearNumberAndNameIgnoreCaseAndIdNot(Long userId, int yearNumber, String name, Long id);
+
+    Optional<Card> findByUserIdAndYearNumberAndNameIgnoreCase(Long userId, int yearNumber, String name);
 }

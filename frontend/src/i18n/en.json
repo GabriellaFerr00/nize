@@ -44,7 +44,12 @@
     "CATEGORY_IN_USE": "This category still has expenses.",
     "YEAR_ALREADY_EXISTS": "That year already exists in your account.",
     "INVALID_YEAR": "Enter a year between 2000 and 2100.",
-    "NOT_FOUND": "We could not find this item. Refresh the page."
+    "NOT_FOUND": "We could not find this item. Refresh the page.",
+    "INVALID_EXPENSE": "That combination is not allowed. Check type, payment method, card, person and installments.",
+    "INVALID_MONTH": "Invalid month.",
+    "DATE_OUT_OF_MONTH": "The date must be inside the month.",
+    "INACTIVE_REFERENCE": "The chosen category, card or person is deactivated.",
+    "REFERENCE_UNAVAILABLE": "The installments run into a year where the category, card or person no longer exists. Adjust that year's lists."
   },
   "auth": {
     "fields": {
@@ -155,5 +160,55 @@
     "yearNumber": "Year",
     "createYear": "Create year",
     "yearCreated": "Year {{year}} created."
+  },
+  "expense": {
+    "new": "New expense",
+    "title": "New expense",
+    "saved": "Expense saved.",
+    "saveAndAnother": "Save and add another",
+    "choose": "Choose…",
+    "noCard": "No card",
+    "nobody": "Nobody (my expense)",
+    "fields": {
+      "name": "Name",
+      "amount": "Amount",
+      "type": "Type",
+      "payment": "Payment method",
+      "category": "Category",
+      "card": "Card",
+      "person": "Person (third-party expense)",
+      "date": "Date",
+      "paid": "Already paid"
+    },
+    "type": {
+      "FIXED": "Fixed",
+      "CARD": "Credit card"
+    },
+    "payment": {
+      "PIX": "Pix",
+      "CREDIT": "Credit"
+    },
+    "parceling": {
+      "title": "Installments",
+      "mode": "How to enter",
+      "none": "Single payment (no installments)",
+      "auto": "Automatic installments",
+      "manual": "An existing installment",
+      "count": "Number of installments",
+      "amountIs": "The amount entered is",
+      "total": "The total of the purchase",
+      "each": "The value of each installment",
+      "current": "Current installment",
+      "totalCount": "Total installments"
+    },
+    "errors": {
+      "name": "Enter a name.",
+      "amount": "Enter an amount above zero, like 49.90.",
+      "category": "Choose a category.",
+      "date": "Pick a date inside {{month}}.",
+      "autoCount": "Enter 2 to 120 installments.",
+      "manualCount": "Enter the total installments, from 2 to 120.",
+      "manualNumber": "The current installment must be between 1 and the total."
+    }
   }
 }

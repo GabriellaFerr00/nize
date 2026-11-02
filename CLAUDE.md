@@ -1,10 +1,10 @@
 # CLAUDE.md
-> Nize — Spec version 0.1.5
+> Nize — Spec version 0.1.9
 
 ═══════════════════════════════════════════════════════════
 SPEC DRIVEN DEVELOPMENT — PROJECT CONSTITUTION
 Project: Nize
-Version: 0.1.5
+Version: 0.1.9
 ═══════════════════════════════════════════════════════════
 
 This project uses Spec Driven Development. All work is
@@ -88,6 +88,9 @@ Front-end (a partir da raiz):
 - Erros da API: JSON `{code, fields}` com códigos estáveis em inglês (`EMAIL_ALREADY_REGISTERED`, `INVALID_CREDENTIALS`, `INVALID_RESET_TOKEN`, `UNKNOWN_YEAR`, `VALIDATION_ERROR`); o front traduz. Todos tratados em `ApiExceptionHandler`.
 - Senha: 8–72 caracteres, BCrypt; nunca logada nem devolvida. Login e recuperação não revelam se o e-mail existe.
 - Cadastros por ano seguem o molde `Category*`/`Card*`/`Person*`: repositório com `userId` em toda consulta, `YearGuard` para o ano, `ResourceNotFoundException` → 404, nome único ignorando maiúsculas por ano (409 `*_NAME_TAKEN`), `PUT` com `active` obrigatório, `?active=true` na listagem.
+- Lançamentos: `ExpenseService` valida as "Regras de consistência do lançamento" (design.md); referências inativas só são aceitas se o lançamento já as usava; `month` é reservada no H2 (coluna `month_ref`). `ddl-auto: validate` exige `@JdbcTypeCode(CHAR/VARCHAR/SMALLINT)` nas colunas que não são o padrão do Hibernate (e enum como `VARCHAR`).
+- Dinheiro em JSON: `spring.jackson.deserialization.accept-float-as-int=false` (10.5 é recusado, não vira 10). No front: `parseCents`/`formatCents` em `src/lib/money.ts`, sem float.
+- Em testes, um método auxiliar chamado `post`/`put` esconde o import estático de `MockMvcRequestBuilders`: dê outro nome (`create`, `update`, `generate`).
 - Teste de isolamento de todo endpoint de dados: estender `IsolationTestBase` (`as(user, request)`, `assertOnlyOwnerCanAccess`).
 - `ArchitectureTest` (ArchUnit): campo monetário (nome com `amount`, `cents`, `valor`, `total`, `balance`...) nunca `double`/`float`/`BigDecimal`; `rules` sem Spring/JPA. Se criar um campo monetário com nome novo, acrescente-o à regex `MONEY_NAME`.
 - Regras de cálculo: teste primeiro (cenários do PDF), classe pura em `br.com.nize.rules`.

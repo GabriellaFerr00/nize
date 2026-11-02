@@ -5,6 +5,7 @@ import br.com.nize.service.CategoryInUseException;
 import br.com.nize.service.CategoryNameTakenException;
 import br.com.nize.service.EmailAlreadyRegisteredException;
 import br.com.nize.service.InvalidCredentialsException;
+import br.com.nize.service.InvalidExpenseException;
 import br.com.nize.service.InvalidYearException;
 import br.com.nize.service.InvalidResetTokenException;
 import br.com.nize.service.PersonNameTakenException;
@@ -13,6 +14,7 @@ import br.com.nize.service.UnknownYearException;
 import br.com.nize.service.YearAlreadyExistsException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -87,6 +89,17 @@ class ApiExceptionHandler {
     @ExceptionHandler(InvalidYearException.class)
     ResponseEntity<ErrorResponse> invalidYear() {
         return ResponseEntity.badRequest().body(new ErrorResponse("INVALID_YEAR", Map.of()));
+    }
+
+    @ExceptionHandler(InvalidExpenseException.class)
+    ResponseEntity<ErrorResponse> invalidExpense(InvalidExpenseException e) {
+        return ResponseEntity.badRequest().body(new ErrorResponse(e.getCode(), Map.of()));
+    }
+
+    /** Broken JSON, wrong types (e.g. 10.5 for cents) or unknown enum values. */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    ResponseEntity<ErrorResponse> unreadable() {
+        return ResponseEntity.badRequest().body(new ErrorResponse("VALIDATION_ERROR", Map.of()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

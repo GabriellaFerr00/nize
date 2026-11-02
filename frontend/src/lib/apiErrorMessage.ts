@@ -14,6 +14,11 @@ const KNOWN_CODES = [
   'YEAR_ALREADY_EXISTS',
   'INVALID_YEAR',
   'NOT_FOUND',
+  'INVALID_EXPENSE',
+  'INVALID_MONTH',
+  'DATE_OUT_OF_MONTH',
+  'INACTIVE_REFERENCE',
+  'REFERENCE_UNAVAILABLE',
 ]
 
 /** Translates an error thrown by the API client into a user-facing message. */

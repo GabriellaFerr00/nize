@@ -1,4 +1,8 @@
 spring:
+  jackson:
+    deserialization:
+      # money is whole cents (NFR-001): 10.5 must be rejected, not truncated to 10
+      accept-float-as-int: false
   application:
     name: nize-backend
   flyway:

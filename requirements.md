@@ -1,5 +1,5 @@
 # requirements.md
-> Nize — Version 0.1.1 (MVP web) — 2026-11-01
+> Nize — Version 0.1.3 (MVP web) — 2026-11-01
 
 Fonte: `Nize — Funcionalidades e escopo do MVP web.pdf` (1 nov 2026). Em caso de dúvida entre este arquivo e o PDF, pergunte antes de implementar.
 
@@ -15,6 +15,7 @@ O Nize é a versão web da planilha "Finanças 2026". A usuária lança gastos e
 - **Cartão**: gasto de crédito (tipo `cartao`), com cartão e parcelas.
 - **Posição**: entradas menos gastos com data até o dia 15 (ou até o dia 30) do mês.
 - **Saldo próprio**: saldo do mês + gastos de terceiros − reembolsos de terceiros.
+- **Total de crédito**: soma dos gastos com forma de pagamento crédito (cartão ou fixo no crédito).
 - Valores em dinheiro: inteiros em centavos. Mês: texto `AAAA-MM`.
 
 ## Functional Requirements
@@ -54,8 +55,8 @@ O Nize é a versão web da planilha "Finanças 2026". A usuária lança gastos e
   - _Acceptance_: pessoa desativada não aparece no formulário, mas lançamentos antigos continuam exibindo-a.
 
 ### Lançamentos de gastos
-- **REQ-015**: A usuária shall poder lançar gasto fixo com nome, categoria, valor, forma de pagamento (Pix), data e marca "pago".
-  - _Acceptance_: o fixo aparece na lista de Fixos do mês e entra no total de fixos e no total de gastos.
+- **REQ-015**: A usuária shall poder lançar gasto fixo com nome, categoria, valor, forma de pagamento (Pix ou crédito, este com cartão opcional; ex.: assinatura paga no cartão), data e marca "pago".
+  - _Acceptance_: o fixo aparece na lista de Fixos do mês e entra no total de fixos e no total de gastos. Um fixo no crédito também entra no total de crédito e no resumo por cartão.
 - **REQ-016**: A usuária shall poder lançar gasto de cartão de crédito com nome, categoria, valor, cartão, data e parcelas.
   - _Acceptance_: o gasto aparece na lista de Cartão do mês e entra no total de gastos.
 - **REQ-017**: A usuária shall poder marcar um gasto de terceiro informando a pessoa e o cartão usado.
@@ -69,7 +70,7 @@ O Nize é a versão web da planilha "Finanças 2026". A usuária lança gastos e
 - **REQ-021**: O sistema shall exibir o indicador de parcela no formato "N/M" no mês.
   - _Acceptance_: lançamento com parcela 7 de 12 aparece como "7/12".
 - **REQ-022**: Ao abrir um mês pela primeira vez, o sistema shall copiar os fixos do mês anterior com "pago" desmarcado e criar as parcelas (de gastos e de entradas parceladas) que caem nele.
-  - _Acceptance_: cenários "Carga ao abrir um mês" do PDF passam; gastos avulsos não são copiados; parcela 12/12 não gera nova parcela; parcelas já geradas não são recriadas; abrir o mesmo mês duas vezes não duplica nada; a virada dez→jan segue a mesma regra e abre o novo ano.
+  - _Acceptance_: a próxima parcela também é criada para parcelas lançadas à mão, mas só com a permissão de parcelas automáticas ligada (desligada: só os fixos são copiados); cenários "Carga ao abrir um mês" do PDF passam; gastos avulsos não são copiados; parcela 12/12 não gera nova parcela; parcelas já geradas não são recriadas; abrir o mesmo mês duas vezes não duplica nada; a virada dez→jan segue a mesma regra e abre o novo ano.
 - **REQ-023**: A usuária shall poder editar e excluir qualquer dado (lançamentos, entradas, categorias, cartões, pessoas), inclusive o que foi carregado automaticamente.
   - _Acceptance_: editar um fixo carregado no mês não altera o mês anterior.
 
@@ -161,3 +162,5 @@ O Nize é a versão web da planilha "Finanças 2026". A usuária lança gastos e
 |---|---|---|
 | 0.1.0 | 2026-11-01 | Initial spec, derivada do PDF do MVP web |
 | 0.1.1 | 2026-11-01 | REQ-046 (idioma da interface en/pt) |
+| 0.1.2 | 2026-11-01 | REQ-015: fixo pode ser pago no crédito; glossário "Total de crédito" |
+| 0.1.3 | 2026-11-01 | REQ-022: carga continua parcelas à mão e respeita a permissão |

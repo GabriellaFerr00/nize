@@ -18,4 +18,6 @@ public interface PersonRepository extends JpaRepository<Person, Long> {
     boolean existsByUserIdAndYearNumberAndNameIgnoreCase(Long userId, int yearNumber, String name);
 
     boolean existsByUserIdAndYearNumberAndNameIgnoreCaseAndIdNot(Long userId, int yearNumber, String name, Long id);
+
+    Optional<Person> findByUserIdAndYearNumberAndNameIgnoreCase(Long userId, int yearNumber, String name);
 }

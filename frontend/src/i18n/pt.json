@@ -44,7 +44,12 @@
     "CATEGORY_IN_USE": "Esta categoria ainda tem lançamentos.",
     "YEAR_ALREADY_EXISTS": "Esse ano já existe na sua conta.",
     "INVALID_YEAR": "Informe um ano entre 2000 e 2100.",
-    "NOT_FOUND": "Não encontramos esse item. Atualize a página."
+    "NOT_FOUND": "Não encontramos esse item. Atualize a página.",
+    "INVALID_EXPENSE": "Essa combinação não é permitida. Confira tipo, forma de pagamento, cartão, pessoa e parcelas.",
+    "INVALID_MONTH": "Mês inválido.",
+    "DATE_OUT_OF_MONTH": "A data precisa estar dentro do mês.",
+    "INACTIVE_REFERENCE": "A categoria, o cartão ou a pessoa escolhida está desativada.",
+    "REFERENCE_UNAVAILABLE": "As parcelas passam para um ano em que a categoria, o cartão ou a pessoa não existe mais. Ajuste os cadastros desse ano."
   },
   "auth": {
     "fields": {
@@ -155,5 +160,55 @@
     "yearNumber": "Ano",
     "createYear": "Criar ano",
     "yearCreated": "Ano {{year}} criado."
+  },
+  "expense": {
+    "new": "Novo lançamento",
+    "title": "Novo lançamento",
+    "saved": "Lançamento salvo.",
+    "saveAndAnother": "Salvar e lançar outro",
+    "choose": "Escolha…",
+    "noCard": "Sem cartão",
+    "nobody": "Ninguém (gasto meu)",
+    "fields": {
+      "name": "Nome",
+      "amount": "Valor (R$)",
+      "type": "Tipo",
+      "payment": "Forma de pagamento",
+      "category": "Categoria",
+      "card": "Cartão",
+      "person": "Pessoa (gasto de terceiro)",
+      "date": "Data",
+      "paid": "Já foi pago"
+    },
+    "type": {
+      "FIXED": "Fixo",
+      "CARD": "Cartão de crédito"
+    },
+    "payment": {
+      "PIX": "Pix",
+      "CREDIT": "Crédito"
+    },
+    "parceling": {
+      "title": "Parcelas",
+      "mode": "Como lançar",
+      "none": "À vista (sem parcelas)",
+      "auto": "Parcelas automáticas",
+      "manual": "Uma parcela já existente",
+      "count": "Número de parcelas",
+      "amountIs": "O valor informado é",
+      "total": "O valor total da compra",
+      "each": "O valor de cada parcela",
+      "current": "Parcela atual",
+      "totalCount": "Total de parcelas"
+    },
+    "errors": {
+      "name": "Informe um nome.",
+      "amount": "Informe um valor maior que zero, como 49,90.",
+      "category": "Escolha uma categoria.",
+      "date": "Escolha uma data dentro do mês {{month}}.",
+      "autoCount": "Informe de 2 a 120 parcelas.",
+      "manualCount": "Informe o total de parcelas, de 2 a 120.",
+      "manualNumber": "A parcela atual deve estar entre 1 e o total."
+    }
   }
 }

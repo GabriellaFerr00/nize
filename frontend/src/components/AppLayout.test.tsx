@@ -26,8 +26,9 @@ describe('app shell', () => {
   })
 
   it('redirects / to the current month', () => {
-    renderAt('/')
-    expect(screen.getByRole('heading', { name: 'Mês' })).toBeInTheDocument()
+    const router = renderAt('/')
+    expect(router.state.location.pathname).toMatch(/^\/month\/\d{4}-\d{2}$/)
+    expect(screen.getByRole('button', { name: 'Novo lançamento' })).toBeInTheDocument()
   })
 
   it('links every menu entry in both menus', () => {

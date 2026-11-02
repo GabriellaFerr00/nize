@@ -1,5 +1,5 @@
 # tasks.md
-> Nize — Version 0.1.1 (MVP web) — 2026-11-01
+> Nize — Version 0.1.2 (MVP web) — 2026-11-01
 
 ## Legend
 - [ ] Not started
@@ -87,31 +87,31 @@ Nomes em inglês: ver "Nomenclatura em inglês" em `design.md` (os termos em por
 *Goal*: Usuária lança fixos e cartão, com parcelas corretas e carga automática ao abrir um mês.
 *Antes de começar*: resolver Open Questions de crédito sem cartão, fixo com cartão e padrão de parcelas automáticas.
 
-- [ ] **TASK-021** [REQ-020, NFR-003]: **Teste primeiro**, depois `regras.Parcelas.dividirTotal` e `dividirPorValor`.
+- [x] **TASK-021** [REQ-020, NFR-003]: **Teste primeiro**, depois `regras.Parcelas.dividirTotal` e `dividirPorValor`.
   - _Output_: testes dos cenários "Compra dividida sem perder centavos" e de parcelas automáticas; classe pura.
   - _Verify_: 3333/3333/3334; 4×5000; propriedade: soma das parcelas = total para totais e n variados.
-- [ ] **TASK-022** [REQ-021, NFR-003]: Teste e implementação do indicador "N/M".
+- [x] **TASK-022** [REQ-021, NFR-003]: Teste e implementação do indicador "N/M".
   - _Output_: `regras.IndicadorParcela`.
   - _Verify_: 7 de 12 → "7/12"; sem parcelas → vazio.
-- [ ] **TASK-023** [REQ-015, REQ-016, REQ-017, REQ-019]: Migração V3 com `lancamento` e entidade/repositório; criação de lançamento único (fixo e cartão, terceiro, parcela manual).
+- [~] **TASK-023** [REQ-015, REQ-016, REQ-017, REQ-019]: Migração V3 com `lancamento` e entidade/repositório; criação de lançamento único (fixo e cartão, terceiro, parcela manual).
   - _Output_: `V3__lancamentos.sql`, `POST /api/meses/{mes}/lancamentos`.
-  - _Verify_: testes de criação; `data` fora do `mes` rejeitada; `valor_centavos ≤ 0` rejeitado.
-- [ ] **TASK-024** [REQ-018, REQ-009, REQ-020]: Geração de parcelas automáticas (`gerarParcelas`) respeitando a permissão e usando `grupo_parcela_id`.
+  - _Verify_: testes de criação; `data` fora do `mes` rejeitada; `valor_centavos ≤ 0` rejeitado. Aplicar as "Regras de consistência do lançamento" do `design.md` (fixo no crédito permitido; cartão só em crédito; parcelas só em tipo cartão). **Pendente: aplicar V3 no MySQL (validação do Hibernate); H2 verde (162 testes).**
+- [x] **TASK-024** [REQ-018, REQ-009, REQ-020]: Geração de parcelas automáticas (`gerarParcelas`) respeitando a permissão e usando `grupo_parcela_id`.
   - _Output_: serviço e testes.
   - _Verify_: cenários "Parcelas automáticas" do PDF (inclui permissão desligada e sem parcelas).
-- [ ] **TASK-025** [REQ-023, REQ-015, REQ-033]: Editar, excluir e marcar como pago (`PUT`, `DELETE`, `PATCH .../pago`).
+- [x] **TASK-025** [REQ-023, REQ-015, REQ-033]: Editar, excluir e marcar como pago (`PUT`, `DELETE`, `PATCH .../pago`).
   - _Output_: endpoints e testes.
   - _Verify_: marcar pago não muda `valor_centavos`; isolamento ok.
-- [ ] **TASK-026** [REQ-022, NFR-003]: **Teste primeiro**, depois `regras.CargaDoMes` (puro): fixos sem "pago", próxima parcela, última parcela não se repete, parcelas já geradas não se repetem.
+- [x] **TASK-026** [REQ-022, NFR-003]: **Teste primeiro**, depois `regras.CargaDoMes` (puro): fixos sem "pago", próxima parcela, última parcela não se repete, parcelas já geradas não se repetem.
   - _Output_: testes dos 3+1 cenários "Carga ao abrir um mês" e "Parcelas geradas não se repetem".
   - _Verify_: todos verdes.
-- [ ] **TASK-027** [REQ-022]: Migração `mes_carregado` e serviço que aplica `CargaDoMes` na primeira abertura do mês (idempotente), incluindo a virada dez→jan.
+- [x] **TASK-027** [REQ-022]: Migração `mes_carregado` e serviço que aplica `CargaDoMes` na primeira abertura do mês (idempotente), incluindo a virada dez→jan.
   - _Output_: migração, serviço.
-  - _Verify_: abrir o mês 2× não duplica; dezembro → janeiro abre o novo ano e copia estrutura.
-- [ ] **TASK-028** [REQ-023, REQ-004]: Testes de isolamento de todos os endpoints de lançamento.
+  - _Verify_: abrir o mês 2× não duplica; dezembro → janeiro abre o novo ano e copia estrutura. Verificado no H2 (`MonthLoadServiceTest`); **a V4 também precisa ser aplicada no MySQL** (junto da V3, TASK-023). O serviço `MonthLoadService.open` ainda não é chamado por nenhum endpoint: a TASK-034 (`GET /api/months/{mes}`) vai chamá-lo.
+- [x] **TASK-028** [REQ-023, REQ-004]: Testes de isolamento de todos os endpoints de lançamento.
   - _Output_: testes.
-  - _Verify_: usuária B recebe 404 em PUT/DELETE/PATCH de lançamento de A.
-- [ ] **TASK-029** [REQ-016, REQ-017, REQ-018, REQ-019, REQ-042]: Janela "Novo lançamento" no front (nome, valor, categoria, tipo, cartão, pessoa, data, parcelas automáticas ou mês a mês, salvar e lançar outro).
+  - _Verify_: usuária B recebe 404 em PUT/DELETE/PATCH de lançamento de A. Coberto em `ExpenseCreateApiTest` (POST com categoria/cartão/pessoa alheios → 404, `userId` no corpo ignorado) e `ExpenseEditApiTest` (PUT/PATCH/DELETE → 404 e nada muda); o `GET` do mês entra na TASK-034.
+- [x] **TASK-029** [REQ-016, REQ-017, REQ-018, REQ-019, REQ-042]: Janela "Novo lançamento" no front (nome, valor, categoria, tipo, cartão, pessoa, data, parcelas automáticas ou mês a mês, salvar e lançar outro).
   - _Output_: componente de formulário e integração.
   - _Verify_: Vitest do formulário; lançar 3 gastos seguidos sem fechar a janela.
 

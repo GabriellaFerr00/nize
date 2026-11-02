@@ -1,5 +1,5 @@
 # design.md
-> Nize — Version 0.1.6 (MVP web) — 2026-11-01
+> Nize — Version 0.1.9 (MVP web) — 2026-11-01
 
 ## Architecture Overview
 Monorepo com dois módulos independentes: `backend` (API REST) e `frontend` (SPA). **Toda regra de cálculo vive só no back-end** (totais, saldo, posição por quinzena, parcelas, carga do mês, saldo próprio, porcentagens). O front apenas exibe o que a API devolve e nunca recalcula valores. Como back (Java) e front (TypeScript) não compartilham código, o "pacote de regras compartilhado" do PDF vira o pacote Java `br.com.nize.rules`, puro (sem Spring, sem JPA), testado antes do código.
@@ -40,7 +40,7 @@ Monorepo com dois módulos independentes: `backend` (API REST) e `frontend` (SPA
 | D-10 | **Todo identificador técnico em inglês**: pacotes, classes, métodos, tabelas, colunas, rotas e JSON (ver "Nomenclatura em inglês"). Os termos em português nas seções abaixo são do domínio do PDF e mapeiam para os nomes em inglês | Decisão da usuária, 2026-11-01 |
 | D-12 | Sessão no front: token JWT guardado em `localStorage` (`nize.auth`, com a hora de expiração); ao expirar ou receber 401 a sessão é limpa e a usuária volta a `/sign-in`. Risco aceito no MVP: XSS poderia ler o token | Decisão da usuária, 2026-11-01 |
 | D-11 | O front tem i18n com inglês e português; a usuária escolhe o idioma da interface (REQ-046). Só texto exibido é traduzido; valores e regras continuam vindo da API | Decisão da usuária, 2026-11-01 |
-| D-9 | Posição por quinzena usa "data efetiva": Pix = `data`; crédito = dia de vencimento do cartão dentro do mês do lançamento; crédito sem cartão = `data` (a confirmar) | REQ-032 |
+| D-9 | Posição por quinzena usa "data efetiva" (pela forma de pagamento, não pelo tipo): Pix = `data`; crédito com cartão = dia de vencimento do cartão dentro do mês do lançamento; crédito sem cartão = `data` (confirmado 2026-11-01) | REQ-032 |
 
 ## Nomenclatura em inglês
 As seções de modelo de dados, regras e API abaixo foram escritas em português (termos do PDF). Na implementação valem os nomes em inglês desta tabela; onde a spec diz `lancamento`, leia `expense`, etc. Mudar um nome aqui exige atualizar esta tabela primeiro.
@@ -49,7 +49,7 @@ As seções de modelo de dados, regras e API abaixo foram escritas em português
 |---|---|
 | usuario / usuario_id | `app_user` / `user_id` |
 | configuracao / ano_vigente / parcelas_automaticas | `settings` / `current_year` / `auto_installments` |
-| ano (tabela) / ano (coluna) / mes | `user_year` / `year_number` / `month` (`YYYY-MM`). `year` é palavra reservada no H2, por isso não é usado como nome de tabela ou coluna |
+| ano (tabela) / ano (coluna) / mes | `user_year` / `year_number` / `month_ref` (`YYYY-MM`). `year` e `month` são palavras reservadas no H2, por isso não são usados como nome de tabela ou coluna; a data do lançamento é `expense_date` |
 | token_recuperacao_senha | `password_reset_token` |
 | categoria / cartao / pessoa | `category` / `card` / `person` |
 | lancamento (tipo `fixo`, `cartao`) | `expense` (type `FIXED`, `CARD`) |
@@ -147,7 +147,7 @@ Convenções: todas as tabelas têm `usuario_id BIGINT NOT NULL` (FK `usuario.id
 | categoria_id | BIGINT | NOT NULL, FK categoria | |
 | valor_centavos | BIGINT | NOT NULL, CHECK > 0 | |
 | tipo | VARCHAR(10) | NOT NULL, CHECK in ('fixo','cartao') | |
-| forma_pagamento | VARCHAR(10) | NOT NULL, CHECK in ('pix','credito') | fixo → pix; cartao → credito |
+| forma_pagamento | VARCHAR(10) | NOT NULL, CHECK in ('pix','credito') | independente do tipo: fixo pode ser pix ou crédito (ex.: assinatura no cartão); cartao é sempre crédito |
 | cartao_id | BIGINT | NULL, FK cartao | só crédito; NULL = "Sem cartão" |
 | pessoa_id | BIGINT | NULL, FK pessoa | NOT NULL = gasto de terceiro (REQ-017) |
 | pago | BOOLEAN | NOT NULL, default false | só controle (REQ-033) |
@@ -157,6 +157,12 @@ Convenções: todas as tabelas têm `usuario_id BIGINT NOT NULL` (FK `usuario.id
 | grupo_parcela_id | CHAR(36) | NULL | UUID comum às parcelas de uma compra |
 
 Restrições: UNIQUE (`grupo_parcela_id`, `parcela_atual`) onde não nulos; `parcela_atual` e `parcelas_total` ambos nulos ou ambos preenchidos.
+
+Regras de consistência do lançamento (validadas no serviço; as CHECK do banco cobrem as simples):
+- `tipo = cartao` ⇒ `forma_pagamento = credito`. `tipo = fixo` ⇒ `forma_pagamento` pix **ou** crédito.
+- `cartao_id` só com `forma_pagamento = credito`; crédito sem `cartao_id` é "Sem cartão".
+- Parcelas (`parcela_atual`/`parcelas_total`/`grupo_parcela_id`) só em `tipo = cartao`.
+- Um fixo no crédito continua na lista de Fixos e entra em `totalFixos`; também entra em "total de crédito" e no resumo por cartão.
 
 ### entrada
 | Field | Type | Constraints | Notes |
@@ -218,7 +224,7 @@ Semeadas em `category` para cada ano novo (REQ-010). A usuária pode renomear, d
 | resumoPorCategoria | Σ por categoria; % = valor ÷ totalGastos (2 casas, HALF_UP só na exibição) | REQ-035 |
 | resumoPorForma / PorCartão | Σ por forma de pagamento; Σ por cartão com grupo "Sem cartão" | REQ-036/037 |
 | resumoPorPessoa | Σ gastos com pessoa_id, por pessoa e por cartão | REQ-038 |
-| cargaDoMês(mesAnterior, mês) | copia fixos (pago=false, sem avulsos); cria parcela N+1 se N < total e `(grupo, N+1)` não existe; idem entradas parceladas; só se o mês não está em `mes_carregado` | REQ-022 |
+| cargaDoMês(mesAnterior, mês) | copia os fixos (pago=false; gastos avulsos não são copiados); para cada parcela N/M do mês anterior com N < M cria a parcela N+1, **se a permissão de parcelas automáticas está ligada**, e se `(grupo, N+1)` ainda não existe (vale também para parcelas lançadas à mão, que recebem grupo próprio ao serem criadas); idem entradas parceladas; só se o mês não está em `loaded_month`. Referências (categoria, cartão, pessoa) trocam de ano pelo nome; item cuja categoria não existe no ano novo é ignorado | REQ-022 |
 
 Porcentagem é o único valor não inteiro e só existe na resposta da API/exibição; nunca é usada para somar.
 
@@ -304,10 +310,10 @@ groupId `br.com.nize`, artifactId `nize-backend`, pacote raiz `br.com.nize`.
 - [x] ~~Versão do Spring Boot~~ — resolvido em 2026-11-01: 4.0.9 (última 4.0.x estável; a 4.1.2 existe e pode ser adotada depois).
 - [x] ~~groupId / pacote Java raiz~~ — resolvido em 2026-11-01: `br.com.nize`.
 - [x] ~~Recuperação de senha~~ — resolvido em 2026-11-01: token no log em dev, atrás da interface `EmailSender`.
-- [ ] **Padrão de `parcelas_automaticas`**: ligado ou desligado em conta nova? Proposto: ligado.
-- [ ] **Crédito sem cartão** na posição por quinzena: proposto usar `data` do lançamento.
-- [ ] **Fixo com cartão?** O PDF define fixo como Pix. Proposto: fixo sempre `forma_pagamento = pix`.
-- [ ] **Compra parcelada em cartão com vencimento diferente do mês**: proposto que cada parcela caia no mês em que aparece, com dia de vencimento daquele mês.
+- [x] ~~Padrão de `parcelas_automaticas`~~ — resolvido em 2026-11-01: ligado em conta nova.
+- [x] ~~Crédito sem cartão~~ — resolvido em 2026-11-01: usa a `data` do lançamento.
+- [x] ~~Fixo com cartão~~ — resolvido em 2026-11-01: **pode**. Há fixos pagos no crédito (ex.: assinaturas); fixo e forma de pagamento são independentes (ver "Regras de consistência do lançamento"). Diverge do PDF; decisão da usuária.
+- [x] ~~Parcela e vencimento~~ — resolvido em 2026-11-01: cada parcela pesa no mês em que aparece, com o dia de vencimento do cartão naquele mês.
 - [ ] **Hospedagem final** (provisório: Render + Vercel/Netlify/Cloudflare Pages + H2).
 - [ ] **Cucumber ou JUnit** para os cenários Gherkin do PDF. Proposto: JUnit 5 com nomes iguais aos cenários, sem Cucumber.
 - [ ] **Meta de desempenho NFR-007** é proposta da spec; confirmar.
@@ -323,3 +329,6 @@ groupId `br.com.nize`, artifactId `nize-backend`, pacote raiz `br.com.nize`.
 | 0.1.4 | 2026-11-01 | Rotas do front em inglês; estrutura do front: `pages/`, `components/`, `api/`, `styles/`, `i18n/` |
 | 0.1.5 | 2026-11-01 | D-12 (token em localStorage), rota `/reset-password`, pastas `lib/` e `test/` do front |
 | 0.1.6 | 2026-11-01 | Descrições das 15 categorias reescritas com texto próprio (REQ-045); lista guardada em `DefaultCategories` |
+| 0.1.7 | 2026-11-01 | Fixo pode ser no crédito (tipo e forma de pagamento independentes); regras de consistência do lançamento; Open Questions da Phase 3 resolvidas |
+| 0.1.8 | 2026-11-01 | `month` reservado no H2: coluna `month_ref`; data do lançamento `expense_date` |
+| 0.1.9 | 2026-11-01 | Carga do mês: continua parcelas à mão (grupo próprio) e respeita a permissão de parcelas automáticas |

@@ -1,11 +1,12 @@
-import { useId, type InputHTMLAttributes } from 'react'
+import { useId, type InputHTMLAttributes, type Ref } from 'react'
 
 type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'id'> & {
   label: string
   error?: string | null
+  ref?: Ref<HTMLInputElement>
 }
 
-export function TextField({ label, error, ...input }: Props) {
+export function TextField({ label, error, ref, ...input }: Props) {
   const id = useId()
   const errorId = `${id}-error`
   return (
@@ -14,6 +15,7 @@ export function TextField({ label, error, ...input }: Props) {
         {label}
       </label>
       <input
+        ref={ref}
         id={id}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? errorId : undefined}
