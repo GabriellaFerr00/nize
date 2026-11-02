@@ -82,7 +82,9 @@ jobs:
       - name: trufflehog (whole history, verified and unknown secrets)
         run: |
           docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -v "$PWD:/repo" "$TRUFFLEHOG_IMAGE" \
-            git file:///repo --results=verified,unknown --fail --no-update
+            git file:///repo --results=verified,unknown --fail --no-update --exclude-detectors=JDBC
+          # JDBC is excluded: it flags every credential-less URL (docs, tests, CI). A JDBC URL with a
+          # password is still blocked by gitleaks (rule nize-jdbc-url-with-password).
       - name: CPF and card numbers (Luhn) in tracked files
         run: python3 -I scripts/ci/check_pii.py
       - name: No dumps, backups, CSV or env files tracked
@@ -223,12 +225,25 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: trivy fs report (SARIF + medium/low list)
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+      # Scan the built jar: exactly the libraries that ship, resolved by Maven (with cache) instead of
+      # trivy walking pom.xml against Maven Central (which rate-limits CI runners).
+      - name: Build the jar
+        working-directory: backend
+        run: |
+          ./mvnw -B -ntp -q -DskipTests -Djacoco.skip=true package
+          mkdir -p ../deps && cp target/nize-backend-*.jar ../deps/
+      - name: trivy report (SARIF + medium/low list)
         run: |
           mkdir -p findings
-          docker run --rm -v "$PWD/backend:/src:ro" -v "$PWD:/out" "$TRIVY_IMAGE" fs --quiet --scanners vuln \
+          docker run --rm -v "$PWD/deps:/src:ro" -v "$PWD:/out" "$TRIVY_IMAGE" rootfs --quiet --scanners vuln \
             --format sarif --output /out/trivy-maven.sarif /src
-          docker run --rm -v "$PWD/backend:/src:ro" "$TRIVY_IMAGE" fs --quiet --scanners vuln \
+          docker run --rm -v "$PWD/deps:/src:ro" "$TRIVY_IMAGE" rootfs --quiet --scanners vuln \
             --severity MEDIUM,LOW --format json /src > trivy-maven-medium.json
           python3 -I - > findings/trivy-maven.md <<'PY'
           import json
@@ -243,7 +258,7 @@ jobs:
           category: trivy-maven
       - name: Gate (critical/high block)
         run: |
-          docker run --rm -v "$PWD/backend:/src:ro" "$TRIVY_IMAGE" fs --quiet --scanners vuln \
+          docker run --rm -v "$PWD/deps:/src:ro" "$TRIVY_IMAGE" rootfs --quiet --scanners vuln \
             --exit-code 1 --ignore-unfixed --severity CRITICAL,HIGH /src
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
@@ -402,7 +417,8 @@ jobs:
   db-security:
     name: Migrations and DB privileges (throwaway MySQL)
     # In the pipelines the integration job runs these same checks; forks have no secrets.
-    if: inputs.scope != 'frontend' && inputs.run_tests != false && github.event.pull_request.head.repo.fork != true
+    # github.workflow is the caller's name when called; "Security" means it runs on its own.
+    if: inputs.scope != 'frontend' && (github.workflow == 'Security' || inputs.run_tests) && github.event.pull_request.head.repo.fork != true
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     services:
@@ -456,7 +472,7 @@ jobs:
 
   security-tests:
     name: Security tests (JUnit, ArchUnit, isolation)
-    if: inputs.scope != 'frontend' && inputs.run_tests != false
+    if: inputs.scope != 'frontend' && (github.workflow == 'Security' || inputs.run_tests)
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:

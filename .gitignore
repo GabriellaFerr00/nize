@@ -15,3 +15,6 @@ frontend/dist/
 !scripts/ci/*.sql
 .env.*
 !.env.example
+
+# CI scratch (security.yml)
+deps/
