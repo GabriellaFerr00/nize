@@ -1,8 +1,8 @@
 # design.md
-> Nize — Version 0.2.3 (MVP web) — 2026-11-04
+> Nize — Version 0.2.4 (MVP web) — 2026-11-04
 
 ## Architecture Overview
-Monorepo com dois módulos independentes: `backend` (API REST) e `frontend` (SPA). **Toda regra de cálculo vive só no back-end** (totais, saldo, posição por quinzena, parcelas, carga do mês, saldo próprio, porcentagens). O front apenas exibe o que a API devolve e nunca recalcula valores. Como back (Java) e front (TypeScript) não compartilham código, o "pacote de regras compartilhado" do PDF vira o pacote Java `br.com.nize.rules`, puro (sem Spring, sem JPA), testado antes do código.
+Monorepo com dois módulos independentes: `backend` (API REST) e `frontend` (SPA). **Toda regra de cálculo vive só no back-end** (totais, saldo, posição nos fechamentos, parcelas, carga do mês, saldo próprio, porcentagens). O front apenas exibe o que a API devolve e nunca recalcula valores. Como back (Java) e front (TypeScript) não compartilham código, o "pacote de regras compartilhado" do PDF vira o pacote Java `br.com.nize.rules`, puro (sem Spring, sem JPA), testado antes do código.
 
 **Stack**
 - Back-end: Java 25, Spring Boot **4.0.9** (Web, Security, Data JPA, Validation), Maven. Toolchain local: Temurin 25 + Maven 3.9.16 em `~/tools`.
@@ -63,7 +63,8 @@ As seções de modelo de dados, regras e API abaixo foram escritas em português
 |---|---|
 | usuario / usuario_id | `app_user` / `user_id` |
 | configuracao / ano_vigente / parcelas_automaticas | `settings` / `current_year` / `auto_installments` |
-| ano (tabela) / ano (coluna) / mes | `user_year` / `year_number` / `month_ref` (`YYYY-MM`). `year` e `month` são palavras reservadas no H2, por isso não são usados como nome de tabela ou coluna; a data do lançamento é `expense_date` |
+| fechamentos_ativos / dia_fechamento / dia | `closings_enabled` / `closing_day` / `day_number` |
+| ano (tabela) / ano (coluna) / mes | `user_year` / `year_number` / `month_ref` (`YYYY-MM`). `year` e `month` são palavras reservadas no H2, por isso não são usados como nome de tabela ou coluna; a data do lançamento é `expense_date` e a da entrada, `income_date` |
 | token_recuperacao_senha | `password_reset_token` |
 | categoria / cartao / pessoa | `category` / `card` / `person` |
 | lancamento (tipo `fixo`, `cartao`) | `expense` (type `FIXED`, `CARD`) |
@@ -85,7 +86,7 @@ As seções de modelo de dados, regras e API abaixo foram escritas em português
 | rotas do front `/mes/:aaaa-mm`, `/panorama/:ano` | `/month/:yyyy-mm`, `/overview/:year` |
 | rotas do front `/categorias`, `/cartoes`, `/pessoas`, `/configuracoes` | `/categories`, `/cards`, `/people`, `/settings` |
 
-Nomes de classes de regras: `Installments`, `InstallmentIndicator`, `MonthLoad`, `MonthTotals`, `FortnightPosition`, `OwnBalance`, `CategorySummary` etc. (mesma ordem das regras em português). Textos de erro e de interface são tratados pelo i18n (D-11); a API devolve códigos de erro estáveis em inglês.
+Nomes de classes de regras: `Installments`, `InstallmentIndicator`, `MonthLoad`, `MonthTotals`, `ClosingPositions`, `OwnBalance`, `CategorySummary` etc. (mesma ordem das regras em português). Textos de erro e de interface são tratados pelo i18n (D-11); a API devolve códigos de erro estáveis em inglês.
 
 ## Data Models
 Convenções: todas as tabelas têm `usuario_id BIGINT NOT NULL` (FK `usuario.id`) e índice por ele. `ano` é `SMALLINT`. Datas são `DATE`.
@@ -115,6 +116,13 @@ Convenções: todas as tabelas têm `usuario_id BIGINT NOT NULL` (FK `usuario.id
 | usuario_id | BIGINT | PK, FK | uma linha por usuária |
 | ano_vigente | SMALLINT | NOT NULL | REQ-006 |
 | parcelas_automaticas | BOOLEAN | NOT NULL, default true | REQ-009 (padrão a confirmar) |
+| fechamentos_ativos | BOOLEAN | NOT NULL, default true | REQ-048 |
+
+### dia_fechamento
+| Field | Type | Constraints | Notes |
+|---|---|---|---|
+| usuario_id | BIGINT | PK (com dia), FK | REQ-048 |
+| dia | SMALLINT | PK (com usuario_id), CHECK 1–31 | dia além do fim do mês vale como último dia; conta nova recebe 15 e 31 (a migração também, para as contas existentes) |
 
 ### ano
 | Field | Type | Constraints | Notes |
@@ -201,7 +209,7 @@ Regras de consistência do lançamento (validadas no serviço; as CHECK do banco
 
 **Relationships**: usuario 1—N de todas as tabelas; lancamento N—1 categoria, cartao (opcional), pessoa (opcional); entrada N—1 pessoa (opcional). Tabelas de fase 2 (`aporte_investimento`, `meta`, `aporte_meta`) **não** são criadas no MVP.
 
-**Valores derivados (não persistidos, NFR-002)**: total de gastos, total de fixos, saldo, posição dia 15/30, saldo próprio, resumos e porcentagens.
+**Valores derivados (não persistidos, NFR-002)**: total de gastos, total de fixos, saldo, posições nos fechamentos, saldo próprio, resumos e porcentagens.
 
 ## Categorias de fábrica
 Semeadas em `category` para cada ano novo (REQ-010). A usuária pode renomear, desativar, criar e excluir (REQ-011/012). Os nomes seguem a lista do produto; as descrições têm texto próprio do Nize (REQ-045). O código guarda esta lista em `DefaultCategories`; se mudar aqui, mude lá (e vice-versa).
@@ -231,7 +239,7 @@ Semeadas em `category` para cada ano novo (REQ-010). A usuária pode renomear, d
 | totalFixos | Σ valor de lancamento tipo fixo | REQ-028 |
 | saldo | Σ entradas − totalGastos | REQ-029 |
 | dataEfetiva | Pix: `data`; crédito com cartão: dia `min(dia_vencimento, último dia do mês)` do `mes` do lançamento; crédito sem cartão: `data` | REQ-032 |
-| posição(limite) | Σ entradas com `data.dia ≤ limite` − Σ gastos com `dataEfetiva.dia ≤ limite`; limite 30 = último dia do mês | REQ-030/031 |
+| posições(dias) | para cada dia de fechamento d: limite = `min(d, último dia do mês)`; posição = Σ entradas com `data.dia ≤ limite` − Σ gastos com `dataEfetiva.dia ≤ limite`. Em ordem crescente de limite; dias que caem no mesmo limite (30 e 31 em fevereiro) dão uma posição só. Fechamentos desligados ou sem dias → nenhuma posição | REQ-030/031/048 |
 | saldoPróprio | saldo + Σ gastos com pessoa_id − Σ entradas com pessoa_id | REQ-034 |
 | dividirParcelas(total, n) | base = total ÷ n (inteira); n−1 parcelas = base; última = total − base×(n−1) | REQ-020 |
 | parcelasPorValor(valor, n) | n parcelas iguais | REQ-018 |
@@ -253,8 +261,8 @@ REST JSON sob `/api`. Todos os endpoints exceto `/api/auth/**` exigem `Authoriza
 | POST | /api/auth/redefinir-senha | não | REQ-003 | usa token e define nova senha |
 | GET | /api/me | sim | REQ-005 | dados da usuária e `onboarding_visto` |
 | POST | /api/me/onboarding-visto | sim | REQ-005 | marca onboarding como visto |
-| GET | /api/configuracao | sim | REQ-006, REQ-009 | ano vigente e parcelas automáticas |
-| PUT | /api/configuracao | sim | REQ-006, REQ-009 | altera configuração |
+| GET | /api/configuracao | sim | REQ-006, REQ-009, REQ-048 | ano vigente, parcelas automáticas, `closingsEnabled` e `closingDays` (crescente) |
+| PUT | /api/configuracao | sim | REQ-006, REQ-009, REQ-048 | altera configuração; `closingDays` de 1 a 31, sem repetir (senão 400 `VALIDATION_ERROR`) |
 | GET | /api/anos | sim | REQ-008 | anos existentes |
 | POST | /api/anos/{ano} | sim | REQ-007 | cria ano copiando estrutura do anterior |
 | GET | /api/anos/{ano}/categorias | sim | REQ-010 | lista |
@@ -286,7 +294,7 @@ Limite de tentativas (REQ-047): os quatro `POST /api/auth/**` devolvem 429 `{cod
 | /mes/:aaaa-mm | Mês (principal) + janela "Novo lançamento" | REQ-041, REQ-042 |
 | /panorama/:ano | Panorama anual | REQ-039 |
 | /categorias, /cartoes, /pessoas | Cadastros | REQ-044 |
-| /configuracoes | Ano vigente, parcelas automáticas | REQ-006, REQ-009 |
+| /configuracoes | Ano vigente, parcelas automáticas, fechamentos (ligar/desligar, dias) | REQ-006, REQ-009, REQ-048 |
 
 Navegação: menu lateral (≥ 768px) e barra inferior (< 768px) — REQ-043. Identidade visual própria — REQ-045.
 
@@ -382,6 +390,7 @@ GitHub Actions (detalhes em `docs/ci-cd.md`; NFR-010). **Um workflow por tema**,
 | 0.1.7 | 2026-11-01 | Fixo pode ser no crédito (tipo e forma de pagamento independentes); regras de consistência do lançamento; Open Questions da Phase 3 resolvidas |
 | 0.1.8 | 2026-11-01 | `month` reservado no H2: coluna `month_ref`; data do lançamento `expense_date` |
 | 0.1.9 | 2026-11-01 | Carga do mês: continua parcelas à mão (grupo próprio) e respeita a permissão de parcelas automáticas |
+| 0.2.4 | 2026-11-04 | Fechamentos opcionais (REQ-048): `settings.closings_enabled`, tabela `closing_day`, regra `ClosingPositions` (substitui `FortnightPosition`), `/api/settings` com `closingsEnabled`/`closingDays`. Diverge do PDF (15/30 fixos); decisão da usuária |
 | 0.2.3 | 2026-11-04 | PR do Dependabot sem preview do front e com secret próprio para o MySQL dos testes; Dependabot ignora Spring Boot ≥ 4.1 e Flyway ≥ 12; Testes integrados também rodam quando muda `backend.yml`/`frontend.yml` (senão o *gate* falha por falta de run) |
 | 0.2.2 | 2026-11-02 | Um workflow por tema (back, front, segurança, testes integrados) sem aninhamento; deploys esperam Segurança e Testes integrados do mesmo commit (job *gate*); testes integrados em dois jobs (back: MySQL + fluxo da API; front: E2E com a API em `h2`) |
 | 0.2.1 | 2026-11-02 | `ci-cd.yml` também roda em Pull Request para a `main` (o `workflow_dispatch` só existe depois que o workflow está na `main`) |

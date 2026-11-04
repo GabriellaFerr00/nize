@@ -47,6 +47,7 @@
     "INVALID_YEAR": "Enter a year between 2000 and 2100.",
     "NOT_FOUND": "We could not find this item. Refresh the page.",
     "INVALID_EXPENSE": "That combination is not allowed. Check type, payment method, card, person and installments.",
+    "INVALID_INCOME": "Check the installments: the number must be between 1 and the total (at most 120).",
     "INVALID_MONTH": "Invalid month.",
     "DATE_OUT_OF_MONTH": "The date must be inside the month.",
     "INACTIVE_REFERENCE": "The chosen category, card or person is deactivated.",
@@ -160,7 +161,17 @@
     "newYearHelp": "Creates the year copying categories, cards and people from the previous year. Older years stay editable.",
     "yearNumber": "Year",
     "createYear": "Create year",
-    "yearCreated": "Year {{year}} created."
+    "yearCreated": "Year {{year}} created.",
+    "closings": "Month closings",
+    "closingsHelp": "Shows on the month screen what is left or missing up to each chosen day. A day past the end of the month counts as the last day.",
+    "closingDays": "Closing days",
+    "closingDay": "Day {{day}}",
+    "lastDay": "Last day",
+    "newClosingDay": "New closing day",
+    "addClosingDay": "Add day",
+    "removeClosingDay": "Remove {{label}}",
+    "invalidClosingDay": "Enter a day from 1 to 31 that is not in the list yet.",
+    "noClosingDays": "No day chosen."
   },
   "expense": {
     "new": "New expense",

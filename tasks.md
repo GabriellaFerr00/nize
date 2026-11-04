@@ -144,19 +144,22 @@ Nomes em inglês: ver "Nomenclatura em inglês" em `design.md` (os termos em por
 ## Phase 4: Entradas e saldo do mês
 *Goal*: Mês mostra total de gastos, fixos, saldo, posição dia 15/30, reembolsos e saldo próprio.
 
-- [ ] **TASK-030** [REQ-027, REQ-028, REQ-029, NFR-003]: **Teste primeiro**, depois `regras.TotaisDoMes` (gastos, fixos, saldo).
+- [x] **TASK-030** [REQ-027, REQ-028, REQ-029, NFR-003]: **Teste primeiro**, depois `regras.TotaisDoMes` (gastos, fixos, saldo).
   - _Output_: testes dos cenários "Totais do mês".
   - _Verify_: 99399+494889=594288; saldo 68070.
-- [ ] **TASK-031** [REQ-030, REQ-031, REQ-032, REQ-033, NFR-003]: **Teste primeiro**, depois `regras.PosicaoPorQuinzena` com `dataEfetiva` (Pix pela data; crédito pelo vencimento; fevereiro e meses de 31 dias).
-  - _Output_: testes dos cenários "Posição por quinzena" e "Pix e crédito".
-  - _Verify_: sobra 180000; −30000; Pix 12/04 até o 15; crédito com vencimento 10 até o 15; "pago" não altera.
-- [ ] **TASK-032** [REQ-034, NFR-003]: **Teste primeiro**, depois `regras.SaldoProprio`.
+- [x] **TASK-031** [REQ-030, REQ-031, REQ-032, REQ-033, REQ-048, NFR-003]: **Teste primeiro**, depois `rules.ClosingPositions` com `dataEfetiva` (Pix pela data; crédito pelo vencimento; dias de fechamento quaisquer; dia além do fim do mês = último dia).
+  - _Output_: testes dos cenários "Posição por quinzena" e "Pix e crédito" (com os dias padrão 15 e 31) e dos fechamentos configuráveis.
+  - _Verify_: sobra 180000; −30000; Pix 12/04 até o 15; crédito com vencimento 10 até o 15; "pago" não altera; dias 5/10/20 → três posições; 30 e 31 em fevereiro → uma posição no 28/29; sem dias → nenhuma.
+- [x] **TASK-032** [REQ-034, NFR-003]: **Teste primeiro**, depois `regras.SaldoProprio`.
   - _Output_: teste e classe.
   - _Verify_: 50000, 20000, 19000 → 51000.
-- [ ] **TASK-033** [REQ-024, REQ-025, REQ-026]: Migração V4 com `entrada`; criação, edição e exclusão de entradas, parceladas e reembolso; estender `CargaDoMes` às entradas parceladas.
+- [x] **TASK-033** [REQ-024, REQ-025, REQ-026]: Migração V5 com `entrada` (`income`); criação, edição e exclusão de entradas, parceladas e reembolso; estender `CargaDoMes` às entradas parceladas.
   - _Output_: migração, serviço, endpoints, testes.
   - _Verify_: entrada 1/3 gera 2/3 e 3/3 nos meses seguintes sem duplicar; entrada com `pessoa_id` conta como reembolso; isolamento ok.
-- [ ] **TASK-034** [REQ-027..REQ-034]: Montar o bloco de totais e posições em `GET /api/meses/{mes}` a partir das regras.
+- [x] **TASK-061** [REQ-048, REQ-044]: Migração V6 (`settings.closings_enabled`, `closing_day` com 15 e 31 para as contas existentes); cadastro grava 15 e 31; `GET/PUT /api/settings` com `closingsEnabled`/`closingDays`; tela Configurações com ligar/desligar e lista de dias.
+  - _Output_: migração, serviço, testes de API e de isolamento, tela e testes Vitest.
+  - _Verify_: conta nova tem 15 e 31; dia 0, 32 ou repetido → 400; outra usuária não vê nem altera; desligar mantém os dias salvos.
+- [x] **TASK-034** [REQ-027..REQ-034, REQ-048]: Montar o bloco de totais e posições em `GET /api/meses/{mes}` a partir das regras.
   - _Output_: DTO do cabeçalho e testes de integração.
   - _Verify_: resposta bate com os exemplos do PDF; nenhuma coluna de total no banco (NFR-002).
 

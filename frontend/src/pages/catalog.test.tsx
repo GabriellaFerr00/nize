@@ -11,7 +11,7 @@ const YEARS = [
 ]
 const baseReplies = (): Replies => ({
   'GET /api/me': { body: { id: 1, name: 'Ana', email: 'a@x.com', onboardingSeen: true } },
-  'GET /api/settings': { body: { currentYear: 2026, autoInstallments: true } },
+  'GET /api/settings': { body: { currentYear: 2026, autoInstallments: true, closingsEnabled: true, closingDays: [15, 31] } },
   'GET /api/years': { body: YEARS },
 })
 
@@ -256,7 +256,7 @@ describe('people screen (REQ-014)', () => {
 
 describe('settings screen (REQ-006, REQ-007, REQ-009)', () => {
   it('shows the saved settings and saves changes', async () => {
-    const calls = stubApi({ ...baseReplies(), 'PUT /api/settings': { body: { currentYear: 2025, autoInstallments: false } } })
+    const calls = stubApi({ ...baseReplies(), 'PUT /api/settings': { body: { currentYear: 2025, autoInstallments: false, closingsEnabled: true, closingDays: [15, 31] } } })
     renderApp('/settings', { signedIn: true })
 
     const year = await screen.findByLabelText(/^Ano vigente/)
@@ -269,7 +269,50 @@ describe('settings screen (REQ-006, REQ-007, REQ-009)', () => {
     await userEvent.click(screen.getAllByRole('button', { name: 'Salvar' })[0])
 
     expect(await screen.findByText('Configurações salvas.')).toBeInTheDocument()
-    expect(calls.find((c) => c.key === 'PUT /api/settings')?.body).toEqual({ currentYear: 2025, autoInstallments: false })
+    expect(calls.find((c) => c.key === 'PUT /api/settings')?.body).toEqual({
+      currentYear: 2025, autoInstallments: false, closingsEnabled: true, closingDays: [15, 31],
+    })
+  })
+
+  it('shows the closing days and saves added, removed and turned-off closings (REQ-048)', async () => {
+    const calls = stubApi({ ...baseReplies(), 'PUT /api/settings': { body: { currentYear: 2026, autoInstallments: true, closingsEnabled: false, closingDays: [5, 31] } } })
+    renderApp('/settings', { signedIn: true })
+
+    const closings = await screen.findByRole('checkbox', { name: /Fechamentos do mês/ })
+    await waitFor(() => expect(closings).toBeChecked())
+    const list = screen.getByRole('list', { name: 'Dias de fechamento' })
+    expect(within(list).getByText('Dia 15')).toBeInTheDocument()
+    expect(within(list).getByText('Último dia')).toBeInTheDocument()
+
+    await userEvent.type(screen.getByLabelText('Novo dia de fechamento'), '5')
+    await userEvent.click(screen.getByRole('button', { name: 'Adicionar dia' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Remover Dia 15' }))
+    const items = within(list).getAllByRole('listitem')
+    expect(items).toHaveLength(2)
+    expect(within(items[0]).getByText('Dia 5')).toBeInTheDocument()
+    expect(within(items[1]).getByText('Último dia')).toBeInTheDocument()
+    await userEvent.click(closings)
+    await userEvent.click(screen.getAllByRole('button', { name: 'Salvar' })[0])
+
+    expect(await screen.findByText('Configurações salvas.')).toBeInTheDocument()
+    expect(calls.find((c) => c.key === 'PUT /api/settings')?.body).toEqual({
+      currentYear: 2026, autoInstallments: true, closingsEnabled: false, closingDays: [5, 31],
+    })
+  })
+
+  it('refuses a closing day outside 1 to 31 or already in the list', async () => {
+    stubApi(baseReplies())
+    renderApp('/settings', { signedIn: true })
+
+    const day = await screen.findByLabelText('Novo dia de fechamento')
+    await waitFor(() => expect(screen.getByText('Dia 15')).toBeInTheDocument())
+    for (const value of ['0', '32', '15', '2.5']) {
+      await userEvent.clear(day)
+      await userEvent.type(day, value)
+      await userEvent.click(screen.getByRole('button', { name: 'Adicionar dia' }))
+      expect(screen.getByText('Informe um dia de 1 a 31 que ainda não esteja na lista.')).toBeInTheDocument()
+    }
+    expect(within(screen.getByRole('list', { name: 'Dias de fechamento' })).getAllByRole('listitem')).toHaveLength(2)
   })
 
   it('creates a new year, suggesting the one after the latest', async () => {

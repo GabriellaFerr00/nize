@@ -4,6 +4,7 @@ import br.com.nize.domain.Card;
 import br.com.nize.domain.Category;
 import br.com.nize.domain.Expense;
 import br.com.nize.domain.ExpenseType;
+import br.com.nize.domain.Income;
 import br.com.nize.domain.LoadedMonth;
 import br.com.nize.domain.LoadedMonthId;
 import br.com.nize.domain.Person;
@@ -11,6 +12,7 @@ import br.com.nize.domain.UserYearId;
 import br.com.nize.repository.CardRepository;
 import br.com.nize.repository.CategoryRepository;
 import br.com.nize.repository.ExpenseRepository;
+import br.com.nize.repository.IncomeRepository;
 import br.com.nize.repository.LoadedMonthRepository;
 import br.com.nize.repository.PersonRepository;
 import br.com.nize.repository.SettingsRepository;
@@ -33,7 +35,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Opens a month for the first time: carries over what {@link MonthLoad} decides (REQ-022). Runs once per user and
+ * Opens a month for the first time: carries over what {@link MonthLoad} decides, for expenses and for incomes in
+ * installments (REQ-022, REQ-025). Runs once per user and
  * month (D-7); opening again does nothing, even if the user deleted what was carried over.
  */
 @Service
@@ -41,6 +44,7 @@ public class MonthLoadService {
 
     private final LoadedMonthRepository loaded;
     private final ExpenseRepository expenses;
+    private final IncomeRepository incomes;
     private final CategoryRepository categories;
     private final CardRepository cards;
     private final PersonRepository people;
@@ -48,11 +52,13 @@ public class MonthLoadService {
     private final UserYearRepository years;
     private final YearService yearService;
 
-    public MonthLoadService(LoadedMonthRepository loaded, ExpenseRepository expenses, CategoryRepository categories,
+    public MonthLoadService(LoadedMonthRepository loaded, ExpenseRepository expenses, IncomeRepository incomes,
+                            CategoryRepository categories,
                             CardRepository cards, PersonRepository people, SettingsRepository settings,
                             UserYearRepository years, YearService yearService) {
         this.loaded = loaded;
         this.expenses = expenses;
+        this.incomes = incomes;
         this.categories = categories;
         this.cards = cards;
         this.people = people;
@@ -71,8 +77,13 @@ public class MonthLoadService {
         }
         loaded.saveAndFlush(new LoadedMonth(userId, month.toString(), Instant.now()));
 
-        YearMonth previousMonth = month.minusMonths(1);
-        List<Expense> previous = expenses.findByUserIdAndMonthOrderByIdAsc(userId, previousMonth.toString());
+        String previousMonth = month.minusMonths(1).toString();
+        boolean automaticInstallments = settings.findById(userId).orElseThrow().isAutoInstallments();
+        loadExpenses(userId, month, expenses.findByUserIdAndMonthOrderByIdAsc(userId, previousMonth), automaticInstallments);
+        loadIncomes(userId, month, incomes.findByUserIdAndMonthOrderByIdAsc(userId, previousMonth), automaticInstallments);
+    }
+
+    private void loadExpenses(Long userId, YearMonth month, List<Expense> previous, boolean automaticInstallments) {
         if (previous.isEmpty()) {
             return;
         }
@@ -82,13 +93,49 @@ public class MonthLoadService {
         List<Decision> decisions = MonthLoad.decide(
                 previous.stream().map(MonthLoadService::toRuleInput).toList(),
                 existingInstallments(userId, previous),
-                settings.findById(userId).orElseThrow().isAutoInstallments());
+                automaticInstallments);
 
         List<Expense> created = decisions.stream()
                 .map(d -> copy(userId, month, byKey.get(d.sourceKey()), d.nextNumber()))
                 .filter(java.util.Objects::nonNull)
                 .toList();
         expenses.saveAll(created);
+    }
+
+    /** Incomes are never copied as such; only the next installment of an income in installments is created. */
+    private void loadIncomes(Long userId, YearMonth month, List<Income> previous, boolean automaticInstallments) {
+        List<Income> inInstallments = previous.stream().filter(i -> i.getInstallmentGroupId() != null).toList();
+        if (inInstallments.isEmpty()) {
+            return;
+        }
+        Map<String, Income> byKey = new HashMap<>();
+        inInstallments.forEach(i -> byKey.put(String.valueOf(i.getId()), i));
+        Set<InstallmentKey> existing = new HashSet<>();
+        incomes.findByUserIdAndInstallmentGroupIdIn(userId,
+                        inInstallments.stream().map(Income::getInstallmentGroupId).collect(Collectors.toSet()))
+                .forEach(i -> existing.add(new InstallmentKey(i.getInstallmentGroupId(), i.getInstallmentNumber())));
+
+        List<Decision> decisions = MonthLoad.decide(
+                inInstallments.stream().map(i -> new PreviousExpense(String.valueOf(i.getId()), false,
+                        i.getInstallmentGroupId(), i.getInstallmentNumber(), i.getInstallmentCount())).toList(),
+                existing, automaticInstallments);
+
+        List<Income> created = decisions.stream()
+                .map(d -> copy(userId, month, byKey.get(d.sourceKey()), d.nextNumber()))
+                .filter(java.util.Objects::nonNull)
+                .toList();
+        incomes.saveAll(created);
+    }
+
+    /** The next installment of an income; null when its person no longer exists in the target year. */
+    private Income copy(Long userId, YearMonth month, Income source, int nextNumber) {
+        Long personId = source.getPersonId() == null ? null : mapPerson(userId, month.getYear(), source.getPersonId());
+        if (source.getPersonId() != null && personId == null) {
+            return null;
+        }
+        LocalDate date = month.atDay(Math.min(source.getDate().getDayOfMonth(), month.lengthOfMonth()));
+        return new Income(userId, month.toString(), source.getName(), date, source.getAmountCents(), personId,
+                nextNumber, source.getInstallmentCount(), source.getInstallmentGroupId());
     }
 
     private static PreviousExpense toRuleInput(Expense e) {
