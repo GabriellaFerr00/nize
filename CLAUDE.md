@@ -1,10 +1,10 @@
 # CLAUDE.md
-> Nize — Spec version 0.1.9
+> Nize — Spec version 0.2.2
 
 ═══════════════════════════════════════════════════════════
 SPEC DRIVEN DEVELOPMENT — PROJECT CONSTITUTION
 Project: Nize
-Version: 0.1.9
+Version: 0.2.2
 ═══════════════════════════════════════════════════════════
 
 This project uses Spec Driven Development. All work is
@@ -85,8 +85,10 @@ Front-end (a partir da raiz):
 **Back-end**
 - Identificadores técnicos em inglês; tabela de nomes português → inglês em `design.md` ("Nomenclatura em inglês"). Mudar um nome exige atualizar essa tabela antes.
 - Usuária autenticada: use `CurrentUser.id()` (`security`); DTOs de entrada nunca têm `userId`. Linha de outra usuária → 404 (não 403).
-- Erros da API: JSON `{code, fields}` com códigos estáveis em inglês (`EMAIL_ALREADY_REGISTERED`, `INVALID_CREDENTIALS`, `INVALID_RESET_TOKEN`, `UNKNOWN_YEAR`, `VALIDATION_ERROR`); o front traduz. Todos tratados em `ApiExceptionHandler`.
+- Erros da API: JSON `{code, fields}` com códigos estáveis em inglês (`EMAIL_ALREADY_REGISTERED`, `INVALID_CREDENTIALS`, `INVALID_RESET_TOKEN`, `UNKNOWN_YEAR`, `VALIDATION_ERROR`, `TOO_MANY_ATTEMPTS`); o front traduz. Todos tratados em `ApiExceptionHandler`, inclusive os do framework (404 `NOT_FOUND`, 405 `METHOD_NOT_ALLOWED`, 415 `UNSUPPORTED_MEDIA_TYPE`, 500 `INTERNAL_ERROR`, sem detalhes no corpo).
 - Senha: 8–72 caracteres, BCrypt; nunca logada nem devolvida. Login e recuperação não revelam se o e-mail existe.
+- `/api/auth/**` tem limite de tentativas (`AttemptLimiter`, REQ-047). Nos testes, o Surefire sobe os limites; teste de limite usa `@SpringBootTest(properties=...)` com limites baixos e IPs/e-mails próprios.
+- Perfil `prod` (Render): Flyway desligado (migração é passo do CI com outro usuário), TLS obrigatório na URL (`DatabaseTlsGuard`), `DisabledEmailSender`. Só `/actuator/health` é público.
 - Cadastros por ano seguem o molde `Category*`/`Card*`/`Person*`: repositório com `userId` em toda consulta, `YearGuard` para o ano, `ResourceNotFoundException` → 404, nome único ignorando maiúsculas por ano (409 `*_NAME_TAKEN`), `PUT` com `active` obrigatório, `?active=true` na listagem.
 - Lançamentos: `ExpenseService` valida as "Regras de consistência do lançamento" (design.md); referências inativas só são aceitas se o lançamento já as usava; `month` é reservada no H2 (coluna `month_ref`). `ddl-auto: validate` exige `@JdbcTypeCode(CHAR/VARCHAR/SMALLINT)` nas colunas que não são o padrão do Hibernate (e enum como `VARCHAR`).
 - Dinheiro em JSON: `spring.jackson.deserialization.accept-float-as-int=false` (10.5 é recusado, não vira 10). No front: `parseCents`/`formatCents` em `src/lib/money.ts`, sem float.
@@ -105,6 +107,11 @@ Front-end (a partir da raiz):
 - Tema e cores só como tokens em `src/styles/index.css` (`@theme`); sem cores soltas. Layout: menu lateral ≥ 768px, barra inferior abaixo; sem rolagem horizontal.
 - Testes: `renderApp(path, {signedIn})` e `stubApi({...})` em `src/test/renderApp.tsx` (o objeto de respostas é lido a cada chamada: altere-o para simular o refetch).
 - Cadastros por ano (categorias, cartões, pessoas): reutilizar `CatalogManager` + `catalogApi`; ano da tela via `useSelectedYear` (`?year=`, padrão = ano vigente).
+
+**CI/CD** (`docs/ci-cd.md`)
+- Workflows em `.github/workflows/`; actions fixadas por SHA e scanners por digest. Validar com `docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12` antes de subir.
+- Cobertura mínima 80% (JaCoCo `coverage.min`/`coverage.rules.min`; Vitest `COVERAGE_MIN`). E2E: `npm --prefix frontend run e2e` com o back em :8080.
+- Arquivo novo de pipeline/script também precisa entrar em "File Structure" do `design.md`.
 
 **Armadilhas deste ambiente**
 - Nunca usar `pkill -f`/`pgrep -f` com texto que apareça no próprio comando (derruba o shell): encerrar servidores por PID ou porta.

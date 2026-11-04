@@ -1,5 +1,5 @@
 # tasks.md
-> Nize — Version 0.1.2 (MVP web) — 2026-11-01
+> Nize — Version 0.1.3 (MVP web) — 2026-11-01
 
 ## Legend
 - [ ] Not started
@@ -115,6 +115,32 @@ Nomes em inglês: ver "Nomenclatura em inglês" em `design.md` (os termos em por
   - _Output_: componente de formulário e integração.
   - _Verify_: Vitest do formulário; lançar 3 gastos seguidos sem fechar a janela.
 
+## Phase 3.5: CI/CD e segurança
+*Goal*: Pipeline no GitHub Actions que testa, verifica segurança e publica (Cloudflare Pages, Render, Aiven) só o que mudou. Pedido da usuária em 2026-11-01, antes da Phase 4 (design.md 0.2.0, "CI/CD", D-13 a D-18).
+
+- [x] **TASK-051** [REQ-047]: **Teste primeiro**, depois `security.AttemptLimiter` nos quatro `POST /api/auth/**` (429 `TOO_MANY_ATTEMPTS` + `Retry-After`); front traduz o código.
+  - _Verify_: `RateLimitApiTest` (6ª falha bloqueada, e-mail existente ou não, sucesso zera) e Vitest.
+- [x] **TASK-052** [NFR-008, REQ-003]: `DisabledEmailSender` no perfil `prod`; testes que capturam o log e as respostas de cadastro, login e recuperação.
+  - _Verify_: nenhuma senha, JWT ou token de recuperação no log capturado nem em resposta.
+- [x] **TASK-053** [NFR-009]: perfil `prod` (`application-prod.yml`, Flyway desligado, `PORT`, pool 5, forward headers), `DatabaseTlsGuard`, Actuator só com `/actuator/health`, `flyway-maven-plugin`.
+  - _Verify_: teste do guard (URL sem `sslMode` seguro falha); `GET /actuator/health` sem token → 200.
+- [x] **TASK-054** [NFR-004, NFR-005, REQ-002]: Testes de segurança: JWT `alg: none`/expirado/adulterado/emissor errado → 401; segredo curto impede o boot; e-mail inexistente e senha errada dão a mesma resposta; BCrypt com custo ≥ 10; regras ArchUnit (DTO sem `userId`, repositórios com `userId`) e `IsolationCoverageTest`.
+  - _Verify_: `./mvnw test` verde.
+- [x] **TASK-055** [NFR-010]: Cobertura: JaCoCo (`coverage.min` global e `coverage.rules.min` em `rules`, padrão 0.80) e Vitest (`COVERAGE_MIN`, padrão 80).
+  - _Verify_: `./mvnw verify` e `npm test -- --coverage` passam no limiar.
+- [x] **TASK-056** [NFR-009, D-13]: `backend/Dockerfile` multi-stage (JDK 25 → JRE, não-root, digest fixo, `HEALTHCHECK`, JVM para 512 MB) e `.dockerignore`.
+  - _Verify_: `hadolint` sem erros.
+- [x] **TASK-057** [D-15, REQ-043]: `_redirects`, `_headers` (CSP sem `unsafe-inline` em scripts, `connect-src 'self'`), Pages Function de proxy e E2E Playwright (cadastro/login → lançamento; saldo entra após a TASK-034).
+  - _Verify_: E2E local contra o back no perfil `h2`.
+- [x] **TASK-058** [NFR-010]: Workflows (`ci-cd`, `backend-deploy`, `frontend-deploy`, `integration-tests`, `security`), `dependabot.yml`, `.semgrep/`, `.gitleaks.toml`, `.zap/rules.tsv`, `scripts/ci/`; actions fixadas por SHA.
+  - _Verify_: `actionlint` sem erros; scripts SQL/shell rodados contra o MySQL local quando possível.
+- [~] **TASK-059** [NFR-010]: `.env.example` e `docs/ci-cd.md` (fluxo, segredos, checklist Cloudflare/Render/Aiven, rollback, rotação, cold start, achados).
+  - _Verify_: revisão da usuária (pendente).
+- [~] **TASK-060** [NFR-010]: Validar o pipeline em `ci/pipeline-test` por `workflow_dispatch` depois de cadastrar os segredos (precisa da usuária: contas e push).
+  - _Verify_: todos os jobs verdes até o preview do front (OK no PR #1 em 2026-11-02); deploy de produção só após aprovação (pendente: serviço no Render e merge na `main`).
+
+---
+
 ## Phase 4: Entradas e saldo do mês
 *Goal*: Mês mostra total de gastos, fixos, saldo, posição dia 15/30, reembolsos e saldo próprio.
 
@@ -194,8 +220,8 @@ Nomes em inglês: ver "Nomenclatura em inglês" em `design.md` (os termos em por
 - [ ] **TASK-049** [REQ-045]: Revisão de identidade visual: nada copiado da planilha.
   - _Output_: checklist assinado.
   - _Verify_: revisão manual.
-- [ ] **TASK-050** [NFR-005, NFR-006]: Preparar deploy de teste (Dockerfile do back, variáveis de ambiente, build do front) e subir na hospedagem escolhida.
-  - _Output_: Dockerfile, README de deploy.
+- [ ] **TASK-050** [NFR-005, NFR-006]: Subir o MVP na hospedagem de teste (D-13) usando o pipeline da Phase 3.5.
+  - _Output_: URLs de teste; Dockerfile e `docs/ci-cd.md` já vêm da Phase 3.5.
   - _Verify_: cadastro → lançamento → resumo funcionando na URL de teste.
 
 ---

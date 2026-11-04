@@ -1,5 +1,5 @@
 # requirements.md
-> Nize — Version 0.1.3 (MVP web) — 2026-11-01
+> Nize — Version 0.1.4 (MVP web) — 2026-11-01
 
 Fonte: `Nize — Funcionalidades e escopo do MVP web.pdf` (1 nov 2026). Em caso de dúvida entre este arquivo e o PDF, pergunte antes de implementar.
 
@@ -27,8 +27,11 @@ O Nize é a versão web da planilha "Finanças 2026". A usuária lança gastos e
   - _Acceptance_: credenciais corretas dão acesso; incorretas retornam 401 sem revelar qual campo errou.
 - **REQ-003**: A usuária shall poder recuperar a senha.
   - _Acceptance_: pedido de recuperação gera um link/token de uso único com validade; após uso, a nova senha funciona e o token deixa de valer. (Ver Open Question sobre envio de e-mail.)
+  - Em produção o token nunca é escrito no log (NFR-008); enquanto não houver provedor de e-mail, a recuperação fica indisponível em produção e o pedido continua respondendo 202 sem revelar se o e-mail existe.
 - **REQ-004**: O sistema shall isolar os dados por usuária.
   - _Acceptance_: teste automatizado em que a usuária A não lê, altera nem exclui nenhuma linha da usuária B em nenhum endpoint (resposta 404).
+- **REQ-047**: O sistema shall limitar tentativas em login, cadastro, pedido e uso de recuperação de senha, bloqueando temporariamente quem ultrapassar o limite.
+  - _Acceptance_: a 6ª falha de login para o mesmo e-mail em 15 min recebe 429 `TOO_MANY_ATTEMPTS` (com `Retry-After`) mesmo com a senha certa, até o fim da janela; a resposta é a mesma para e-mail cadastrado ou não. Limites: login 5 falhas por e-mail e 20 por IP em 15 min; cadastro 10 por IP por hora; pedido de recuperação 3 por e-mail e 10 por IP por hora; uso de token de recuperação 10 falhas por IP por hora. Login certo zera o contador do e-mail. (Requisito novo, pedido pela usuária em 2026-11-01.)
 - **REQ-005**: O sistema shall exibir um onboarding curto na primeira entrada da usuária.
   - _Acceptance_: aparece no primeiro login, pode ser dispensado e não reaparece depois.
 
@@ -148,6 +151,13 @@ O Nize é a versão web da planilha "Finanças 2026". A usuária lança gastos e
 - **NFR-007** (meta proposta): `GET` do resumo do mês responde em < 500 ms no p95 com 500 lançamentos no mês.
   - _Measurement_: teste de carga simples local. Meta proposta pela spec, não vem do PDF; confirmar.
 
+- **NFR-008**: Senhas, tokens (JWT e de recuperação) e o segredo `NIZE_JWT_SECRET` nunca aparecem em logs nem em respostas da API.
+  - _Measurement_: testes que capturam o log no login, cadastro e recuperação; grep no log da aplicação nos testes de integração do CI.
+- **NFR-009**: Em produção, a aplicação acessa o banco com um usuário que só tem `SELECT, INSERT, UPDATE, DELETE`, por conexão com TLS obrigatório; as migrações rodam num passo separado, com outro usuário.
+  - _Measurement_: teste no CI que tenta `CREATE/ALTER/DROP/TRUNCATE` com o usuário da aplicação e espera falha; a aplicação não sobe no perfil `prod` sem `sslMode=REQUIRED` (ou `VERIFY_CA`/`VERIFY_IDENTITY`) na URL.
+- **NFR-010**: Nenhum deploy acontece sem testes unitários, de integração (H2 e MySQL), cobertura mínima de 80% (back e front, configurável) e portão de segurança aprovados.
+  - _Measurement_: pipeline do GitHub Actions (`docs/ci-cd.md`); críticos/altos bloqueiam o deploy.
+
 ## Out of Scope (0.1.0)
 - Open Finance, Pix real, importação automática de extrato.
 - Investimentos e metas (fase 2): entidades `aporte_investimento`, `meta`, `aporte_meta`.
@@ -164,3 +174,4 @@ O Nize é a versão web da planilha "Finanças 2026". A usuária lança gastos e
 | 0.1.1 | 2026-11-01 | REQ-046 (idioma da interface en/pt) |
 | 0.1.2 | 2026-11-01 | REQ-015: fixo pode ser pago no crédito; glossário "Total de crédito" |
 | 0.1.3 | 2026-11-01 | REQ-022: carga continua parcelas à mão e respeita a permissão |
+| 0.1.4 | 2026-11-01 | REQ-047 (limite de tentativas), NFR-008 a NFR-010 (segredos fora do log, banco com privilégio mínimo e TLS, pipeline de CI/CD); REQ-003 em produção sem e-mail |

@@ -32,6 +32,7 @@
   },
   "errors": {
     "INVALID_CREDENTIALS": "E-mail ou senha incorretos.",
+    "TOO_MANY_ATTEMPTS": "Muitas tentativas. Espere alguns minutos e tente de novo.",
     "EMAIL_ALREADY_REGISTERED": "Este e-mail já está cadastrado.",
     "INVALID_RESET_TOKEN": "Este link de recuperação é inválido ou expirou. Peça um novo.",
     "VALIDATION_ERROR": "Confira os dados informados.",

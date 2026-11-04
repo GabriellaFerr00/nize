@@ -1,0 +1,21 @@
+# Production (Render + Aiven MySQL, D-13/D-14). Every value comes from the environment.
+# Migrations run in the pipeline with a separate migration user, never on boot.
+server:
+  port: ${PORT:8080}
+  # Render (and the Cloudflare Pages proxy) set X-Forwarded-For/-Proto: real client IP for
+  # the attempt limits and HTTPS for HSTS.
+  forward-headers-strategy: framework
+  shutdown: graceful
+
+spring:
+  datasource:
+    # Must use TLS: sslMode=REQUIRED, VERIFY_CA or VERIFY_IDENTITY (DatabaseTlsGuard, NFR-009).
+    url: ${NIZE_DB_URL}
+    username: ${NIZE_DB_USER}
+    password: ${NIZE_DB_PASSWORD}
+    hikari:
+      # The Aiven free plan allows 76 connections; one small instance needs few.
+      maximum-pool-size: 5
+      minimum-idle: 1
+  flyway:
+    enabled: false

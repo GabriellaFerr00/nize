@@ -32,6 +32,7 @@
   },
   "errors": {
     "INVALID_CREDENTIALS": "Incorrect email or password.",
+    "TOO_MANY_ATTEMPTS": "Too many attempts. Wait a few minutes and try again.",
     "EMAIL_ALREADY_REGISTERED": "This email is already registered.",
     "INVALID_RESET_TOKEN": "This recovery link is invalid or has expired. Request a new one.",
     "VALIDATION_ERROR": "Please check the data you entered.",

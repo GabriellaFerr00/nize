@@ -1,0 +1,200 @@
+# Integration tests (design.md "CI/CD"). Synthetic data only; never production data.
+# Two jobs, each only when its side changed:
+#   backend:  real MySQL 8.4 → migrations with the migration user (twice) → schema rules and
+#             runtime-user privileges → app in profile prod (runtime user, no DDL, no Flyway, TLS)
+#             → smoke → full API flow → log check (NFR-008/009/010)
+#   frontend: Playwright E2E against the built site and the API in profile h2 → log check
+# The H2 API suite runs in the Backend workflow.
+name: Integration tests
+
+on:
+  push:
+    branches: [main]
+    paths: &integration-paths
+      - backend/**
+      - frontend/**
+      - scripts/ci/**
+      - .github/workflows/integration-tests.yml
+  pull_request:
+    branches: [main]
+    paths: *integration-paths
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: integration-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read # paths-filter lists the PR files through the API
+    outputs:
+      backend: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.backend == 'true' }}
+      frontend: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.frontend == 'true' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - 'scripts/ci/**'
+              - '.github/workflows/integration-tests.yml'
+            frontend:
+              - 'frontend/**'
+              - 'scripts/ci/**'
+              - '.github/workflows/integration-tests.yml'
+
+  backend:
+    name: Backend on MySQL 8.4 (least-privilege app + API flow)
+    needs: changes
+    # Forks get no secrets (the throwaway MySQL needs one).
+    if: needs.changes.outputs.backend == 'true' && github.event.pull_request.head.repo.fork != true
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      mysql:
+        image: mysql:8.4.13@sha256:a0225d1ea6631c8bc2385dc4c2faba17bbf1834ecf369e1659a9a382bd8d5dd7
+        env:
+          MYSQL_ROOT_PASSWORD: ${{ secrets.NIZE_DB_ROOT_PASSWORD_TEST }}
+        ports:
+          - 127.0.0.1:3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 --silent"
+          --health-interval 5s --health-timeout 5s --health-retries 30
+    env:
+      MYSQL_ROOT_PASSWORD: ${{ secrets.NIZE_DB_ROOT_PASSWORD_TEST }}
+      NIZE_DB_MIGRATION_USER: nize_migrator
+      NIZE_DB_USER: nize_app
+      # The container's self-signed certificate is enough to exercise sslMode=REQUIRED.
+      DB_URL: jdbc:mysql://127.0.0.1:3306/nize?sslMode=REQUIRED
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+      - name: Per-run credentials (random, masked, gone with the job)
+        run: |
+          echo "MYSQL_CONTAINER=${{ job.services.mysql.id }}" >> "$GITHUB_ENV"
+          for name in NIZE_DB_MIGRATION_PASSWORD NIZE_DB_PASSWORD NIZE_JWT_SECRET; do
+            value=$(openssl rand -hex 24)
+            echo "::add-mask::$value"
+            echo "$name=$value" >> "$GITHUB_ENV"
+          done
+      - name: Create the database and the two users
+        run: scripts/ci/mysql-setup.sh
+      - name: Flyway with the migration user (twice, to prove it is idempotent)
+        working-directory: backend
+        env:
+          FLYWAY_URL: ${{ env.DB_URL }}
+          FLYWAY_USER: ${{ env.NIZE_DB_MIGRATION_USER }}
+          FLYWAY_PASSWORD: ${{ env.NIZE_DB_MIGRATION_PASSWORD }}
+        run: |
+          ./mvnw -B -ntp -q flyway:migrate
+          ./mvnw -B -ntp flyway:migrate | tee "$RUNNER_TEMP/second.log"
+          grep -qiE 'up to date|no migration necessary' "$RUNNER_TEMP/second.log" \
+            || { echo "::error::the second migrate was not a no-op"; exit 1; }
+          ./mvnw -B -ntp -q flyway:validate
+      - name: Schema rules (money BIGINT, only hashes, no forbidden personal data)
+        run: |
+          out=$(docker exec -i -e MYSQL_PWD="$MYSQL_ROOT_PASSWORD" "$MYSQL_CONTAINER" mysql -uroot -N < scripts/ci/check-schema.sql)
+          if [ -n "$out" ]; then echo "::error::schema rule violations"; echo "$out"; exit 1; fi
+      - name: The runtime user cannot change the schema
+        run: scripts/ci/check-runtime-privileges.sh
+      - name: Build the jar
+        working-directory: backend
+        run: ./mvnw -B -ntp -q -DskipTests -Djacoco.skip=true package
+      - name: Start the API (profile prod, runtime user, Flyway off)
+        working-directory: backend
+        env:
+          SPRING_PROFILES_ACTIVE: prod
+          NIZE_DB_URL: ${{ env.DB_URL }}
+        run: |
+          nohup java -jar target/nize-backend-*.jar > "$RUNNER_TEMP/app.log" 2>&1 &
+          echo "APP_PID=$!" >> "$GITHUB_ENV"
+      - name: API smoke
+        run: scripts/ci/api-smoke.sh http://localhost:8080 180
+      - name: API flow (every write path on MySQL)
+        run: scripts/ci/api-flow.sh http://localhost:8080
+      - name: Stop the API and check its log for secrets
+        id: logcheck
+        if: always() && env.APP_PID != ''
+        run: |
+          kill "$APP_PID" 2>/dev/null || true
+          sleep 3
+          scripts/ci/check-logs.sh "$RUNNER_TEMP/app.log" "$NIZE_DB_PASSWORD" "$NIZE_DB_MIGRATION_PASSWORD" "$NIZE_JWT_SECRET"
+      - name: API log (only after it was proven free of secrets)
+        if: failure() && steps.logcheck.outcome == 'success'
+        run: tail -n 200 "$RUNNER_TEMP/app.log"
+
+  frontend:
+    name: Frontend E2E (Playwright)
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      E2E_PASSWORD: E2e-synthetic-pass-1 # the synthetic password used by frontend/e2e (checked against the log)
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Start the API (profile h2, per-run secret)
+        working-directory: backend
+        run: |
+          secret=$(openssl rand -hex 32); echo "::add-mask::$secret"; echo "NIZE_JWT_SECRET=$secret" >> "$GITHUB_ENV"
+          ./mvnw -B -ntp -q -DskipTests -Djacoco.skip=true package
+          NIZE_JWT_SECRET="$secret" nohup java -jar target/nize-backend-*.jar --spring.profiles.active=h2 \
+            > "$RUNNER_TEMP/app.log" 2>&1 &
+          echo "APP_PID=$!" >> "$GITHUB_ENV"
+      - name: Wait for the API
+        run: scripts/ci/api-smoke.sh http://localhost:8080 120
+      - name: E2E (built site under the production CSP)
+        working-directory: frontend
+        env:
+          CI: "true"
+        run: |
+          npm ci
+          npm run build
+          npx playwright install --with-deps chromium
+          npm run e2e
+      - name: Stop the API and check its log for secrets
+        if: always() && env.APP_PID != ''
+        run: |
+          kill "$APP_PID" 2>/dev/null || true
+          sleep 3
+          scripts/ci/check-logs.sh "$RUNNER_TEMP/app.log" "$NIZE_JWT_SECRET" "$E2E_PASSWORD"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 7
+          if-no-files-found: ignore

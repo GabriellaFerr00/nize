@@ -20,3 +20,23 @@ nize:
     expiration: 1h
   password-reset:
     expiration: 30m
+  # Attempt limits on /api/auth/** (REQ-047, D-16).
+  rate-limit:
+    login-per-email: 5
+    login-per-ip: 20
+    login-window: 15m
+    register-per-ip: 10
+    forgot-per-email: 3
+    forgot-per-ip: 10
+    reset-per-ip: 10
+    hour-window: 1h
+
+# Only the health endpoint, without details (D-18).
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never

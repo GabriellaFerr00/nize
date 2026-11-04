@@ -1,16 +1,24 @@
 # design.md
-> Nize — Version 0.1.9 (MVP web) — 2026-11-01
+> Nize — Version 0.2.2 (MVP web) — 2026-11-01
 
 ## Architecture Overview
 Monorepo com dois módulos independentes: `backend` (API REST) e `frontend` (SPA). **Toda regra de cálculo vive só no back-end** (totais, saldo, posição por quinzena, parcelas, carga do mês, saldo próprio, porcentagens). O front apenas exibe o que a API devolve e nunca recalcula valores. Como back (Java) e front (TypeScript) não compartilham código, o "pacote de regras compartilhado" do PDF vira o pacote Java `br.com.nize.rules`, puro (sem Spring, sem JPA), testado antes do código.
 
 **Stack**
 - Back-end: Java 25, Spring Boot **4.0.9** (Web, Security, Data JPA, Validation), Maven. Toolchain local: Temurin 25 + Maven 3.9.16 em `~/tools`.
-- Banco: MySQL no ambiente local; H2 em memória (modo MySQL) no perfil de teste/nuvem por enquanto. Migrações com Flyway, com SQL compatível com os dois.
+- Banco: MySQL 8.4 no ambiente local, MySQL 8.x gerenciado (Aiven, plano gratuito, TLS) em produção; H2 em memória (modo MySQL) nos testes. Migrações com Flyway, com SQL compatível com os dois.
 - Front-end: React + TypeScript + Vite, Tailwind CSS, TanStack Query, React Router, biblioteca de gráficos (Recharts) para o panorama anual.
 - Testes: JUnit 5 + AssertJ (regras e serviços), Spring Boot Test/MockMvc (API e isolamento), Vitest + Testing Library (front).
 
-**Deployment** (provisório, gratuito, só para testes): back-end em Render (plano gratuito, Docker); front-end em Vercel/Netlify/Cloudflare Pages; banco H2 em memória (dados somem a cada reinício). Decisão final em aberto.
+**Deployment** (provisório, gratuito, só para testes; D-13): front-end no **Cloudflare Pages** (projeto `nize`); back-end no **Render** (serviço `nize-api`, plano gratuito) a partir de uma imagem Docker publicada no GHCR (`ghcr.io/gabriellaferr00/nize-backend`, pública); banco **Aiven for MySQL** (plano gratuito: 1 GB RAM, 1 GB disco, `max_connections` 76, sem IP fixo, pode ser desligado por inatividade). Pipeline no GitHub Actions; ver "CI/CD" e `docs/ci-cd.md`.
+
+```
+ GitHub Actions ──► GHCR (imagem verificada pelo trivy) ──► Render (nize-api, perfil prod)
+       │  Flyway migrate (usuário de migração, TLS)               │ usuário de runtime (só DML), TLS
+       ▼                                                          ▼
+ Aiven MySQL ◄────────────────────────────────────────────────────┘
+ Navegador ──► Cloudflare Pages (SPA + Function /api/* ──► Render)
+```
 
 ## System Diagram
 ```
@@ -40,6 +48,12 @@ Monorepo com dois módulos independentes: `backend` (API REST) e `frontend` (SPA
 | D-10 | **Todo identificador técnico em inglês**: pacotes, classes, métodos, tabelas, colunas, rotas e JSON (ver "Nomenclatura em inglês"). Os termos em português nas seções abaixo são do domínio do PDF e mapeiam para os nomes em inglês | Decisão da usuária, 2026-11-01 |
 | D-12 | Sessão no front: token JWT guardado em `localStorage` (`nize.auth`, com a hora de expiração); ao expirar ou receber 401 a sessão é limpa e a usuária volta a `/sign-in`. Risco aceito no MVP: XSS poderia ler o token | Decisão da usuária, 2026-11-01 |
 | D-11 | O front tem i18n com inglês e português; a usuária escolhe o idioma da interface (REQ-046). Só texto exibido é traduzido; valores e regras continuam vindo da API | Decisão da usuária, 2026-11-01 |
+| D-13 | Hospedagem de teste: Cloudflare Pages (front), Render via imagem Docker do GHCR (back), Aiven for MySQL (banco). O Render puxa a imagem já verificada pelo trivy e não gasta minutos de build; o deploy é disparado pelo deploy hook com `imgURL` (digest) | Decisão da usuária, 2026-11-01 (custo zero) |
+| D-14 | Perfil `prod` com `spring.flyway.enabled=false`: as migrações rodam num passo do pipeline, antes do deploy, com o usuário de migração (DDL). A aplicação usa outro usuário só com `SELECT, INSERT, UPDATE, DELETE`, TLS obrigatório na URL (`DatabaseTlsGuard`) e pool pequeno (5). Perfis `h2` e `local` continuam migrando no boot. Migrações seguem expand/contract (compatíveis com a versão anterior do app) | NFR-009, decisão da usuária |
+| D-15 | O front continua chamando `/api` na própria origem. No Cloudflare Pages, uma Pages Function (`frontend/functions/api/[[path]].ts`) repassa `/api/*` para o Render (`API_ORIGIN`), trocando `X-Forwarded-For` pelo IP real (`CF-Connecting-IP`). Sem CORS no back; CSP com `connect-src 'self'` | Decisão da usuária, 2026-11-01 ("seguir o que tem hoje") |
+| D-16 | Limite de tentativas (REQ-047) em memória, por chave (`login:email`, `login:ip`, ...), janela fixa; limites configuráveis em `nize.rate-limit.*`. Vale para uma instância só (o plano gratuito tem uma); reinício zera os contadores. IP vem de `X-Forwarded-For` no perfil `prod` (`server.forward-headers-strategy: framework`); quem chama o Render direto pode forjar o IP, por isso o limite por e-mail é o controle principal | REQ-047 |
+| D-17 | `EmailSender` no perfil `prod` é `DisabledEmailSender` (não envia e não loga e-mail nem token); `LoggingEmailSender` só fora de `prod` | NFR-008, REQ-003 |
+| D-18 | Healthcheck por Spring Boot Actuator, expondo só `GET /actuator/health` (sem detalhes, sem autenticação) | Smoke test e `HEALTHCHECK` do Docker |
 | D-9 | Posição por quinzena usa "data efetiva" (pela forma de pagamento, não pelo tipo): Pix = `data`; crédito com cartão = dia de vencimento do cartão dentro do mês do lançamento; crédito sem cartão = `data` (confirmado 2026-11-01) | REQ-032 |
 
 ## Nomenclatura em inglês
@@ -259,6 +273,11 @@ REST JSON sob `/api`. Todos os endpoints exceto `/api/auth/**` exigem `Authoriza
 | POST | /api/meses/{aaaa-mm}/entradas | sim | REQ-024..026 | cria entrada (parcelada ou reembolso) |
 | PUT/DELETE | /api/entradas/{id} | sim | REQ-023 | edita / exclui |
 | GET | /api/anos/{ano}/panorama | sim | REQ-039 | 12 meses: gastos, entradas e saldo |
+| GET | /actuator/health | não | D-18 | `{"status":"UP"}`; usado pelo Docker e pelo smoke test |
+
+Erros sempre no formato `{code, fields}` (`ApiExceptionHandler`), inclusive os do framework: parâmetro de tipo errado → 400 `VALIDATION_ERROR`; rota inexistente → 404 `NOT_FOUND`; método errado → 405 `METHOD_NOT_ALLOWED`; tipo de conteúdo errado → 415 `UNSUPPORTED_MEDIA_TYPE`; erro inesperado → 500 `INTERNAL_ERROR` (causa só no log do servidor, nunca na resposta).
+
+Limite de tentativas (REQ-047): os quatro `POST /api/auth/**` devolvem 429 `{code: "TOO_MANY_ATTEMPTS", fields: {}}` com `Retry-After` (segundos) quando a chave está bloqueada.
 
 ## Frontend
 | Rota | Tela | REQ |
@@ -275,9 +294,21 @@ Navegação: menu lateral (≥ 768px) e barra inferior (< 768px) — REQ-043. Id
 ```
 nize/
 ├── CLAUDE.md  CONTEXT.md  requirements.md  design.md  tasks.md
+├── .env.example  .gitleaks.toml  (nomes das variáveis, sem valores; regras extras do gitleaks)
+├── .semgrep/nize.yml            (regras próprias: XSS, hash fraco, Random para token, userId em DTO)
+├── .zap/rules.tsv               (o que o ZAP baseline trata como falha/aviso)
+├── .github/
+│   ├── dependabot.yml           (Maven, npm, GitHub Actions, Docker)
+│   └── workflows/  backend.yml, frontend.yml, integration-tests.yml, security.yml (um por tema)
+├── docs/ci-cd.md                (fluxo, segredos, rollback, rotação, achados)
+├── scripts/ci/                  (scripts do pipeline: mysql-setup.sh, check-schema.sql,
+│                                 check-runtime-privileges.sh, api-smoke.sh, dast-checks.sh,
+│                                 frontend-smoke.sh, check-logs.sh, check_pii.py, check-forbidden-files.sh,
+│                                 render-deploy.sh, wait-for-workflows.sh, api-flow.sh)
 ├── pom.xml                      (agregador Maven; opcional)
 ├── backend/              (estrutura no padrão do Spring Initializr)
 │   ├── pom.xml  mvnw  mvnw.cmd  .mvn/wrapper/  .gitignore  .gitattributes  HELP.md
+│   ├── Dockerfile  .dockerignore  (multi-stage; D-13)
 │   └── src/
 │       ├── main/java/br/com/nize/
 │       │   ├── NizeApplication.java
@@ -287,11 +318,14 @@ nize/
 │       │   ├── service/
 │       │   ├── api/             (controllers e DTOs)
 │       │   └── security/        (JWT, user_id do token)
-│       ├── main/resources/  application.yml, application-local.yml, application-h2.yml
+│       ├── main/resources/  application.yml, application-local.yml, application-h2.yml, application-prod.yml
 │       ├── main/resources/db/migration/   (Flyway)
 │       └── test/java/br/com/nize/  (rules/, service/, api/)
 └── frontend/
-    ├── package.json  vite.config.ts
+    ├── package.json  vite.config.ts  playwright.config.ts
+    ├── public/  _redirects (fallback da SPA)  _headers (CSP, HSTS...)
+    ├── functions/api/[[path]].ts  (Pages Function: proxy /api → Render; D-15)
+    ├── e2e/  (Playwright, dados sintéticos)
     └── src/ (pages/, components/, api/, lib/, styles/, i18n/ com en.json e pt.json, test/)
 ```
 groupId `br.com.nize`, artifactId `nize-backend`, pacote raiz `br.com.nize`.
@@ -304,6 +338,20 @@ groupId `br.com.nize`, artifactId `nize-backend`, pacote raiz `br.com.nize`.
 - Recuperação de senha: token aleatório, só o hash é guardado, uso único, expira.
 - CORS restrito ao domínio do front. Mensagens de login não revelam se o e-mail existe.
 - Validação com Bean Validation em todos os DTOs.
+- Limite de tentativas em `/api/auth/**` (REQ-047, D-16): `security.AttemptLimiter` + `TooManyAttemptsException` → 429.
+- Segredos, senhas e tokens fora de logs e respostas (NFR-008); `DisabledEmailSender` em `prod` (D-17).
+- Banco de produção: usuário de runtime só DML, migração com outro usuário, TLS obrigatório (`security.DatabaseTlsGuard`, perfil `prod`) — NFR-009, D-14.
+- Logout é só no cliente (o JWT vale até expirar, 1h): risco residual aceito no MVP.
+- Testes de segurança: `ArchitectureTest` (dinheiro, `rules` puro, DTO de entrada sem `userId`, repositórios de dados com `userId`) e `IsolationCoverageTest` (todo controller de dados tem teste que estende `IsolationTestBase`).
+
+## CI/CD
+GitHub Actions (detalhes em `docs/ci-cd.md`; NFR-010). **Um workflow por tema**, sem workflows aninhados; cada um dispara em push e Pull Request para a `main` só quando o seu código muda (filtro `paths`), e manualmente (`workflow_dispatch`):
+- **Back** (`backend.yml`; `backend/**`): `mvnw verify` (testes de regras, API em H2, segurança, isolamento, ArchUnit; JaCoCo ≥ 80% global e em `rules`) → imagem Docker + trivy → (só `main`) push GHCR → *gate* → Environment `production` (aprovação) → Flyway no Aiven com o usuário de migração → Render (API, por digest) → smoke.
+- **Front** (`frontend.yml`; `frontend/**`): `npm ci`, lint, typecheck, Vitest com cobertura ≥ 80%, build → *gate* → Cloudflare Pages: PR/branch publica preview (Environment `staging`), `main` publica produção (`production`, aprovação) → smoke.
+- **Testes integrados** (`integration-tests.yml`; um job por lado, cada um só se o seu código mudou): **back** — MySQL 8.4 descartável → migrações com o usuário de migração (duas vezes) → regras do esquema e privilégios do usuário de runtime → app no perfil `prod` (sem Flyway, só DML, TLS) → smoke → fluxo completo da API (`api-flow.sh`) → log sem segredos; **front** — E2E Playwright do site construído (CSP de produção) contra a API no perfil `h2` → log sem segredos.
+- **Segurança** (`security.yml`; back ou front, semanal e manual): gitleaks e trufflehog no histórico, PII/arquivos proibidos, semgrep, CodeQL (Java e JS/TS), trivy no jar, npm audit, headers do front, DAST + ZAP contra o back local (perfil `h2`). Críticos/altos falham o workflow; médios/baixos viram issue (fora de PR).
+- **Gate**: workflows separados não se referenciam com `needs`; o job *gate* do back e do front espera (via API do GitHub) os workflows Segurança e Testes integrados **do mesmo commit** terminarem com sucesso antes de qualquer deploy (`scripts/ci/wait-for-workflows.sh`). A aprovação de `production` só é pedida depois do gate.
+- Actions fixadas por SHA e scanners por digest; `permissions: contents: read` por padrão; sem `pull_request_target`; PR de fork não recebe segredos (sem integração nem deploy de preview).
 
 ## Open Questions
 - [x] ~~Lista das 15 categorias de fábrica~~ — resolvido em 2026-11-01: ver seção "Categorias de fábrica". "Mainha" não é categoria; é uma pessoa (terceiro), cadastrada em `pessoa`.
@@ -314,7 +362,8 @@ groupId `br.com.nize`, artifactId `nize-backend`, pacote raiz `br.com.nize`.
 - [x] ~~Crédito sem cartão~~ — resolvido em 2026-11-01: usa a `data` do lançamento.
 - [x] ~~Fixo com cartão~~ — resolvido em 2026-11-01: **pode**. Há fixos pagos no crédito (ex.: assinaturas); fixo e forma de pagamento são independentes (ver "Regras de consistência do lançamento"). Diverge do PDF; decisão da usuária.
 - [x] ~~Parcela e vencimento~~ — resolvido em 2026-11-01: cada parcela pesa no mês em que aparece, com o dia de vencimento do cartão naquele mês.
-- [ ] **Hospedagem final** (provisório: Render + Vercel/Netlify/Cloudflare Pages + H2).
+- [x] ~~Hospedagem final~~ — resolvido em 2026-11-01: Cloudflare Pages + Render (imagem do GHCR) + Aiven MySQL (D-13).
+- [ ] **Provedor de e-mail em produção** para a recuperação de senha (REQ-003). Até lá, `DisabledEmailSender` (D-17).
 - [ ] **Cucumber ou JUnit** para os cenários Gherkin do PDF. Proposto: JUnit 5 com nomes iguais aos cenários, sem Cucumber.
 - [ ] **Meta de desempenho NFR-007** é proposta da spec; confirmar.
 - [x] ~~Idioma do código~~ — resolvido em 2026-11-01: tudo em inglês, inclusive banco e API; front com opção de português (D-10, D-11, REQ-046).
@@ -332,3 +381,6 @@ groupId `br.com.nize`, artifactId `nize-backend`, pacote raiz `br.com.nize`.
 | 0.1.7 | 2026-11-01 | Fixo pode ser no crédito (tipo e forma de pagamento independentes); regras de consistência do lançamento; Open Questions da Phase 3 resolvidas |
 | 0.1.8 | 2026-11-01 | `month` reservado no H2: coluna `month_ref`; data do lançamento `expense_date` |
 | 0.1.9 | 2026-11-01 | Carga do mês: continua parcelas à mão (grupo próprio) e respeita a permissão de parcelas automáticas |
+| 0.2.2 | 2026-11-02 | Um workflow por tema (back, front, segurança, testes integrados) sem aninhamento; deploys esperam Segurança e Testes integrados do mesmo commit (job *gate*); testes integrados em dois jobs (back: MySQL + fluxo da API; front: E2E com a API em `h2`) |
+| 0.2.1 | 2026-11-02 | `ci-cd.yml` também roda em Pull Request para a `main` (o `workflow_dispatch` só existe depois que o workflow está na `main`) |
+| 0.2.0 | 2026-11-01 | CI/CD e hospedagem (D-13 a D-18): perfil `prod` sem Flyway no boot, usuários de banco separados, TLS, proxy `/api` no Cloudflare Pages, limite de tentativas, Actuator health, `DisabledEmailSender`; File Structure com workflows, Dockerfile, scripts e docs |

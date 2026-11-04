@@ -1,0 +1,200 @@
+# Backend (design.md "CI/CD"): build + tests + coverage → image + trivy → [main] gate (Security and
+# Integration tests of this commit passed) → approval → Flyway migration → Render → smoke.
+name: Backend
+
+on:
+  push:
+    branches: [main]
+    paths: &backend-paths
+      - backend/**
+      - scripts/ci/**
+      - .github/workflows/backend.yml
+  pull_request:
+    branches: [main]
+    paths: *backend-paths
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # Never cancel a run that may be halfway through a migration or deploy.
+  group: backend-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  TRIVY_IMAGE: aquasec/trivy:0.76.1@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c
+
+jobs:
+  build:
+    name: Build, tests (H2) and coverage
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+      - name: Verify (rules, API, security, isolation and architecture tests; JaCoCo limits)
+        env:
+          # Percent, set in Settings → Variables; 80 when unset (NFR-010).
+          COVERAGE_MIN: ${{ vars.COVERAGE_MIN || '80' }}
+          COVERAGE_RULES_MIN: ${{ vars.COVERAGE_RULES_MIN || '80' }}
+        run: |
+          ./mvnw -B -ntp verify \
+            -Dcoverage.min="$(awk -v v="$COVERAGE_MIN" 'BEGIN { print v / 100 }')" \
+            -Dcoverage.rules.min="$(awk -v v="$COVERAGE_RULES_MIN" 'BEGIN { print v / 100 }')"
+      - name: Coverage summary
+        if: always()
+        run: |
+          [ -f target/site/jacoco/jacoco.csv ] || exit 0
+          awk -F, 'NR > 1 { m += $8; c += $9 } END { if (m + c) printf "### Backend line coverage: %.1f%%\n", 100 * c / (m + c) }' \
+            target/site/jacoco/jacoco.csv >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: backend-coverage
+          path: backend/target/site/jacoco/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  image:
+    name: Docker image + trivy
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+    outputs:
+      image: ${{ steps.push.outputs.image }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build
+        id: build
+        run: |
+          name="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/nize-backend"
+          echo "ref=$name:$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+          docker build --pull --label "org.opencontainers.image.source=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" -t "$name:$GITHUB_SHA" backend
+      - name: trivy config (Dockerfile)
+        run: docker run --rm -v "$PWD/backend:/src:ro" "$TRIVY_IMAGE" config --quiet --exit-code 1 --severity HIGH,CRITICAL /src
+      - name: trivy image report (SARIF)
+        env:
+          IMAGE: ${{ steps.build.outputs.ref }}
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD:/out" "$TRIVY_IMAGE" image \
+            --quiet --format sarif --output /out/trivy-image.sarif "$IMAGE"
+      - uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        if: github.event.pull_request.head.repo.fork != true
+        with:
+          sarif_file: trivy-image.sarif
+          category: trivy-image
+      - name: trivy image gate (critical/high block the deploy)
+        env:
+          IMAGE: ${{ steps.build.outputs.ref }}
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock "$TRIVY_IMAGE" image \
+            --quiet --exit-code 1 --ignore-unfixed --severity CRITICAL,HIGH "$IMAGE"
+      - name: Push to GHCR (main only)
+        id: push
+        if: github.ref == 'refs/heads/main'
+        env:
+          IMAGE: ${{ steps.build.outputs.ref }}
+          REGISTRY_TOKEN: ${{ github.token }}
+        run: |
+          echo "$REGISTRY_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker push "$IMAGE"
+          # Deploy by digest: Render runs exactly the bytes trivy scanned.
+          echo "image=$(docker inspect --format '{{index .RepoDigests 0}}' "$IMAGE")" >> "$GITHUB_OUTPUT"
+          docker logout ghcr.io
+
+  gate:
+    name: Gate (Security and Integration tests passed)
+    needs: image
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 70
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Wait for the other workflows of this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: scripts/ci/wait-for-workflows.sh "$GITHUB_SHA" "Security" "Integration tests"
+
+  deploy:
+    name: Migrate, deploy and smoke (production)
+    needs: [image, gate]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    # Required reviewers on this Environment: nothing below runs without approval.
+    environment:
+      name: production
+      url: ${{ vars.API_URL }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+      - name: Migration URL requires TLS
+        env:
+          NIZE_DB_MIGRATION_URL: ${{ secrets.NIZE_DB_MIGRATION_URL }}
+        run: |
+          grep -qiE '[?&]sslMode=(REQUIRED|VERIFY_CA|VERIFY_IDENTITY)(&|$)' <<<"$NIZE_DB_MIGRATION_URL" \
+            || { echo "::error::NIZE_DB_MIGRATION_URL must set sslMode=REQUIRED, VERIFY_CA or VERIFY_IDENTITY"; exit 1; }
+      - name: Flyway migrate (migration user; a failure stops the deploy)
+        working-directory: backend
+        env:
+          FLYWAY_URL: ${{ secrets.NIZE_DB_MIGRATION_URL }}
+          FLYWAY_USER: ${{ secrets.NIZE_DB_MIGRATION_USER }}
+          FLYWAY_PASSWORD: ${{ secrets.NIZE_DB_MIGRATION_PASSWORD }}
+        run: |
+          ./mvnw -B -ntp -q flyway:migrate
+          ./mvnw -B -ntp -q flyway:validate
+          ./mvnw -B -ntp flyway:info | sed -n '/+-/,$p'
+      - name: Deploy the scanned image to Render
+        id: render
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+          IMAGE: ${{ needs.image.outputs.image }}
+        run: scripts/ci/render-deploy.sh "$IMAGE"
+      - name: Smoke test (generous wait for a cold start)
+        env:
+          API_URL: ${{ vars.API_URL }}
+        run: scripts/ci/api-smoke.sh "$API_URL" 300
+      - name: Rollback notes
+        if: always()
+        env:
+          IMAGE: ${{ needs.image.outputs.image }}
+          DEPLOY_ID: ${{ steps.render.outputs.deploy_id }}
+        run: |
+          {
+            echo "### Backend deploy"
+            echo "- Image: \`$IMAGE\`"
+            echo "- Render deploy: \`${DEPLOY_ID:-none}\`"
+            echo "- Rollback: Render → nize-api → Events → previous deploy → Rollback (see docs/ci-cd.md)."
+            echo "- Migrations are never reverted automatically (expand/contract)."
+          } >> "$GITHUB_STEP_SUMMARY"
