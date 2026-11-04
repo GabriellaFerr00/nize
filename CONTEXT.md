@@ -1,6 +1,6 @@
 # CONTEXT.md
 > Nize — Live session journal
-> Last updated: 2026-11-04 — Session 5
+> Last updated: 2026-11-04 — Session 6
 
 ## ⚡ Resume from here
 
@@ -20,6 +20,7 @@ Para rodar o app é preciso `export NIZE_JWT_SECRET=<>=32 bytes>` (os testes usa
 
 | # | Date | What was done | Files changed |
 |---|---|---|---|
+| 6 | 2026-11-04 | PR #9: job "Backend on MySQL 8.4" falhou com 500 em `GET /api/settings` (`LazyInitializationException` em `Settings.closingDays`; `open-in-view: false` e os testes `@Transactional` escondiam). Correção: `@ElementCollection(fetch = EAGER)` + `SettingsOutsideTransactionTest` (sem transação no teste; apaga a usuária no fim) | Settings.java, SettingsOutsideTransactionTest.java |
 | 5 | 2026-11-04 | Phase 5: `CategorySummary` (% com 2 casas, decimal exato), `PaymentSummary`, `ThirdPartySummary`, resumos no `GET /api/months/{m}`. Phase 4: `MonthTotals`, `ClosingPositions` (fechamentos configuráveis, decisão da usuária: requirements 0.1.5 REQ-048, design 0.2.4), `OwnBalance`; entradas (V5 `income`, `/api/months/{m}/incomes`, `/api/incomes/{id}`, carga continua entradas parceladas); V6 `closing_day` + `settings.closings_enabled`, `/api/settings` com `closingsEnabled`/`closingDays`, tela Configurações (`ClosingDaysField`); `GET /api/months/{m}`. Antes: PRs #6/#7 (Dependabot sem preview, ignora Spring Boot 4.1/Flyway 12, Integration tests também roda quando muda `backend.yml`/`frontend.yml`) | backend/**, frontend/src/**, specs |
 | 4 | 2026-11-04 | Merge do PR #1; trivy barrou a imagem (libexpat 2.9.0, CVEs novos) → PR #5 com `apk upgrade libexpat` no Dockerfile; imagem no GHCR (pública); serviço `nize-api` no Render, segredos no GitHub e `API_ORIGIN` no Cloudflare; 1ª migração falhou (Aiven em Rebuilding → host sem DNS); após Running + banco/usuários, deploy back e front verdes. TASK-060 [x]; notas no ci-cd.md (Render sem Auto-Deploy p/ imagem; esperar Aiven Running) | backend/Dockerfile, tasks.md, docs/ci-cd.md, CONTEXT.md |
 | 3 | 2026-11-02 | Phase 3.5 (CI/CD, pedido em `CICD_PROMPT.md`): specs 0.2.0 (requirements 0.1.4: REQ-047, NFR-008..010; design D-13..D-18; tasks Phase 3.5). Back: `AttemptLimiter` (429 TOO_MANY_ATTEMPTS), perfil `prod` (Flyway off, pool 5, forward headers), `DatabaseTlsGuard` (BeanFactoryPostProcessor), `DisabledEmailSender`, Actuator health, JWT exige `exp`, `ApiExceptionHandler` cobre erros do framework (404/405/415/500 com `{code, fields}`), JaCoCo 80% e flyway-maven-plugin; testes AuthHardening, SecretsNotExposed, JwtSecretBoot, DatabaseTlsGuard, ErrorContract, RateLimit, IsolationCoverage, ArchUnit (DTO sem userId, repos com userId, sem findById puro). `backend/Dockerfile`. Front: `_redirects`, `_headers`, Pages Function proxy `/api`, Vitest coverage 80%, Playwright E2E. Workflows por tema (backend, frontend, integration-tests, security; gate espera Security e Integration do mesmo commit), dependabot, `.semgrep/`, `.gitleaks.toml`, `.zap/`, `scripts/ci/`, `.env.example`, `docs/ci-cd.md` | backend/**, frontend/**, .github/**, scripts/ci/**, docs/ci-cd.md, specs |
