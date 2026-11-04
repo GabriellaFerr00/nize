@@ -93,9 +93,9 @@ Nomes em inglês: ver "Nomenclatura em inglês" em `design.md` (os termos em por
 - [x] **TASK-022** [REQ-021, NFR-003]: Teste e implementação do indicador "N/M".
   - _Output_: `regras.IndicadorParcela`.
   - _Verify_: 7 de 12 → "7/12"; sem parcelas → vazio.
-- [~] **TASK-023** [REQ-015, REQ-016, REQ-017, REQ-019]: Migração V3 com `lancamento` e entidade/repositório; criação de lançamento único (fixo e cartão, terceiro, parcela manual).
+- [x] **TASK-023** [REQ-015, REQ-016, REQ-017, REQ-019]: Migração V3 com `lancamento` e entidade/repositório; criação de lançamento único (fixo e cartão, terceiro, parcela manual).
   - _Output_: `V3__lancamentos.sql`, `POST /api/meses/{mes}/lancamentos`.
-  - _Verify_: testes de criação; `data` fora do `mes` rejeitada; `valor_centavos ≤ 0` rejeitado. Aplicar as "Regras de consistência do lançamento" do `design.md` (fixo no crédito permitido; cartão só em crédito; parcelas só em tipo cartão). **Pendente: aplicar V3 no MySQL (validação do Hibernate); H2 verde (162 testes).**
+  - _Verify_: testes de criação; `data` fora do `mes` rejeitada; `valor_centavos ≤ 0` rejeitado. Aplicar as "Regras de consistência do lançamento" do `design.md` (fixo no crédito permitido; cartão só em crédito; parcelas só em tipo cartão). V3–V6 aplicadas no MySQL 8.4 local em 2026-11-04 (perfil `local`, `ddl-auto: validate` ok, app subiu).
 - [x] **TASK-024** [REQ-018, REQ-009, REQ-020]: Geração de parcelas automáticas (`gerarParcelas`) respeitando a permissão e usando `grupo_parcela_id`.
   - _Output_: serviço e testes.
   - _Verify_: cenários "Parcelas automáticas" do PDF (inclui permissão desligada e sem parcelas).
@@ -107,7 +107,7 @@ Nomes em inglês: ver "Nomenclatura em inglês" em `design.md` (os termos em por
   - _Verify_: todos verdes.
 - [x] **TASK-027** [REQ-022]: Migração `mes_carregado` e serviço que aplica `CargaDoMes` na primeira abertura do mês (idempotente), incluindo a virada dez→jan.
   - _Output_: migração, serviço.
-  - _Verify_: abrir o mês 2× não duplica; dezembro → janeiro abre o novo ano e copia estrutura. Verificado no H2 (`MonthLoadServiceTest`); **a V4 também precisa ser aplicada no MySQL** (junto da V3, TASK-023). O serviço `MonthLoadService.open` ainda não é chamado por nenhum endpoint: a TASK-034 (`GET /api/months/{mes}`) vai chamá-lo.
+  - _Verify_: abrir o mês 2× não duplica; dezembro → janeiro abre o novo ano e copia estrutura. Verificado no H2 (`MonthLoadServiceTest`); V4 aplicada no MySQL junto da V3 (TASK-023, 2026-11-04). O serviço `MonthLoadService.open` ainda não é chamado por nenhum endpoint: a TASK-034 (`GET /api/months/{mes}`) vai chamá-lo.
 - [x] **TASK-028** [REQ-023, REQ-004]: Testes de isolamento de todos os endpoints de lançamento.
   - _Output_: testes.
   - _Verify_: usuária B recebe 404 em PUT/DELETE/PATCH de lançamento de A. Coberto em `ExpenseCreateApiTest` (POST com categoria/cartão/pessoa alheios → 404, `userId` no corpo ignorado) e `ExpenseEditApiTest` (PUT/PATCH/DELETE → 404 e nada muda); o `GET` do mês entra na TASK-034.
@@ -144,35 +144,38 @@ Nomes em inglês: ver "Nomenclatura em inglês" em `design.md` (os termos em por
 ## Phase 4: Entradas e saldo do mês
 *Goal*: Mês mostra total de gastos, fixos, saldo, posição dia 15/30, reembolsos e saldo próprio.
 
-- [ ] **TASK-030** [REQ-027, REQ-028, REQ-029, NFR-003]: **Teste primeiro**, depois `regras.TotaisDoMes` (gastos, fixos, saldo).
+- [x] **TASK-030** [REQ-027, REQ-028, REQ-029, NFR-003]: **Teste primeiro**, depois `regras.TotaisDoMes` (gastos, fixos, saldo).
   - _Output_: testes dos cenários "Totais do mês".
   - _Verify_: 99399+494889=594288; saldo 68070.
-- [ ] **TASK-031** [REQ-030, REQ-031, REQ-032, REQ-033, NFR-003]: **Teste primeiro**, depois `regras.PosicaoPorQuinzena` com `dataEfetiva` (Pix pela data; crédito pelo vencimento; fevereiro e meses de 31 dias).
-  - _Output_: testes dos cenários "Posição por quinzena" e "Pix e crédito".
-  - _Verify_: sobra 180000; −30000; Pix 12/04 até o 15; crédito com vencimento 10 até o 15; "pago" não altera.
-- [ ] **TASK-032** [REQ-034, NFR-003]: **Teste primeiro**, depois `regras.SaldoProprio`.
+- [x] **TASK-031** [REQ-030, REQ-031, REQ-032, REQ-033, REQ-048, NFR-003]: **Teste primeiro**, depois `rules.ClosingPositions` com `dataEfetiva` (Pix pela data; crédito pelo vencimento; dias de fechamento quaisquer; dia além do fim do mês = último dia).
+  - _Output_: testes dos cenários "Posição por quinzena" e "Pix e crédito" (com os dias padrão 15 e 31) e dos fechamentos configuráveis.
+  - _Verify_: sobra 180000; −30000; Pix 12/04 até o 15; crédito com vencimento 10 até o 15; "pago" não altera; dias 5/10/20 → três posições; 30 e 31 em fevereiro → uma posição no 28/29; sem dias → nenhuma.
+- [x] **TASK-032** [REQ-034, NFR-003]: **Teste primeiro**, depois `regras.SaldoProprio`.
   - _Output_: teste e classe.
   - _Verify_: 50000, 20000, 19000 → 51000.
-- [ ] **TASK-033** [REQ-024, REQ-025, REQ-026]: Migração V4 com `entrada`; criação, edição e exclusão de entradas, parceladas e reembolso; estender `CargaDoMes` às entradas parceladas.
+- [x] **TASK-033** [REQ-024, REQ-025, REQ-026]: Migração V5 com `entrada` (`income`); criação, edição e exclusão de entradas, parceladas e reembolso; estender `CargaDoMes` às entradas parceladas.
   - _Output_: migração, serviço, endpoints, testes.
   - _Verify_: entrada 1/3 gera 2/3 e 3/3 nos meses seguintes sem duplicar; entrada com `pessoa_id` conta como reembolso; isolamento ok.
-- [ ] **TASK-034** [REQ-027..REQ-034]: Montar o bloco de totais e posições em `GET /api/meses/{mes}` a partir das regras.
+- [x] **TASK-061** [REQ-048, REQ-044]: Migração V6 (`settings.closings_enabled`, `closing_day` com 15 e 31 para as contas existentes); cadastro grava 15 e 31; `GET/PUT /api/settings` com `closingsEnabled`/`closingDays`; tela Configurações com ligar/desligar e lista de dias.
+  - _Output_: migração, serviço, testes de API e de isolamento, tela e testes Vitest.
+  - _Verify_: conta nova tem 15 e 31; dia 0, 32 ou repetido → 400; outra usuária não vê nem altera; desligar mantém os dias salvos.
+- [x] **TASK-034** [REQ-027..REQ-034, REQ-048]: Montar o bloco de totais e posições em `GET /api/meses/{mes}` a partir das regras.
   - _Output_: DTO do cabeçalho e testes de integração.
   - _Verify_: resposta bate com os exemplos do PDF; nenhuma coluna de total no banco (NFR-002).
 
 ## Phase 5: Resumos
 *Goal*: Resumos por categoria, forma de pagamento, cartão e pessoa que sempre fecham com os totais.
 
-- [ ] **TASK-035** [REQ-035, NFR-003]: **Teste primeiro**, depois `regras.ResumoPorCategoria` com porcentagem.
+- [x] **TASK-035** [REQ-035, NFR-003]: **Teste primeiro**, depois `regras.ResumoPorCategoria` com porcentagem.
   - _Output_: testes e classe.
   - _Verify_: 141814/594288 = 23,86%; Σ categorias = total de gastos.
-- [ ] **TASK-036** [REQ-036, REQ-037, NFR-003]: **Teste primeiro**, depois resumos por forma de pagamento e por cartão com "Sem cartão".
+- [x] **TASK-036** [REQ-036, REQ-037, NFR-003]: **Teste primeiro**, depois resumos por forma de pagamento e por cartão com "Sem cartão".
   - _Output_: testes e classes.
   - _Verify_: Σ por cartão (com "Sem cartão") = total de crédito.
-- [ ] **TASK-037** [REQ-038, NFR-003]: **Teste primeiro**, depois resumo de terceiros por pessoa e por cartão.
+- [x] **TASK-037** [REQ-038, NFR-003]: **Teste primeiro**, depois resumo de terceiros por pessoa e por cartão.
   - _Output_: testes e classe.
   - _Verify_: Σ por pessoa = total de gastos de terceiros.
-- [ ] **TASK-038** [REQ-035..REQ-038]: Incluir os resumos em `GET /api/meses/{mes}`.
+- [x] **TASK-038** [REQ-035..REQ-038]: Incluir os resumos em `GET /api/meses/{mes}`.
   - _Output_: DTOs e testes de integração.
   - _Verify_: invariantes de soma verificadas em teste com dados mistos.
 

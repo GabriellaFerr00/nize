@@ -260,4 +260,96 @@ class MonthLoadServiceTest extends IsolationTestBase {
         assertThat(expensesOf(userB, JULY)).extracting(r -> r.get("NAME")).containsExactly("Aluguel B");
         assertThat(expensesOf(userA, JULY)).hasSize(1);
     }
+
+    // ---- incomes (TASK-033, REQ-025, REQ-026) ----
+
+    private long income(TestUser user, String month, String json) throws Exception {
+        String body = as(user, post("/api/months/" + month + "/incomes").contentType(MediaType.APPLICATION_JSON).content(json))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        return ((Number) JsonPath.read(body, "$.id")).longValue();
+    }
+
+    private long incomeInstallment(TestUser user, String month, String name, int number, int count, String extra) throws Exception {
+        return income(user, month, "{\"name\":\"%s\",\"amountCents\":10000,\"date\":\"%s-20\",\"installmentNumber\":%d,\"installmentCount\":%d%s}"
+                .formatted(name, month, number, count, extra));
+    }
+
+    private List<Map<String, Object>> incomesOf(TestUser user, String month) {
+        entityManager.flush();
+        return jdbc.queryForList("SELECT * FROM income WHERE user_id = ? AND month_ref = ? ORDER BY id", user.id(), month);
+    }
+
+    private long personOf(TestUser user, int year, String name) throws Exception {
+        return ((Number) JsonPath.read(as(user, post("/api/years/" + year + "/people").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"" + name + "\"}")).andReturn().getResponse().getContentAsString(), "$.id")).longValue();
+    }
+
+    @Test
+    void anIncomeInOneOfThreeInstallmentsCreatesTheSecondAndThirdWithoutDuplicating() throws Exception {
+        incomeInstallment(userA, JUNE, "Venda do sofá", 1, 3, "");
+        String august = YEAR + "-08";
+        String september = YEAR + "-09";
+
+        open(userA, JULY);
+        open(userA, JULY);
+        open(userA, august);
+        open(userA, september);
+
+        Map<String, Object> second = incomesOf(userA, JULY).get(0);
+        assertThat(incomesOf(userA, JULY)).hasSize(1);
+        assertThat(second.get("INSTALLMENT_NUMBER")).isEqualTo(2);
+        assertThat(second.get("INSTALLMENT_GROUP_ID")).isEqualTo(incomesOf(userA, JUNE).get(0).get("INSTALLMENT_GROUP_ID"));
+        assertThat(((Number) second.get("AMOUNT_CENTS")).longValue()).isEqualTo(10_000L);
+        assertThat(second.get("INCOME_DATE").toString()).isEqualTo(JULY + "-20");
+        assertThat(incomesOf(userA, august)).extracting(r -> r.get("INSTALLMENT_NUMBER")).containsExactly(3);
+        assertThat(incomesOf(userA, september)).isEmpty();
+    }
+
+    @Test
+    void aPlainIncomeIsNotCarriedOver() throws Exception {
+        income(userA, JUNE, "{\"name\":\"Salário\",\"amountCents\":500000,\"date\":\"%s-05\"}".formatted(JUNE));
+
+        open(userA, JULY);
+
+        assertThat(incomesOf(userA, JULY)).isEmpty();
+    }
+
+    @Test
+    void withTheAutomaticPermissionOffIncomeInstallmentsAreNotCreated() throws Exception {
+        incomeInstallment(userA, JUNE, "Venda do sofá", 1, 3, "");
+        as(userA, put("/api/settings").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"currentYear\":%d,\"autoInstallments\":false}".formatted(YEAR))).andExpect(status().isOk());
+
+        open(userA, JULY);
+
+        assertThat(incomesOf(userA, JULY)).isEmpty();
+    }
+
+    @Test
+    void aReimbursementInInstallmentsKeepsThePersonAcrossTheYear() throws Exception {
+        long mainha = personOf(userA, YEAR, "Mainha");
+        incomeInstallment(userA, YEAR + "-12", "Mainha devolve", 1, 2, ",\"personId\":" + mainha);
+
+        open(userA, (YEAR + 1) + "-01");
+
+        Long newMainha = jdbc.queryForObject("SELECT id FROM person WHERE user_id = ? AND year_number = ? AND name = 'Mainha'",
+                Long.class, userA.id(), YEAR + 1);
+        List<Map<String, Object>> january = incomesOf(userA, (YEAR + 1) + "-01");
+        assertThat(january).hasSize(1);
+        assertThat(((Number) january.get(0).get("PERSON_ID")).longValue()).isEqualTo(newMainha);
+    }
+
+    @Test
+    void anIncomeWhosePersonNoLongerExistsInTheNewYearIsSkipped() throws Exception {
+        long mainha = personOf(userA, YEAR, "Mainha");
+        incomeInstallment(userA, YEAR + "-12", "Mainha devolve", 1, 2, ",\"personId\":" + mainha);
+        as(userA, post("/api/years/" + (YEAR + 1))).andExpect(status().isCreated());
+        long newMainha = id(userA, YEAR + 1, "people", "Mainha");
+        as(userA, put("/api/people/" + newMainha).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Mãe\",\"active\":true}")).andExpect(status().isOk());
+
+        open(userA, (YEAR + 1) + "-01");
+
+        assertThat(incomesOf(userA, (YEAR + 1) + "-01")).isEmpty();
+    }
 }

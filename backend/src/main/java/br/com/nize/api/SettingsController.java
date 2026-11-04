@@ -27,10 +27,12 @@ public class SettingsController {
 
     @PutMapping
     public SettingsResponse update(@Valid @RequestBody SettingsRequest request) {
-        return toResponse(service.update(CurrentUser.id(), request.currentYear(), request.autoInstallments()));
+        return toResponse(service.update(CurrentUser.id(), request.currentYear(), request.autoInstallments(),
+                request.closingsEnabled(), request.closingDays()));
     }
 
     private static SettingsResponse toResponse(Settings settings) {
-        return new SettingsResponse(settings.getCurrentYear(), settings.isAutoInstallments());
+        return new SettingsResponse(settings.getCurrentYear(), settings.isAutoInstallments(),
+                settings.isClosingsEnabled(), settings.getClosingDays());
     }
 }
