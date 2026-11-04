@@ -221,6 +221,90 @@
       "autoCount": "Enter 2 to 120 installments.",
       "manualCount": "Enter the total installments, from 2 to 120.",
       "manualNumber": "The current installment must be between 1 and the total."
+    },
+    "editTitle": "Edit expense",
+    "installmentFixed": "Installment {{label}}: the type and the installments do not change when editing."
+  },
+  "income": {
+    "new": "New income",
+    "title": "New income",
+    "editTitle": "Edit income",
+    "saved": "Income saved.",
+    "saveAndAnother": "Save and add another",
+    "nobody": "Nobody (my own income)",
+    "installmentFixed": "Installment {{label}}: the installments do not change when editing.",
+    "fields": {
+      "name": "Name",
+      "amount": "Amount",
+      "date": "Date",
+      "person": "Reimbursement from (person)"
+    },
+    "installments": {
+      "title": "Installments",
+      "enable": "This income comes in installments",
+      "current": "Current installment",
+      "total": "Number of installments",
+      "help": "With automatic installments on, the next installments show up when you open the following months."
+    },
+    "errors": {
+      "name": "Enter a name.",
+      "amount": "Enter an amount greater than zero, such as 49.90.",
+      "date": "Choose a date within {{month}}.",
+      "count": "Enter the number of installments, from 2 to 120.",
+      "number": "The current installment must be between 1 and the total."
+    }
+  },
+  "month": {
+    "currency": "R$",
+    "loading": "Loading the month…",
+    "previous": "Previous month",
+    "next": "Next month",
+    "pickMonth": "Choose month",
+    "pickYear": "Choose year",
+    "totals": {
+      "expenses": "Total expenses",
+      "fixed": "Total fixed",
+      "income": "Income",
+      "balance": "Month balance"
+    },
+    "positions": {
+      "title": "Closings",
+      "upTo": "Up to day {{day}}",
+      "left": "Left",
+      "missing": "Missing"
+    },
+    "lists": {
+      "fixed": "Fixed",
+      "card": "Card",
+      "income": "Income",
+      "fixedEmpty": "No fixed expenses this month.",
+      "cardEmpty": "No card expenses this month.",
+      "incomeEmpty": "No income this month."
+    },
+    "installment": "Installment {{label}}",
+    "thirdParty": "spent by {{name}}",
+    "reimbursementFrom": "Reimbursement from {{name}}",
+    "paid": "{{name}} paid",
+    "edit": "Edit {{name}}",
+    "delete": "Delete {{name}}",
+    "deleteTitle": "Delete",
+    "deleteQuestion": "Delete \"{{name}}\"? This cannot be undone.",
+    "summary": {
+      "title": "Summaries",
+      "show": "Show",
+      "hide": "Hide",
+      "ownBalance": "Own balance",
+      "balance": "Month balance",
+      "thirdParty": "Third-party expenses",
+      "reimbursements": "Reimbursements received",
+      "ownBalanceHelp": "The month balance plus third-party expenses, minus reimbursements.",
+      "byCategory": "By category",
+      "byPayment": "By payment method",
+      "byCard": "By card",
+      "byPerson": "Third parties by person and card",
+      "noExpenses": "No expenses this month.",
+      "noCredit": "No credit expenses this month.",
+      "noThirdParty": "No third-party expenses this month."
     }
   }
 }

@@ -182,21 +182,26 @@ Nomes em inglês: ver "Nomenclatura em inglês" em `design.md` (os termos em por
 ## Phase 6: Tela do mês
 *Goal*: A tela principal junta tudo, com navegação entre meses e lançamento rápido.
 
-- [ ] **TASK-039** [REQ-041, REQ-040]: Página `/mes/:aaaa-mm` com cabeçalho (totais e posições), seletor de mês/ano e carga ao abrir.
+- [x] **TASK-039** [REQ-041, REQ-040]: Página `/mes/:aaaa-mm` com cabeçalho (totais e posições), seletor de mês/ano e carga ao abrir.
   - _Output_: página e hooks.
   - _Verify_: trocar de mês atualiza os números; valores exibidos vêm só da API.
-- [ ] **TASK-040** [REQ-041, REQ-015, REQ-016, REQ-024, REQ-023]: Listas de Fixos, Cartão e Entradas com "pago", editar e excluir, e indicador N/M.
+  - _Done_: `MonthPage` + `MonthHeader` (totais, posições só com `closingsEnabled`) + `MonthPicker` (anterior/próximo, mês, ano de `/api/years`); `useMonth` (`GET /api/months/{m}`, que faz a carga). Testes em `pages/month.test.tsx`.
+- [x] **TASK-040** [REQ-041, REQ-015, REQ-016, REQ-024, REQ-023]: Listas de Fixos, Cartão e Entradas com "pago", editar e excluir, e indicador N/M.
   - _Output_: componentes de lista.
   - _Verify_: marcar pago não altera os totais exibidos; editar e excluir refletem na hora.
-- [ ] **TASK-041** [REQ-041, REQ-035..REQ-038, REQ-034]: Painel de resumos (categoria, forma, cartão, pessoa) e saldo próprio.
+  - _Done_: `EntryLists` (marca "pago" só nos fixos, via `PATCH .../paid`; N/M = `installmentLabel` da API); edição reusa `ExpenseFormDialog`/`IncomeFormDialog` (PUT; parcelas e tipo de parcela travados); exclusão com confirmação; tudo refaz `GET /api/months/{m}`.
+- [x] **TASK-041** [REQ-041, REQ-035..REQ-038, REQ-034]: Painel de resumos (categoria, forma, cartão, pessoa) e saldo próprio.
   - _Output_: componentes do painel.
   - _Verify_: números idênticos aos da API; sem cálculo no front.
-- [ ] **TASK-042** [REQ-042, REQ-024, REQ-026]: Botão de lançamento rápido na tela do mês para gasto e entrada (reuso da janela da TASK-029; entrada com parcelas e reembolso).
+  - _Done_: `SummaryPanel` (categoria com o `percent` da API, Pix/crédito, cartão com "Sem cartão" para `cardId` null, terceiros por pessoa e cartão, saldo próprio com saldo, terceiros e reembolsos da API).
+- [x] **TASK-042** [REQ-042, REQ-024, REQ-026]: Botão de lançamento rápido na tela do mês para gasto e entrada (reuso da janela da TASK-029; entrada com parcelas e reembolso).
   - _Output_: janela de entrada.
   - _Verify_: lançar um gasto em poucos segundos sem sair da tela.
-- [ ] **TASK-043** [REQ-043, NFR-006]: Ajustar a tela do mês para 360px (listas empilhadas, painel recolhível).
+  - _Done_: botões "Novo lançamento" e "Nova entrada"; `IncomeFormDialog` (parcela N de M, reembolso de pessoa ativa, "salvar e lançar outra").
+- [x] **TASK-043** [REQ-043, NFR-006]: Ajustar a tela do mês para 360px (listas empilhadas, painel recolhível).
   - _Output_: ajustes de CSS.
   - _Verify_: sem rolagem horizontal em 360px, 768px e 1280px.
+  - _Done_: listas empilhadas; painel em coluna lateral a partir de 1280px (`xl`); resumos recolhíveis abaixo de 768px. Medido com Playwright (API simulada, nomes e valores longos): sem rolagem horizontal nem elemento fora da tela em 360/768/1280px, com o painel aberto e com as janelas abertas.
 
 ## Phase 7: Panorama anual
 *Goal*: Visão dos 12 meses coerente com a tela do mês.

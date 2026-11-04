@@ -336,6 +336,9 @@ nize/
     ├── functions/api/[[path]].ts  (Pages Function: proxy /api → Render; D-15)
     ├── e2e/  (Playwright, dados sintéticos)
     └── src/ (pages/, components/, api/, lib/, styles/, i18n/ com en.json e pt.json, test/)
+        tela do mês (Phase 6): api/monthApi.ts, api/incomesApi.ts; lib/useMonth.ts, lib/format.ts;
+        components/MonthHeader.tsx, MonthPicker.tsx, EntryLists.tsx, SummaryPanel.tsx, IncomeFormDialog.tsx, Money.tsx;
+        testes pages/month.test.tsx, lib/month.test.ts
 ```
 groupId `br.com.nize`, artifactId `nize-backend`, pacote raiz `br.com.nize`.
 
