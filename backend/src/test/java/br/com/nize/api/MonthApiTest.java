@@ -90,8 +90,10 @@ class MonthApiTest extends IsolationTestBase {
                 .andExpect(jsonPath("$.totals.ownBalanceCents").value(0))
                 .andExpect(jsonPath("$.closingsEnabled").value(true))
                 .andExpect(jsonPath("$.positions", hasSize(2)))
-                .andExpect(jsonPath("$.positions[0].day").value(15))
-                .andExpect(jsonPath("$.positions[1].day").value(30))
+                .andExpect(jsonPath("$.positions[0].fromDay").value(1))
+                .andExpect(jsonPath("$.positions[0].toDay").value(15))
+                .andExpect(jsonPath("$.positions[1].fromDay").value(16))
+                .andExpect(jsonPath("$.positions[1].toDay").value(30))
                 .andExpect(jsonPath("$.expenses", hasSize(0)))
                 .andExpect(jsonPath("$.incomes", hasSize(0)));
     }
@@ -108,10 +110,11 @@ class MonthApiTest extends IsolationTestBase {
         expense(userA, 360_000, "FIXED", 30, "");
 
         month(userA, APRIL.toString())
-                .andExpect(jsonPath("$.positions[0].day").value(15))
+                .andExpect(jsonPath("$.positions[0].toDay").value(15))
                 .andExpect(jsonPath("$.positions[0].balanceCents").value(230_000))
-                .andExpect(jsonPath("$.positions[1].day").value(30))
-                .andExpect(jsonPath("$.positions[1].balanceCents").value(-80_000));
+                // 16–30 only: 50000 − 360000, without the first interval (REQ-030)
+                .andExpect(jsonPath("$.positions[1].fromDay").value(16))
+                .andExpect(jsonPath("$.positions[1].balanceCents").value(-310_000));
     }
 
     @Test
@@ -139,8 +142,11 @@ class MonthApiTest extends IsolationTestBase {
 
         month(userA, APRIL.toString())
                 .andExpect(jsonPath("$.positions", hasSize(3)))
-                .andExpect(jsonPath("$.positions[0].balanceCents").value(100_000))
-                .andExpect(jsonPath("$.positions[1].balanceCents").value(90_000));
+                .andExpect(jsonPath("$.positions[0].balanceCents").value(100_000))   // 1–5
+                .andExpect(jsonPath("$.positions[1].balanceCents").value(-10_000))   // 6–10
+                .andExpect(jsonPath("$.positions[2].fromDay").value(11))             // 11–end of the month
+                .andExpect(jsonPath("$.positions[2].toDay").value(30))
+                .andExpect(jsonPath("$.positions[2].balanceCents").value(0));
 
         as(userA, put("/api/settings").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"currentYear\":%d,\"autoInstallments\":true,\"closingsEnabled\":false}".formatted(YEAR)))

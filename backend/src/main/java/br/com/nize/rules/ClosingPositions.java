@@ -9,9 +9,10 @@ import java.util.Objects;
 import java.util.TreeSet;
 
 /**
- * What is left (or missing) on each closing day of the month (REQ-030, REQ-031, REQ-032, REQ-048). Pure rule: no
+ * What is left (or missing) in each interval between closing days (REQ-030, REQ-031, REQ-032, REQ-048). Pure rule: no
  * Spring, no JPA, no floating point. A closing day past the end of the month counts as the last day, so the default
- * days 15 and 31 are "the 15th" and "the last day" in every month.
+ * days 15 and 31 give the intervals 1–15 and 16–last day in every month. Each interval counts only its own days, and
+ * the last one always runs to the end of the month.
  */
 public final class ClosingPositions {
 
@@ -44,8 +45,8 @@ public final class ClosingPositions {
         }
     }
 
-    /** {@code balanceCents} is income minus expenses up to {@code day} (inclusive) and may be negative. */
-    public record Position(int day, long balanceCents) {
+    /** {@code balanceCents} is income minus expenses from {@code fromDay} to {@code toDay} (inclusive); may be negative. */
+    public record Position(int fromDay, int toDay, long balanceCents) {
     }
 
     /** Pix: the payment date. Credit with a card: the card's due day in this month. Credit without a card: the date. */
@@ -57,8 +58,9 @@ public final class ClosingPositions {
     }
 
     /**
-     * One position per closing day, in ascending order. Days that land on the same date (30 and 31 in February) give
-     * one position. No closing days, no positions. Overflowing sums throw {@link ArithmeticException}.
+     * One position per interval, in ascending order: 1 to the first closing day, then the day after each closing day to
+     * the next one; the last interval ends on the last day of the month. Days that land on the same date (30 and 31 in
+     * February) give one interval. No closing days, no positions. Overflowing sums throw {@link ArithmeticException}.
      */
     public static List<Position> of(YearMonth month, List<Expense> expenses, List<Income> incomes,
                                     Collection<Integer> closingDays) {
@@ -67,7 +69,7 @@ public final class ClosingPositions {
             limits.add(Math.min(requireDay(day), month.lengthOfMonth()));
         }
 
-        // Net amount per day of the month, then a running sum: each position is the sum up to its day.
+        // Net amount per day of the month, then one sum per interval (never carried into the next one).
         long[] netByDay = new long[month.lengthOfMonth() + 1];
         for (Income income : incomes) {
             int day = dayInMonth(income.date(), month);
@@ -80,14 +82,15 @@ public final class ClosingPositions {
         }
 
         List<Position> positions = new ArrayList<>(limits.size());
-        long running = 0;
-        int summedUpTo = 0;
+        int from = 1;
         for (int limit : limits) {
-            for (int day = summedUpTo + 1; day <= limit; day++) {
-                running = Math.addExact(running, netByDay[day]);
+            int to = limit == limits.last() ? month.lengthOfMonth() : limit;
+            long sum = 0;
+            for (int day = from; day <= to; day++) {
+                sum = Math.addExact(sum, netByDay[day]);
             }
-            summedUpTo = limit;
-            positions.add(new Position(limit, running));
+            positions.add(new Position(from, to, sum));
+            from = to + 1;
         }
         return List.copyOf(positions);
     }

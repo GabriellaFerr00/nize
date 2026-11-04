@@ -112,7 +112,7 @@
     "intro": "In a few steps you start tracking your month.",
     "steps": {
       "log": "Add your fixed expenses, card expenses and income on the month screen.",
-      "position": "See your balance and what is missing or left over by the 15th and by the 30th.",
+      "position": "See your balance and what is missing or left over in each part of the month (by default: day 1 to 15 and 16 to the end).",
       "setup": "Adjust categories, cards and people whenever you like, under Categories, Cards and People."
     },
     "dismiss": "Got it"
@@ -280,7 +280,7 @@
     },
     "positions": {
       "title": "Closings",
-      "upTo": "Up to day {{day}}",
+      "range": "Day {{from}} to {{to}}",
       "left": "Left",
       "missing": "Missing"
     },

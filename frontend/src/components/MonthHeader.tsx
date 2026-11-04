@@ -34,10 +34,10 @@ export function MonthHeader({ view }: { view: MonthView }) {
           <ul className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
             {view.positions.map((p) => (
               <li
-                key={p.day}
+                key={p.fromDay}
                 className="flex min-w-0 flex-col rounded-xl border border-line bg-white px-3 py-2 text-sm"
               >
-                <span className="text-ink-soft">{t('month.positions.upTo', { day: p.day })}</span>
+                <span className="text-ink-soft">{t('month.positions.range', { from: p.fromDay, to: p.toDay })}</span>
                 <span className="font-semibold">
                   {p.balanceCents < 0 ? t('month.positions.missing') : t('month.positions.left')}{' '}
                   <Money cents={p.balanceCents} tone unsigned />

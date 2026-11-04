@@ -1,10 +1,10 @@
 # CONTEXT.md
 > Nize — Live session journal
-> Last updated: 2026-11-04 — Session 7
+> Last updated: 2026-11-04 — Session 8
 
 ## ⚡ Resume from here
 
-**Active task:** Phases 6, 7 e TASK-046..048 prontas no branch `feat/phases-6-8` (PR para a `main`). Faltam TASK-049 (revisão visual manual, da usuária) e TASK-050 (deploy final pelo pipeline, depois do merge).
+**Active task:** PR de `fix/closing-intervals` (posições por intervalo, REQ-030). Depois: TASK-049 (revisão visual, da usuária) e TASK-050 (conferir cadastro → lançamento → resumo em produção).
 **Phase:** Phase 4 — TASK-030..034 e 061 [x]. Fechamentos opcionais (REQ-048, design 0.2.4): padrão 15 e 31, quantos dias quiser, liga/desliga; data do lançamento continua obrigatória.
 **Status:** Produção no ar (https://nize.pages.dev, API https://nize-api.onrender.com). `GET /api/months/{m}` abre o mês (carga) e devolve listas, totais, posições, saldo próprio e resumos (categoria com %, forma, cartão com "Sem cartão" = `cardId` null, terceiros por pessoa e cartão). Tela do mês ainda não usa esse endpoint (Phase 6).
 **Blocker (if any):** contas e segredos externos só a usuária pode criar.
@@ -20,6 +20,7 @@ Para rodar o app é preciso `export NIZE_JWT_SECRET=<>=32 bytes>` (os testes usa
 
 | # | Date | What was done | Files changed |
 |---|---|---|---|
+| 8 | 2026-11-04 | PR #10 merged e publicado (back ok; smoke do front falhou por propagação do Cloudflare em `/sign-in`, site ok; usuária reexecutou). Bug relatado pela usuária: posições acumuladas → agora por intervalo entre fechamentos, sem acumular, último até o fim do mês, rótulo "Do dia A ao B" (REQ-030 0.1.7, design 0.2.6), branch `fix/closing-intervals` | ClosingPositions, MonthResponse, MonthHeader, i18n, testes, specs |
 | 7 | 2026-11-04 | PR #8 merged (Maven 3.10.0; `mvnw.cmd` voltou a LF) e deploy ok. Phases 6, 7 e 8 (046–048) em paralelo por 3 agentes (branches `feat/phase-6/7/8` sobre `specs/phases-6-8`), integradas em `feat/phases-6-8`: tela do mês completa; `GET /api/years/{year}/overview` (carga até o mês vigente, D-19) + tela do panorama (Recharts 3.10.1); `PdfScenariosTest` (22 cenários), isolamento 25/25, carga p95 ≈ 14 ms (H2). Na integração: mês padrão no ano vigente (REQ-006). 363 testes back, 137 front | frontend/src/**, backend/src/**, docs/cobertura-cenarios.md, specs |
 | 6 | 2026-11-04 | PR #9: job "Backend on MySQL 8.4" falhou com 500 em `GET /api/settings` (`LazyInitializationException` em `Settings.closingDays`; `open-in-view: false` e os testes `@Transactional` escondiam). Correção: `@ElementCollection(fetch = EAGER)` + `SettingsOutsideTransactionTest` (sem transação no teste; apaga a usuária no fim). Smoke do Cloudflare falhou por cold start do Render (>3 min); rerun verde. Merge do #9 e deploy aprovados pela usuária (back: Flyway V5/V6 na Aiven 21:19; front: smoke ok); um run antigo do PR #7 também foi aprovado (republicou o front de `3a1177a`, depois substituído). TASK-023 fechada: app rodado no IntelliJ (Windows) com perfil `local`; exigiu usuário `nize`@`localhost` com GRANT | Settings.java, SettingsOutsideTransactionTest.java, tasks.md, backend/HELP.md 
 | 5 | 2026-11-04 | Phase 5: `CategorySummary` (% com 2 casas, decimal exato), `PaymentSummary`, `ThirdPartySummary`, resumos no `GET /api/months/{m}`. Phase 4: `MonthTotals`, `ClosingPositions` (fechamentos configuráveis, decisão da usuária: requirements 0.1.5 REQ-048, design 0.2.4), `OwnBalance`; entradas (V5 `income`, `/api/months/{m}/incomes`, `/api/incomes/{id}`, carga continua entradas parceladas); V6 `closing_day` + `settings.closings_enabled`, `/api/settings` com `closingsEnabled`/`closingDays`, tela Configurações (`ClosingDaysField`); `GET /api/months/{m}`. Antes: PRs #6/#7 (Dependabot sem preview, ignora Spring Boot 4.1/Flyway 12, Integration tests também roda quando muda `backend.yml`/`frontend.yml`) | backend/**, frontend/src/**, specs |

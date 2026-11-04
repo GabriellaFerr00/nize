@@ -1,5 +1,5 @@
 # requirements.md
-> Nize — Version 0.1.6 (MVP web) — 2026-11-04
+> Nize — Version 0.1.7 (MVP web) — 2026-11-04
 
 Fonte: `Nize — Funcionalidades e escopo do MVP web.pdf` (1 nov 2026). Em caso de dúvida entre este arquivo e o PDF, pergunte antes de implementar.
 
@@ -94,8 +94,8 @@ O Nize é a versão web da planilha "Finanças 2026". A usuária lança gastos e
   - _Acceptance_: o total de fixos é a soma apenas dos lançamentos de tipo `fixo`.
 - **REQ-029**: O sistema shall calcular o saldo do mês como entradas menos total de gastos.
   - _Acceptance_: entradas 662358 − gastos 594288 = 68070 centavos.
-- **REQ-030**: Com os fechamentos ligados (REQ-048), o sistema shall calcular a posição em cada dia de fechamento, somando gastos e entradas com data até aquele dia e mostrando o que falta ou sobra.
-  - _Acceptance_: entradas 300000 e gastos 120000 até o dia 15 → sobra 180000.
+- **REQ-030**: Com os fechamentos ligados (REQ-048), o sistema shall calcular a posição de cada intervalo entre fechamentos, sem acumular os intervalos anteriores: o primeiro vai do dia 1 até o primeiro fechamento, cada um dos seguintes vai do dia seguinte ao fechamento anterior até o seu, e o último vai até o fim do mês. Cada posição soma só as entradas e os gastos com data dentro do seu intervalo e mostra o que falta ou sobra nele.
+  - _Acceptance_: entradas 300000 e gastos 120000 do dia 1 ao 15 → sobra 180000; gastos 30000 do dia 16 ao 30 e nenhuma entrada → falta 30000 (não 150000); com fechamentos 10 e 20, os intervalos são 1–10 e 11–fim do mês.
 - **REQ-031**: Um dia de fechamento além do fim do mês shall valer como o último dia do mês (o padrão 31 é sempre o último dia; 30 e 31 em fevereiro viram 28/29).
   - _Acceptance_: entradas 350000 e gastos 380000 até o último dia → posição −30000 ("faltam R$ 300,00"); em fevereiro, o limite é o dia 28/29.
 - **REQ-032**: O sistema shall datar gastos no Pix pela data do pagamento e gastos no crédito pelo dia de vencimento do cartão, e cada parcela shall pesar no mês em que aparece.
@@ -176,6 +176,7 @@ O Nize é a versão web da planilha "Finanças 2026". A usuária lança gastos e
 | 0.1.1 | 2026-11-01 | REQ-046 (idioma da interface en/pt) |
 | 0.1.2 | 2026-11-01 | REQ-015: fixo pode ser pago no crédito; glossário "Total de crédito" |
 | 0.1.3 | 2026-11-01 | REQ-022: carga continua parcelas à mão e respeita a permissão |
+| 0.1.7 | 2026-11-04 | REQ-030: posição por intervalo entre fechamentos, sem acumular; o último intervalo vai até o fim do mês. Diverge do PDF (posição acumulada até 15/30); decisão da usuária |
 | 0.1.6 | 2026-11-04 | NFR-007 confirmada (p95 < 500 ms com 500 lançamentos) |
 | 0.1.5 | 2026-11-04 | REQ-048 (fechamentos opcionais, quantos dias quiser, padrão 15 e 31); REQ-030/031/041 passam a usar os dias de fechamento. Diverge do PDF (dias fixos 15 e 30); decisão da usuária |
 | 0.1.4 | 2026-11-01 | REQ-047 (limite de tentativas), NFR-008 a NFR-010 (segredos fora do log, banco com privilégio mínimo e TLS, pipeline de CI/CD); REQ-003 em produção sem e-mail |
