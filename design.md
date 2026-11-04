@@ -310,6 +310,7 @@ nize/
 │   ├── dependabot.yml           (Maven, npm, GitHub Actions, Docker)
 │   └── workflows/  backend.yml, frontend.yml, integration-tests.yml, security.yml (um por tema)
 ├── docs/ci-cd.md                (fluxo, segredos, rollback, rotação, achados)
+├── docs/cobertura-cenarios.md   (Phase 8: cenários do PDF → testes, endpoints × isolamento, carga NFR-007)
 ├── scripts/ci/                  (scripts do pipeline: mysql-setup.sh, check-schema.sql,
 │                                 check-runtime-privileges.sh, api-smoke.sh, dast-checks.sh,
 │                                 frontend-smoke.sh, check-logs.sh, check_pii.py, check-forbidden-files.sh,
@@ -329,7 +330,9 @@ nize/
 │       │   └── security/        (JWT, user_id do token)
 │       ├── main/resources/  application.yml, application-local.yml, application-h2.yml, application-prod.yml
 │       ├── main/resources/db/migration/   (Flyway)
-│       └── test/java/br/com/nize/  (rules/, service/, api/)
+│       └── test/java/br/com/nize/  (rules/, service/, api/; api/PdfScenariosTest = cenários do PDF com
+│                                    @DisplayName; api/MonthResponseTimeTest = carga, tag `performance`,
+│                                    fora da suíte normal: `-Dtest.excludedGroups=none`)
 └── frontend/
     ├── package.json  vite.config.ts  playwright.config.ts
     ├── public/  _redirects (fallback da SPA)  _headers (CSP, HSTS...)

@@ -211,15 +211,18 @@ Nomes em inglês: ver "Nomenclatura em inglês" em `design.md` (os termos em por
 ## Phase 8: Validação final do MVP
 *Goal*: Garantir que o MVP cumpre a spec antes do primeiro deploy de teste.
 
-- [ ] **TASK-046** [NFR-003]: Conferir que todos os cenários do PDF existem como testes (tabela cenário → teste).
+- [x] **TASK-046** [NFR-003]: Conferir que todos os cenários do PDF existem como testes (tabela cenário → teste).
   - _Output_: seção no final deste arquivo ou `docs/cobertura-cenarios.md`.
   - _Verify_: nenhum cenário sem teste; `mvn test` verde.
+  - _Feito_: `docs/cobertura-cenarios.md` §1; 22 cenários, todos com teste ponta a ponta em `api.PdfScenariosTest` (`@DisplayName` = nome do cenário, números do PDF) além dos testes de regra; 8, 9 e 14 adaptados (REQ-048, REQ-031, REQ-022). Exibição do "N/M" na tela fica com a TASK-040.
 - [ ] **TASK-047** [NFR-004, REQ-004]: Rodar a suíte de isolamento sobre todos os endpoints de dados.
   - _Output_: relatório de endpoints × teste de isolamento.
   - _Verify_: 100% dos endpoints de dados cobertos.
-- [ ] **TASK-048** [NFR-007]: Teste de carga simples do resumo do mês com 500 lançamentos.
+  - _Andamento_: `docs/cobertura-cenarios.md` §2; 24/24 endpoints existentes cobertos (novos: `ExpenseEditApiTest#editCannotPointToAnotherUsersCardOrPerson`, `IncomeApiTest#editCannotPointToAnotherUsersPerson`). **Falta** `GET /api/years/{year}/overview` (TASK-044, Phase 7).
+- [x] **TASK-048** [NFR-007]: Teste de carga simples do resumo do mês com 500 lançamentos.
   - _Output_: resultado registrado.
   - _Verify_: p95 < 500 ms (ou meta revisada).
+  - _Feito_: `api.MonthResponseTimeTest` (tag `performance`, `./mvnw test -Dtest=MonthResponseTimeTest -Dtest.excludedGroups=none`); 300 requisições, p95 ≈ 14 ms, máx. ≈ 27 ms (H2, local); `docs/cobertura-cenarios.md` §3.
 - [ ] **TASK-049** [REQ-045]: Revisão de identidade visual: nada copiado da planilha.
   - _Output_: checklist assinado.
   - _Verify_: revisão manual.
