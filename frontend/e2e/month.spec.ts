@@ -21,15 +21,19 @@ test('a new user signs up, logs an expense in the current month and signs in aga
   const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
   await page.goto(`/month/${month}`)
   await page.getByRole('button', { name: 'Novo lançamento' }).click()
-  await page.getByLabel('Nome').fill('Mercado E2E')
-  await page.getByLabel('Valor (R$)').fill('123,45')
-  await page.getByLabel('Categoria').selectOption({ index: 1 })
-  await page.getByLabel('Data').fill(`${month}-10`)
-  await page.getByRole('button', { name: 'Salvar e lançar outro' }).click()
-  await expect(page.getByText('Lançamento salvo.')).toBeVisible()
-  // The month balance check joins here once GET /api/months/{month} exists (TASK-034).
+  // Scoped to the window: the month screen also has labelled sections (e.g. "Por categoria").
+  const dialog = page.getByRole('dialog')
+  await dialog.getByLabel('Nome', { exact: true }).fill('Mercado E2E')
+  await dialog.getByLabel('Valor (R$)', { exact: true }).fill('123,45')
+  await dialog.getByLabel('Categoria', { exact: true }).selectOption({ index: 1 })
+  await dialog.getByLabel('Data', { exact: true }).fill(`${month}-10`)
+  await dialog.getByRole('button', { name: 'Salvar e lançar outro' }).click()
+  await expect(dialog.getByText('Lançamento salvo.')).toBeVisible()
 
-  await page.getByRole('button', { name: 'Cancelar' }).click()
+  // The month screen (GET /api/months/{month}) lists the new expense.
+  await dialog.getByRole('button', { name: 'Cancelar' }).click()
+  await expect(page.getByText('Mercado E2E')).toBeVisible()
+
   await page.getByRole('button', { name: 'Sair' }).click()
   await page.getByLabel('E-mail').fill(email)
   await page.getByLabel('Senha').fill(password)
