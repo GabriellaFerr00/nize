@@ -1,11 +1,11 @@
 # design.md
-> Nize — Version 0.2.4 (MVP web) — 2026-11-04
+> Nize — Version 0.2.5 (MVP web) — 2026-11-04
 
 ## Architecture Overview
 Monorepo com dois módulos independentes: `backend` (API REST) e `frontend` (SPA). **Toda regra de cálculo vive só no back-end** (totais, saldo, posição nos fechamentos, parcelas, carga do mês, saldo próprio, porcentagens). O front apenas exibe o que a API devolve e nunca recalcula valores. Como back (Java) e front (TypeScript) não compartilham código, o "pacote de regras compartilhado" do PDF vira o pacote Java `br.com.nize.rules`, puro (sem Spring, sem JPA), testado antes do código.
 
 **Stack**
-- Back-end: Java 25, Spring Boot **4.0.9** (Web, Security, Data JPA, Validation), Maven. Toolchain local: Temurin 25 + Maven 3.9.16 em `~/tools`.
+- Back-end: Java 25, Spring Boot **4.0.9** (Web, Security, Data JPA, Validation), Maven. Toolchain local: Temurin 25 + Maven Wrapper (Maven 3.10.0).
 - Banco: MySQL 8.4 no ambiente local, MySQL 8.x gerenciado (Aiven, plano gratuito, TLS) em produção; H2 em memória (modo MySQL) nos testes. Migrações com Flyway, com SQL compatível com os dois.
 - Front-end: React + TypeScript + Vite, Tailwind CSS, TanStack Query, React Router, biblioteca de gráficos (Recharts) para o panorama anual.
 - Testes: JUnit 5 + AssertJ (regras e serviços), Spring Boot Test/MockMvc (API e isolamento), Vitest + Testing Library (front).
@@ -54,6 +54,7 @@ Monorepo com dois módulos independentes: `backend` (API REST) e `frontend` (SPA
 | D-16 | Limite de tentativas (REQ-047) em memória, por chave (`login:email`, `login:ip`, ...), janela fixa; limites configuráveis em `nize.rate-limit.*`. Vale para uma instância só (o plano gratuito tem uma); reinício zera os contadores. IP vem de `X-Forwarded-For` no perfil `prod` (`server.forward-headers-strategy: framework`); quem chama o Render direto pode forjar o IP, por isso o limite por e-mail é o controle principal | REQ-047 |
 | D-17 | `EmailSender` no perfil `prod` é `DisabledEmailSender` (não envia e não loga e-mail nem token); `LoggingEmailSender` só fora de `prod` | NFR-008, REQ-003 |
 | D-18 | Healthcheck por Spring Boot Actuator, expondo só `GET /actuator/health` (sem detalhes, sem autenticação) | Smoke test e `HEALTHCHECK` do Docker |
+| D-19 | `GET /api/years/{year}/overview` faz a carga do mês (`MonthLoadService.open`, idempotente) de cada mês do ano até o mês vigente, em ordem (janeiro primeiro, para cada mês copiar do anterior); ano passado → os 12 meses; ano futuro → nenhum. Meses depois do vigente só mostram o que já existe. Cada mês devolvido bate com `GET /api/months/{m}` (mesmos totais e saldo) | Decisão da usuária, 2026-11-04 |
 | D-9 | Posição por quinzena usa "data efetiva" (pela forma de pagamento, não pelo tipo): Pix = `data`; crédito com cartão = dia de vencimento do cartão dentro do mês do lançamento; crédito sem cartão = `data` (confirmado 2026-11-01) | REQ-032 |
 
 ## Nomenclatura em inglês
@@ -280,7 +281,7 @@ REST JSON sob `/api`. Todos os endpoints exceto `/api/auth/**` exigem `Authoriza
 | DELETE | /api/lancamentos/{id} | sim | REQ-023 | exclui |
 | POST | /api/meses/{aaaa-mm}/entradas | sim | REQ-024..026 | cria entrada (parcelada ou reembolso) |
 | PUT/DELETE | /api/entradas/{id} | sim | REQ-023 | edita / exclui |
-| GET | /api/anos/{ano}/panorama | sim | REQ-039 | 12 meses: gastos, entradas e saldo |
+| GET | /api/anos/{ano}/panorama | sim | REQ-039 | 12 meses: gastos, entradas e saldo; faz a carga dos meses até o vigente (D-19) |
 | GET | /actuator/health | não | D-18 | `{"status":"UP"}`; usado pelo Docker e pelo smoke test |
 
 Erros sempre no formato `{code, fields}` (`ApiExceptionHandler`), inclusive os do framework: parâmetro de tipo errado → 400 `VALIDATION_ERROR`; rota inexistente → 404 `NOT_FOUND`; método errado → 405 `METHOD_NOT_ALLOWED`; tipo de conteúdo errado → 415 `UNSUPPORTED_MEDIA_TYPE`; erro inesperado → 500 `INTERNAL_ERROR` (causa só no log do servidor, nunca na resposta).
@@ -373,8 +374,8 @@ GitHub Actions (detalhes em `docs/ci-cd.md`; NFR-010). **Um workflow por tema**,
 - [x] ~~Parcela e vencimento~~ — resolvido em 2026-11-01: cada parcela pesa no mês em que aparece, com o dia de vencimento do cartão naquele mês.
 - [x] ~~Hospedagem final~~ — resolvido em 2026-11-01: Cloudflare Pages + Render (imagem do GHCR) + Aiven MySQL (D-13).
 - [ ] **Provedor de e-mail em produção** para a recuperação de senha (REQ-003). Até lá, `DisabledEmailSender` (D-17).
-- [ ] **Cucumber ou JUnit** para os cenários Gherkin do PDF. Proposto: JUnit 5 com nomes iguais aos cenários, sem Cucumber.
-- [ ] **Meta de desempenho NFR-007** é proposta da spec; confirmar.
+- [x] ~~Cucumber ou JUnit~~ — resolvido em 2026-11-04: JUnit 5 com nomes iguais aos cenários, sem Cucumber.
+- [x] ~~Meta de desempenho NFR-007~~ — resolvido em 2026-11-04: confirmada (p95 < 500 ms com 500 lançamentos no mês).
 - [x] ~~Idioma do código~~ — resolvido em 2026-11-01: tudo em inglês, inclusive banco e API; front com opção de português (D-10, D-11, REQ-046).
 
 ## Changelog
@@ -390,6 +391,7 @@ GitHub Actions (detalhes em `docs/ci-cd.md`; NFR-010). **Um workflow por tema**,
 | 0.1.7 | 2026-11-01 | Fixo pode ser no crédito (tipo e forma de pagamento independentes); regras de consistência do lançamento; Open Questions da Phase 3 resolvidas |
 | 0.1.8 | 2026-11-01 | `month` reservado no H2: coluna `month_ref`; data do lançamento `expense_date` |
 | 0.1.9 | 2026-11-01 | Carga do mês: continua parcelas à mão (grupo próprio) e respeita a permissão de parcelas automáticas |
+| 0.2.5 | 2026-11-04 | Panorama faz a carga dos meses até o vigente (D-19); Open Questions da Phase 8 resolvidas (JUnit 5, NFR-007 confirmada); Maven 3.10.0 |
 | 0.2.4 | 2026-11-04 | Fechamentos opcionais (REQ-048): `settings.closings_enabled`, tabela `closing_day`, regra `ClosingPositions` (substitui `FortnightPosition`), `/api/settings` com `closingsEnabled`/`closingDays`. Diverge do PDF (15/30 fixos); decisão da usuária |
 | 0.2.3 | 2026-11-04 | PR do Dependabot sem preview do front e com secret próprio para o MySQL dos testes; Dependabot ignora Spring Boot ≥ 4.1 e Flyway ≥ 12; Testes integrados também rodam quando muda `backend.yml`/`frontend.yml` (senão o *gate* falha por falta de run) |
 | 0.2.2 | 2026-11-02 | Um workflow por tema (back, front, segurança, testes integrados) sem aninhamento; deploys esperam Segurança e Testes integrados do mesmo commit (job *gate*); testes integrados em dois jobs (back: MySQL + fluxo da API; front: E2E com a API em `h2`) |
