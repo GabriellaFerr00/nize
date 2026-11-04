@@ -14,7 +14,10 @@ RUN ./mvnw -B -q -DskipTests -Djacoco.skip=true package \
     && cp target/nize-backend-*.jar /app.jar
 
 FROM eclipse-temurin:25-jre-alpine@sha256:56f273059de6b13a6b49fe0ded691ed2d0399bbee76156a8f2d385f7524a3d43
-RUN addgroup -S -g 10001 nize && adduser -S -u 10001 -G nize -H -s /sbin/nologin nize
+# Security fixes from Alpine that the pinned base does not have yet (trivy gate). Drop a package
+# from this list once Dependabot bumps the base to a digest that already includes the fix.
+RUN apk upgrade --no-cache libexpat \
+    && addgroup -S -g 10001 nize && adduser -S -u 10001 -G nize -H -s /sbin/nologin nize
 WORKDIR /app
 # Owned by root and only readable by the app user: the process cannot rewrite its own code.
 COPY --from=build /app.jar /app/app.jar
