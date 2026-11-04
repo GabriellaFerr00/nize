@@ -64,8 +64,10 @@ jobs:
   gate:
     name: Gate (Security and Integration tests passed)
     needs: build
-    # Forks get no secrets: no preview deploy for them.
-    if: github.event.pull_request.head.repo.fork != true
+    # Forks and Dependabot get no regular secrets: no preview deploy for them.
+    if: >-
+      github.event.pull_request.head.repo.fork != true &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-24.04
     timeout-minutes: 70
     permissions:
