@@ -29,3 +29,13 @@ dedicated user (the WSL subnet may change after a Windows restart; repeat with t
     GRANT ALL PRIVILEGES ON nize.* TO 'nize'@'172.28.%';
 
 Then run with `NIZE_DB_URL` (jdbc:mysql://<gateway>:3306/nize), `NIZE_DB_USER`, `NIZE_DB_PASSWORD` and `NIZE_JWT_SECRET` set.
+
+### Running from IntelliJ (Windows)
+
+Import `backend/pom.xml` as a Maven project, then in the `NizeApplication` run configuration set
+**Active profiles** `local` (without it the app falls back to in-memory H2) and the environment variables
+`NIZE_JWT_SECRET`, `NIZE_DB_URL=jdbc:mysql://localhost:3306/nize`, `NIZE_DB_USER`, `NIZE_DB_PASSWORD`.
+The app then runs on Windows and connects from `localhost`, so the user needs that host too:
+
+    CREATE USER 'nize'@'localhost' IDENTIFIED BY '<password>';
+    GRANT ALL PRIVILEGES ON nize.* TO 'nize'@'localhost';

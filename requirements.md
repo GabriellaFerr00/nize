@@ -1,5 +1,5 @@
 # requirements.md
-> Nize — Version 0.1.4 (MVP web) — 2026-11-01
+> Nize — Version 0.1.5 (MVP web) — 2026-11-04
 
 Fonte: `Nize — Funcionalidades e escopo do MVP web.pdf` (1 nov 2026). Em caso de dúvida entre este arquivo e o PDF, pergunte antes de implementar.
 
@@ -44,6 +44,8 @@ O Nize é a versão web da planilha "Finanças 2026". A usuária lança gastos e
   - _Acceptance_: ao abrir 2026 estando em 2027 vigente, todos os lançamentos continuam editáveis.
 - **REQ-009**: A usuária shall poder ligar ou desligar a permissão de parcelas automáticas.
   - _Acceptance_: com a permissão desligada, o formulário de lançamento não oferece geração automática.
+- **REQ-048**: A usuária shall poder ligar ou desligar os fechamentos do mês e escolher quantos dias de fechamento quiser (1 a 31); conta nova começa ligada, com os dias 15 e 31.
+  - _Acceptance_: conta nova mostra posições nos dias 15 e 31 (último dia); com os dias 5, 10 e 20 a tela mostra três posições; desligado, a tela do mês não mostra posições e os demais totais não mudam.
 
 ### Categorias, cartões e pessoas
 - **REQ-010**: O sistema shall entregar as categorias de fábrica, cada uma com descrição, para cada ano.
@@ -92,10 +94,10 @@ O Nize é a versão web da planilha "Finanças 2026". A usuária lança gastos e
   - _Acceptance_: o total de fixos é a soma apenas dos lançamentos de tipo `fixo`.
 - **REQ-029**: O sistema shall calcular o saldo do mês como entradas menos total de gastos.
   - _Acceptance_: entradas 662358 − gastos 594288 = 68070 centavos.
-- **REQ-030**: O sistema shall calcular a posição até o dia 15, somando gastos e entradas com data até o dia 15 e mostrando o que falta ou sobra.
+- **REQ-030**: Com os fechamentos ligados (REQ-048), o sistema shall calcular a posição em cada dia de fechamento, somando gastos e entradas com data até aquele dia e mostrando o que falta ou sobra.
   - _Acceptance_: entradas 300000 e gastos 120000 até o dia 15 → sobra 180000.
-- **REQ-031**: O sistema shall calcular a posição até o dia 30 (até o último dia do mês em meses de 31 dias ou fevereiro).
-  - _Acceptance_: entradas 350000 e gastos 380000 → posição −30000 ("faltam R$ 300,00"); em fevereiro, o limite é o dia 28/29.
+- **REQ-031**: Um dia de fechamento além do fim do mês shall valer como o último dia do mês (o padrão 31 é sempre o último dia; 30 e 31 em fevereiro viram 28/29).
+  - _Acceptance_: entradas 350000 e gastos 380000 até o último dia → posição −30000 ("faltam R$ 300,00"); em fevereiro, o limite é o dia 28/29.
 - **REQ-032**: O sistema shall datar gastos no Pix pela data do pagamento e gastos no crédito pelo dia de vencimento do cartão, e cada parcela shall pesar no mês em que aparece.
   - _Acceptance_: Pix de 20000 pago em 12/04 pesa até o dia 15; compra de 50000 no crédito, cartão com vencimento dia 10, lançada em abril, pesa até o dia 15 de abril e não na data da compra.
 - **REQ-033**: A marca "pago" shall ser apenas controle e não alterar totais nem posições.
@@ -120,7 +122,7 @@ O Nize é a versão web da planilha "Finanças 2026". A usuária lança gastos e
   - _Acceptance_: trocar de mês/ano atualiza cabeçalho, listas e resumos.
 
 ### Telas
-- **REQ-041**: A tela do mês shall concentrar cabeçalho (mês, total de gastos, total de fixos, saldo, posição dia 15 e dia 30), listas de fixos, cartão e entradas, e painel de resumos com saldo próprio.
+- **REQ-041**: A tela do mês shall concentrar cabeçalho (mês, total de gastos, total de fixos, saldo, posições nos dias de fechamento), listas de fixos, cartão e entradas, e painel de resumos com saldo próprio.
   - _Acceptance_: todos os itens acima visíveis na mesma tela.
 - **REQ-042**: A usuária shall poder lançar gasto ou entrada numa janela sobre o mês, com "salvar e lançar outro em seguida".
   - _Acceptance_: um gasto é lançado em poucos segundos sem sair da tela do mês.
@@ -174,4 +176,5 @@ O Nize é a versão web da planilha "Finanças 2026". A usuária lança gastos e
 | 0.1.1 | 2026-11-01 | REQ-046 (idioma da interface en/pt) |
 | 0.1.2 | 2026-11-01 | REQ-015: fixo pode ser pago no crédito; glossário "Total de crédito" |
 | 0.1.3 | 2026-11-01 | REQ-022: carga continua parcelas à mão e respeita a permissão |
+| 0.1.5 | 2026-11-04 | REQ-048 (fechamentos opcionais, quantos dias quiser, padrão 15 e 31); REQ-030/031/041 passam a usar os dias de fechamento. Diverge do PDF (dias fixos 15 e 30); decisão da usuária |
 | 0.1.4 | 2026-11-01 | REQ-047 (limite de tentativas), NFR-008 a NFR-010 (segredos fora do log, banco com privilégio mínimo e TLS, pipeline de CI/CD); REQ-003 em produção sem e-mail |

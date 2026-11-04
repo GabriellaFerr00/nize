@@ -1,10 +1,10 @@
 # CLAUDE.md
-> Nize — Spec version 0.2.3
+> Nize — Spec version 0.2.4
 
 ═══════════════════════════════════════════════════════════
 SPEC DRIVEN DEVELOPMENT — PROJECT CONSTITUTION
 Project: Nize
-Version: 0.2.3
+Version: 0.2.4
 ═══════════════════════════════════════════════════════════
 
 This project uses Spec Driven Development. All work is
@@ -116,3 +116,4 @@ Front-end (a partir da raiz):
 **Armadilhas deste ambiente**
 - Nunca usar `pkill -f`/`pgrep -f` com texto que apareça no próprio comando (derruba o shell): encerrar servidores por PID ou porta.
 - Resposta HTTP 204 em teste não pode ter corpo (nem string vazia).
+- `open-in-view: false` + testes `@Transactional` escondem `LazyInitializationException` (a sessão fica aberta no teste). Coleção lida pela API depois do serviço: `fetch = EAGER` ou carregar dentro da transação; ver `SettingsOutsideTransactionTest`.

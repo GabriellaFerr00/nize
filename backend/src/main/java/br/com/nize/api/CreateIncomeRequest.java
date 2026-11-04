@@ -1,0 +1,22 @@
+package br.com.nize.api;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
+
+import java.time.LocalDate;
+
+/** No user id here on purpose; money is a whole number of cents (NFR-001). With a person it is a reimbursement. */
+public record CreateIncomeRequest(
+        @NotBlank @Size(max = 120) String name,
+        @NotNull @Positive Long amountCents,
+        @NotNull LocalDate date,
+        Long personId,
+        Integer installmentNumber,
+        Integer installmentCount) {
+
+    public CreateIncomeRequest {
+        name = name == null ? null : name.trim();
+    }
+}

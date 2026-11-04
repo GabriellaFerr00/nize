@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { createYear, getSettings, listYears, updateSettings } from '../api/yearsApi'
+import { createYear, getSettings, listYears, updateSettings, type Settings } from '../api/yearsApi'
 import { FormMessage } from '../components/FormMessage'
 import { TextField } from '../components/TextField'
+import { ClosingDaysField } from '../components/ClosingDaysField'
 import { apiErrorMessage } from '../lib/apiErrorMessage'
 
 export function SettingsPage() {
@@ -13,9 +14,11 @@ export function SettingsPage() {
   const years = useQuery({ queryKey: ['years'], queryFn: listYears })
 
   // Edits live in a draft until saved; before any edit the screen shows what the server has.
-  const [draft, setDraft] = useState<{ currentYear?: number; autoInstallments?: boolean }>({})
+  const [draft, setDraft] = useState<Partial<Settings>>({})
   const currentYear = draft.currentYear ?? settings.data?.currentYear
   const autoInstallments = draft.autoInstallments ?? settings.data?.autoInstallments ?? false
+  const closingsEnabled = draft.closingsEnabled ?? settings.data?.closingsEnabled ?? false
+  const closingDays = draft.closingDays ?? settings.data?.closingDays ?? []
   const latestYear = Math.max(0, ...(years.data ?? []).map((y) => y.year))
   const [newYearDraft, setNewYearDraft] = useState<string | null>(null)
   const newYear = newYearDraft ?? (latestYear ? String(latestYear + 1) : '')
@@ -38,7 +41,7 @@ export function SettingsPage() {
 
   function onSave(event: FormEvent) {
     event.preventDefault()
-    if (currentYear !== undefined) save.mutate({ currentYear, autoInstallments })
+    if (currentYear !== undefined) save.mutate({ currentYear, autoInstallments, closingsEnabled, closingDays })
   }
 
   function onAddYear(event: FormEvent) {
@@ -82,6 +85,19 @@ export function SettingsPage() {
             <span className="block text-xs text-ink-soft">{t('settings.autoInstallmentsHelp')}</span>
           </span>
         </label>
+        <label className="flex items-start gap-3 text-sm text-ink">
+          <input
+            type="checkbox"
+            checked={closingsEnabled}
+            onChange={(e) => setDraft({ ...draft, closingsEnabled: e.target.checked })}
+            className="mt-1 size-4 accent-brand-600"
+          />
+          <span>
+            <span className="font-medium">{t('settings.closings')}</span>
+            <span className="block text-xs text-ink-soft">{t('settings.closingsHelp')}</span>
+          </span>
+        </label>
+        <ClosingDaysField days={closingDays} onChange={(days) => setDraft({ ...draft, closingDays: days })} />
         <button
           type="submit"
           disabled={save.isPending || settings.isLoading}
