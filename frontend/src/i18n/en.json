@@ -30,6 +30,17 @@
     "title": "Page not found",
     "back": "Back to start"
   },
+  "overview": {
+    "chart": "Expenses and income by month",
+    "table": "Balance of each month",
+    "month": "Month",
+    "incomes": "Income",
+    "expenses": "Expenses",
+    "balance": "Balance",
+    "openMonth": "Open {{month}}",
+    "loading": "Loading the overview...",
+    "unknownYear": "This year does not exist in your account. Pick another year."
+  },
   "errors": {
     "INVALID_CREDENTIALS": "Incorrect email or password.",
     "TOO_MANY_ATTEMPTS": "Too many attempts. Wait a few minutes and try again.",

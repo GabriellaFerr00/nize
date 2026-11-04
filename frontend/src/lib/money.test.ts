@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatCents, parseCents } from './money'
+import { formatCents, formatCompactCents, parseCents } from './money'
 
 describe('parseCents: what the user types becomes whole cents (NFR-001)', () => {
   it.each([
@@ -46,5 +46,14 @@ describe('formatCents: integer cents for display only', () => {
   it('keeps the sign and handles huge values exactly', () => {
     expect(formatCents(-30_000, 'pt')).toBe('-300,00')
     expect(formatCents(9_000_000_000_001, 'en')).toBe('90,000,000,000.01')
+  })
+})
+
+describe('formatCompactCents: short axis labels from whole cents', () => {
+  it('drops the cents and shortens large amounts', () => {
+    expect(formatCompactCents(9_999, 'pt')).toBe('99')
+    expect(formatCompactCents(12_000_000, 'en')).toBe('120K')
+    expect(formatCompactCents(-500_000, 'en')).toBe('-5K')
+    expect(formatCompactCents(0.25, 'pt')).toBe('0')
   })
 })
