@@ -4,7 +4,7 @@
 
 ## ⚡ Resume from here
 
-**Active task:** Phases 4 e 5 concluídas na branch `feat/phase-4` (commits locais, sem push; push/PR precisam de autorização da usuária). Próximo: Phase 6 (TASK-039, tela do mês usando `GET /api/months/{m}`). Pendente: TASK-023 (V3–V6 no MySQL local), PR #3 do Dependabot (não respondeu ao `@dependabot rebase`).
+**Active task:** Phases 4 e 5 concluídas no PR #9 (`feat/phase-4` → `main`). **Não começar a Phase 6 sem a usuária pedir.** Próximo combinado: a usuária roda a TASK-023 (V3–V6 no MySQL local) em 2026-11-05; depois do merge do #9, aprovar o deploy (aplica V5/V6 na Aiven). PR #3 do Dependabot fechado (não respondeu ao rebase; volta na próxima rodada).
 **Phase:** Phase 4 — TASK-030..034 e 061 [x]. Fechamentos opcionais (REQ-048, design 0.2.4): padrão 15 e 31, quantos dias quiser, liga/desliga; data do lançamento continua obrigatória.
 **Status:** Produção no ar (https://nize.pages.dev, API https://nize-api.onrender.com). `GET /api/months/{m}` abre o mês (carga) e devolve listas, totais, posições, saldo próprio e resumos (categoria com %, forma, cartão com "Sem cartão" = `cardId` null, terceiros por pessoa e cartão). Tela do mês ainda não usa esse endpoint (Phase 6).
 **Blocker (if any):** contas e segredos externos só a usuária pode criar.
