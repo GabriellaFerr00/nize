@@ -219,6 +219,27 @@ class ExpenseEditApiTest extends IsolationTestBase {
     }
 
     @Test
+    void editCannotPointToAnotherUsersCardOrPerson() throws Exception {
+        long id = create(userA, "CARD", "");
+        long category = categoryId(userA, "Aluguel");
+        String cardOfB = as(userB, post("/api/years/" + YEAR + "/cards").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Nubank\",\"dueDay\":10}")).andReturn().getResponse().getContentAsString();
+        String personOfB = as(userB, post("/api/years/" + YEAR + "/people").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Mainha\"}")).andReturn().getResponse().getContentAsString();
+        String date = MONTH.atDay(5).toString();
+
+        update(userA, id, edit(category, 100, "CARD", date, false, ",\"cardId\":" + JsonPath.read(cardOfB, "$.id")))
+                .andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("NOT_FOUND"));
+        update(userA, id, edit(category, 100, "CARD", date, false, ",\"personId\":" + JsonPath.read(personOfB, "$.id")))
+                .andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("NOT_FOUND"));
+
+        Map<String, Object> row = row(id);
+        assertThat(row.get("CARD_ID")).isNull();
+        assertThat(row.get("PERSON_ID")).isNull();
+        assertThat(((Number) row.get("AMOUNT_CENTS")).longValue()).isEqualTo(150000L);
+    }
+
+    @Test
     void ownerAccessWorksAndEverythingRequiresAuthentication() throws Exception {
         long id = create(userA, "FIXED", "");
         long idOfB = create(userB, "FIXED", "");
