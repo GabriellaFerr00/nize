@@ -42,3 +42,13 @@ export function formatCents(cents: number, language: string): string {
   const fraction = String(absolute % 100n).padStart(2, '0')
   return `${negative ? '-' : ''}${whole}${decimal}${fraction}`
 }
+
+/**
+ * Short label for chart axes ("1,2 mil", "12K"): whole units only, from cents, with integer arithmetic.
+ * An axis tick between two cents is cut to the whole cent first.
+ */
+export function formatCompactCents(cents: number, language: string): string {
+  const locale = language === 'pt' ? 'pt-BR' : 'en-US'
+  const units = BigInt(Math.trunc(cents)) / 100n
+  return new Intl.NumberFormat(locale, { notation: 'compact', maximumFractionDigits: 1 }).format(units)
+}

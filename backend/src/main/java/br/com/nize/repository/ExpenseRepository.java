@@ -16,5 +16,7 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
 
     List<Expense> findByUserIdAndMonthOrderByIdAsc(Long userId, String month);
 
+    List<Expense> findByUserIdAndMonthIn(Long userId, Collection<String> months);
+
     List<Expense> findByUserIdAndInstallmentGroupIdIn(Long userId, Collection<String> groups);
 }

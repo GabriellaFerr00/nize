@@ -30,6 +30,17 @@
     "title": "Página não encontrada",
     "back": "Voltar ao início"
   },
+  "overview": {
+    "chart": "Gastos e entradas por mês",
+    "table": "Saldo de cada mês",
+    "month": "Mês",
+    "incomes": "Entradas",
+    "expenses": "Gastos",
+    "balance": "Saldo",
+    "openMonth": "Abrir {{month}}",
+    "loading": "Carregando o panorama...",
+    "unknownYear": "Esse ano não existe na sua conta. Escolha outro ano."
+  },
   "errors": {
     "INVALID_CREDENTIALS": "E-mail ou senha incorretos.",
     "TOO_MANY_ATTEMPTS": "Muitas tentativas. Espere alguns minutos e tente de novo.",
