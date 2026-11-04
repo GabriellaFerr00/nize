@@ -4,6 +4,7 @@ import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
@@ -33,8 +34,8 @@ public class Settings {
     @Column(name = "closings_enabled", nullable = false)
     private boolean closingsEnabled = true;
 
-    /** Days 1–31; a day past the end of the month counts as the last day (REQ-048). */
-    @ElementCollection
+    /** Days 1–31; a day past the end of the month counts as the last day (REQ-048). Eager: the API reads them after the transaction ends. */
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "closing_day", joinColumns = @JoinColumn(name = "user_id"))
     @JdbcTypeCode(SqlTypes.SMALLINT)
     @Column(name = "day_number", nullable = false)
