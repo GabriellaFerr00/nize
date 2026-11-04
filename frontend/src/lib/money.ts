@@ -27,6 +27,11 @@ export function parseCents(typed: string): number | null {
   return Number.isSafeInteger(cents) && cents > 0 ? cents : null
 }
 
+/** Cents as an editable amount ("1234,56"): no thousands separator, so `parseCents` reads it back in any language. */
+export function centsToInput(cents: number): string {
+  return formatCents(cents, 'pt').replace(/\./g, '')
+}
+
 /** Formats cents for display ("1.234,56"), using integers only. */
 export function formatCents(cents: number, language: string): string {
   const negative = cents < 0

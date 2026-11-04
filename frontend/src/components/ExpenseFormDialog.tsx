@@ -1,52 +1,52 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { listItems } from '../api/catalogApi'
-import { createExpense, type ExpenseType, type NewExpense, type PaymentMethod } from '../api/expensesApi'
+import {
+  createExpense,
+  updateExpense,
+  type Expense,
+  type ExpenseEdit,
+  type ExpenseType,
+  type NewExpense,
+  type PaymentMethod,
+} from '../api/expensesApi'
 import { getSettings } from '../api/yearsApi'
 import { apiErrorMessage } from '../lib/apiErrorMessage'
-import { parseCents } from '../lib/money'
+import { centsToInput, parseCents } from '../lib/money'
+import { defaultDate } from '../lib/month'
+import { selectable, useRefreshMonths, useYearCatalogs } from '../lib/useMonth'
 import { Dialog } from './Dialog'
 import { FormMessage } from './FormMessage'
 import { TextField } from './TextField'
 
-type Props = { month: string; onClose: () => void }
+/** Without `expense` the window records a new one; with it, edits that expense (REQ-023). */
+type Props = { month: string; expense?: Expense; onClose: () => void }
 type Parceling = 'none' | 'auto' | 'manual'
 
-const selectClass =
+export const selectClass =
   'rounded-xl border border-line bg-white px-3 py-2.5 text-base text-ink focus:outline-2 focus:outline-brand-500'
 
-function defaultDate(month: string): string {
-  const today = new Date()
-  const current = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`
-  return current === month ? `${month}-${String(today.getDate()).padStart(2, '0')}` : `${month}-01`
-}
-
 /** The "Novo lançamento" window (REQ-016..019, REQ-042): one expense, optionally in installments. */
-export function ExpenseFormDialog({ month, onClose }: Props) {
+export function ExpenseFormDialog({ month, expense, onClose }: Props) {
   const { t } = useTranslation()
-  const queryClient = useQueryClient()
+  const refreshMonths = useRefreshMonths()
   const year = Number(month.slice(0, 4))
   const nameInput = useRef<HTMLInputElement>(null)
+  const editing = expense !== undefined
 
   const settings = useQuery({ queryKey: ['settings'], queryFn: getSettings })
-  const categories = useQuery({ queryKey: ['catalog', 'categories', year], queryFn: () => listItems('categories', year) })
-  const cards = useQuery({ queryKey: ['catalog', 'cards', year], queryFn: () => listItems('cards', year) })
-  const people = useQuery({ queryKey: ['catalog', 'people', year], queryFn: () => listItems('people', year) })
-  const activeCategories = categories.data?.filter((c) => c.active) ?? []
-  const activeCards = cards.data?.filter((c) => c.active) ?? []
-  const activePeople = people.data?.filter((p) => p.active) ?? []
+  const catalogs = useYearCatalogs(year)
   const autoAllowed = settings.data?.autoInstallments ?? false
 
-  const [name, setName] = useState('')
-  const [amount, setAmount] = useState('')
-  const [type, setType] = useState<ExpenseType>('FIXED')
-  const [payment, setPayment] = useState<PaymentMethod>('PIX')
-  const [categoryId, setCategoryId] = useState('')
-  const [cardId, setCardId] = useState('')
-  const [personId, setPersonId] = useState('')
-  const [date, setDate] = useState(() => defaultDate(month))
-  const [paid, setPaid] = useState(false)
+  const [name, setName] = useState(expense?.name ?? '')
+  const [amount, setAmount] = useState(expense ? centsToInput(expense.amountCents) : '')
+  const [type, setType] = useState<ExpenseType>(expense?.type ?? 'FIXED')
+  const [payment, setPayment] = useState<PaymentMethod>(expense?.paymentMethod ?? 'PIX')
+  const [categoryId, setCategoryId] = useState(expense ? String(expense.categoryId) : '')
+  const [cardId, setCardId] = useState(expense?.cardId ? String(expense.cardId) : '')
+  const [personId, setPersonId] = useState(expense?.personId ? String(expense.personId) : '')
+  const [date, setDate] = useState(() => expense?.date ?? defaultDate(month))
+  const [paid, setPaid] = useState(expense?.paid ?? false)
   const [parceling, setParceling] = useState<Parceling>('none')
   const [count, setCount] = useState('')
   const [amountIsTotal, setAmountIsTotal] = useState(true)
@@ -57,11 +57,16 @@ export function ExpenseFormDialog({ month, onClose }: Props) {
   const isCard = type === 'CARD'
   const effectivePayment: PaymentMethod = isCard ? 'CREDIT' : payment
   const usesCredit = effectivePayment === 'CREDIT'
-  const parcelingChoice: Parceling = isCard ? (parceling === 'auto' && !autoAllowed ? 'none' : parceling) : 'none'
+  const parcelingChoice: Parceling = isCard && !editing ? (parceling === 'auto' && !autoAllowed ? 'none' : parceling) : 'none'
+  // an installment stays a card expense: its N/M cannot change (the API keeps it)
+  const typeLocked = editing && expense.installmentLabel !== undefined
 
-  const save = useMutation({ mutationFn: (expense: NewExpense) => createExpense(month, expense) })
+  const save = useMutation({
+    mutationFn: (body: NewExpense) =>
+      editing ? updateExpense(expense.id, body as ExpenseEdit) : createExpense(month, body),
+  })
 
-  function validate(): { body: NewExpense } | null {
+  function validate(): NewExpense | null {
     const next: Record<string, string> = {}
     const cents = parseCents(amount)
     if (!name.trim()) next.name = t('expense.errors.name')
@@ -83,29 +88,28 @@ export function ExpenseFormDialog({ month, onClose }: Props) {
     setErrors(next)
     if (Object.keys(next).length > 0 || cents === null) return null
     return {
-      body: {
-        name: name.trim(),
-        categoryId: Number(categoryId),
-        amountCents: cents,
-        type,
-        paymentMethod: effectivePayment,
-        ...(usesCredit && cardId && { cardId: Number(cardId) }),
-        ...(isCard && personId && { personId: Number(personId) }),
-        ...(type === 'FIXED' && { paid }),
-        date,
-        ...installments,
-      },
+      name: name.trim(),
+      categoryId: Number(categoryId),
+      amountCents: cents,
+      type,
+      paymentMethod: effectivePayment,
+      ...(usesCredit && cardId && { cardId: Number(cardId) }),
+      ...(isCard && personId && { personId: Number(personId) }),
+      // editing replaces every field, so a card expense keeps the mark it had
+      ...(type === 'FIXED' ? { paid } : editing && { paid: expense.paid }),
+      date,
+      ...installments,
     }
   }
 
   function submit(event: FormEvent, another: boolean) {
     event.preventDefault()
     setSavedMessage(false)
-    const checked = validate()
-    if (!checked) return
-    save.mutate(checked.body, {
+    const body = validate()
+    if (!body) return
+    save.mutate(body, {
       onSuccess: () => {
-        void queryClient.invalidateQueries({ queryKey: ['month', month] })
+        void refreshMonths()
         if (!another) return onClose()
         // keep category, type, card, person and date for the next one; clear what changes every time
         setName('')
@@ -121,7 +125,7 @@ export function ExpenseFormDialog({ month, onClose }: Props) {
   }
 
   return (
-    <Dialog title={t('expense.title')} onClose={onClose}>
+    <Dialog title={editing ? t('expense.editTitle') : t('expense.title')} onClose={onClose}>
       <form onSubmit={(e) => submit(e, false)} noValidate className="flex flex-col gap-4">
         {savedMessage && <FormMessage kind="success">{t('expense.saved')}</FormMessage>}
         {save.isError && <FormMessage kind="error">{apiErrorMessage(t, save.error)}</FormMessage>}
@@ -144,7 +148,12 @@ export function ExpenseFormDialog({ month, onClose }: Props) {
 
         <label className="flex flex-col gap-1 text-sm font-medium text-ink">
           {t('expense.fields.type')}
-          <select className={selectClass} value={type} onChange={(e) => setType(e.target.value as ExpenseType)}>
+          <select
+            className={selectClass}
+            value={type}
+            disabled={typeLocked}
+            onChange={(e) => setType(e.target.value as ExpenseType)}
+          >
             <option value="FIXED">{t('expense.type.FIXED')}</option>
             <option value="CARD">{t('expense.type.CARD')}</option>
           </select>
@@ -173,7 +182,7 @@ export function ExpenseFormDialog({ month, onClose }: Props) {
             onChange={(e) => setCategoryId(e.target.value)}
           >
             <option value="">{t('expense.choose')}</option>
-            {activeCategories.map((c) => (
+            {selectable(catalogs.categories, expense?.categoryId).map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
               </option>
@@ -191,7 +200,7 @@ export function ExpenseFormDialog({ month, onClose }: Props) {
             {t('expense.fields.card')}
             <select className={selectClass} value={cardId} onChange={(e) => setCardId(e.target.value)}>
               <option value="">{t('expense.noCard')}</option>
-              {activeCards.map((c) => (
+              {selectable(catalogs.cards, expense?.cardId).map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
                 </option>
@@ -205,7 +214,7 @@ export function ExpenseFormDialog({ month, onClose }: Props) {
             {t('expense.fields.person')}
             <select className={selectClass} value={personId} onChange={(e) => setPersonId(e.target.value)}>
               <option value="">{t('expense.nobody')}</option>
-              {activePeople.map((p) => (
+              {selectable(catalogs.people, expense?.personId).map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
                 </option>
@@ -229,7 +238,11 @@ export function ExpenseFormDialog({ month, onClose }: Props) {
           </label>
         )}
 
-        {isCard && (
+        {typeLocked && (
+          <p className="text-sm text-ink-soft">{t('expense.installmentFixed', { label: expense.installmentLabel })}</p>
+        )}
+
+        {isCard && !editing && (
           <fieldset className="flex flex-col gap-3 rounded-xl border border-line p-3">
             <legend className="px-1 text-sm font-medium text-ink">{t('expense.parceling.title')}</legend>
             <label className="flex flex-col gap-1 text-sm font-medium text-ink">
@@ -289,14 +302,16 @@ export function ExpenseFormDialog({ month, onClose }: Props) {
           <button type="button" className="rounded-xl px-4 py-2 text-sm text-ink-soft" onClick={onClose}>
             {t('catalog.cancel')}
           </button>
-          <button
-            type="button"
-            disabled={save.isPending}
-            onClick={(e) => submit(e, true)}
-            className="rounded-xl border border-brand-600 px-4 py-2 text-sm font-medium text-brand-700 disabled:opacity-60"
-          >
-            {t('expense.saveAndAnother')}
-          </button>
+          {!editing && (
+            <button
+              type="button"
+              disabled={save.isPending}
+              onClick={(e) => submit(e, true)}
+              className="rounded-xl border border-brand-600 px-4 py-2 text-sm font-medium text-brand-700 disabled:opacity-60"
+            >
+              {t('expense.saveAndAnother')}
+            </button>
+          )}
           <button
             type="submit"
             disabled={save.isPending}
