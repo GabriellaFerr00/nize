@@ -13,7 +13,7 @@ import {
 } from '../api/catalogApi'
 import { ApiError } from '../api/client'
 import { apiErrorMessage } from '../lib/apiErrorMessage'
-import { currentMonth } from '../lib/month'
+import { useDefaultMonth } from '../lib/useMonth'
 import { useSelectedYear } from '../lib/useSelectedYear'
 import { Dialog } from './Dialog'
 import { FormMessage } from './FormMessage'
@@ -44,6 +44,7 @@ export function CatalogManager({ kind, fields, canDelete = false }: Props) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
+  const { month: defaultMonth } = useDefaultMonth()
   const { year, years, setYear, isLoading } = useSelectedYear()
   const [dialog, setDialog] = useState<DialogState>(null)
 
@@ -162,7 +163,7 @@ export function CatalogManager({ kind, fields, canDelete = false }: Props) {
             <button
               type="button"
               className="rounded-xl bg-brand-600 px-4 py-2 text-sm font-medium text-white"
-              onClick={() => navigate(`/month/${currentMonth()}`)}
+              onClick={() => navigate(`/month/${defaultMonth}`)}
             >
               {t('catalog.changeExpenses')}
             </button>

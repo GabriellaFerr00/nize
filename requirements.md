@@ -1,5 +1,5 @@
 # requirements.md
-> Nize — Version 0.1.5 (MVP web) — 2026-11-04
+> Nize — Version 0.1.6 (MVP web) — 2026-11-04
 
 Fonte: `Nize — Funcionalidades e escopo do MVP web.pdf` (1 nov 2026). Em caso de dúvida entre este arquivo e o PDF, pergunte antes de implementar.
 
@@ -150,7 +150,7 @@ O Nize é a versão web da planilha "Finanças 2026". A usuária lança gastos e
   - _Measurement_: inspeção do schema e teste de que a senha em texto puro nunca é persistida nem logada.
 - **NFR-006**: A tela do mês funciona em telas de 360px a desktop.
   - _Measurement_: verificação manual em 360px, 768px e 1280px.
-- **NFR-007** (meta proposta): `GET` do resumo do mês responde em < 500 ms no p95 com 500 lançamentos no mês.
+- **NFR-007** (meta confirmada pela usuária em 2026-11-04): `GET` do resumo do mês responde em < 500 ms no p95 com 500 lançamentos no mês.
   - _Measurement_: teste de carga simples local. Meta proposta pela spec, não vem do PDF; confirmar.
 
 - **NFR-008**: Senhas, tokens (JWT e de recuperação) e o segredo `NIZE_JWT_SECRET` nunca aparecem em logs nem em respostas da API.
@@ -176,5 +176,6 @@ O Nize é a versão web da planilha "Finanças 2026". A usuária lança gastos e
 | 0.1.1 | 2026-11-01 | REQ-046 (idioma da interface en/pt) |
 | 0.1.2 | 2026-11-01 | REQ-015: fixo pode ser pago no crédito; glossário "Total de crédito" |
 | 0.1.3 | 2026-11-01 | REQ-022: carga continua parcelas à mão e respeita a permissão |
+| 0.1.6 | 2026-11-04 | NFR-007 confirmada (p95 < 500 ms com 500 lançamentos) |
 | 0.1.5 | 2026-11-04 | REQ-048 (fechamentos opcionais, quantos dias quiser, padrão 15 e 31); REQ-030/031/041 passam a usar os dias de fechamento. Diverge do PDF (dias fixos 15 e 30); decisão da usuária |
 | 0.1.4 | 2026-11-01 | REQ-047 (limite de tentativas), NFR-008 a NFR-010 (segredos fora do log, banco com privilégio mínimo e TLS, pipeline de CI/CD); REQ-003 em produção sem e-mail |

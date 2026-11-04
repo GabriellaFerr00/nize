@@ -3,7 +3,7 @@ import type { ComponentType } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../api/authState'
-import { currentMonth } from '../lib/month'
+import { useDefaultMonth } from '../lib/useMonth'
 import { LanguageSwitcher } from './LanguageSwitcher'
 import { OnboardingModal } from './OnboardingModal'
 
@@ -13,11 +13,11 @@ type NavItem = {
   icon: ComponentType<{ className?: string; 'aria-hidden'?: boolean }>
 }
 
-function navItems(): NavItem[] {
-  const now = currentMonth()
+/** Month and overview open in the user's current year (REQ-006). */
+function navItems(month: string): NavItem[] {
   return [
-    { key: 'month', to: `/month/${now}`, icon: CalendarDays },
-    { key: 'overview', to: `/overview/${now.slice(0, 4)}`, icon: ChartColumn },
+    { key: 'month', to: `/month/${month}`, icon: CalendarDays },
+    { key: 'overview', to: `/overview/${month.slice(0, 4)}`, icon: ChartColumn },
     { key: 'categories', to: '/categories', icon: Tags },
     { key: 'cards', to: '/cards', icon: CreditCard },
     { key: 'people', to: '/people', icon: Users },
@@ -41,7 +41,7 @@ function Brand() {
  */
 export function AppLayout() {
   const { t } = useTranslation()
-  const items = navItems()
+  const items = navItems(useDefaultMonth().month)
   const { signOut } = useAuth()
 
   return (

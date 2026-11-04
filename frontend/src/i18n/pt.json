@@ -30,6 +30,17 @@
     "title": "Página não encontrada",
     "back": "Voltar ao início"
   },
+  "overview": {
+    "chart": "Gastos e entradas por mês",
+    "table": "Saldo de cada mês",
+    "month": "Mês",
+    "incomes": "Entradas",
+    "expenses": "Gastos",
+    "balance": "Saldo",
+    "openMonth": "Abrir {{month}}",
+    "loading": "Carregando o panorama...",
+    "unknownYear": "Esse ano não existe na sua conta. Escolha outro ano."
+  },
   "errors": {
     "INVALID_CREDENTIALS": "E-mail ou senha incorretos.",
     "TOO_MANY_ATTEMPTS": "Muitas tentativas. Espere alguns minutos e tente de novo.",
@@ -221,6 +232,90 @@
       "autoCount": "Informe de 2 a 120 parcelas.",
       "manualCount": "Informe o total de parcelas, de 2 a 120.",
       "manualNumber": "A parcela atual deve estar entre 1 e o total."
+    },
+    "editTitle": "Editar lançamento",
+    "installmentFixed": "Parcela {{label}}: o tipo e as parcelas não mudam na edição."
+  },
+  "income": {
+    "new": "Nova entrada",
+    "title": "Nova entrada",
+    "editTitle": "Editar entrada",
+    "saved": "Entrada salva.",
+    "saveAndAnother": "Salvar e lançar outra",
+    "nobody": "Ninguém (entrada minha)",
+    "installmentFixed": "Parcela {{label}}: as parcelas não mudam na edição.",
+    "fields": {
+      "name": "Nome",
+      "amount": "Valor (R$)",
+      "date": "Data",
+      "person": "Reembolso de (pessoa)"
+    },
+    "installments": {
+      "title": "Parcelas",
+      "enable": "É uma entrada parcelada",
+      "current": "Parcela atual",
+      "total": "Total de parcelas",
+      "help": "Com as parcelas automáticas ligadas, as próximas parcelas aparecem quando você abrir os meses seguintes."
+    },
+    "errors": {
+      "name": "Informe um nome.",
+      "amount": "Informe um valor maior que zero, como 49,90.",
+      "date": "Escolha uma data dentro do mês {{month}}.",
+      "count": "Informe o total de parcelas, de 2 a 120.",
+      "number": "A parcela atual deve estar entre 1 e o total."
+    }
+  },
+  "month": {
+    "currency": "R$",
+    "loading": "Carregando o mês…",
+    "previous": "Mês anterior",
+    "next": "Próximo mês",
+    "pickMonth": "Escolher mês",
+    "pickYear": "Escolher ano",
+    "totals": {
+      "expenses": "Total de gastos",
+      "fixed": "Total de fixos",
+      "income": "Entradas",
+      "balance": "Saldo do mês"
+    },
+    "positions": {
+      "title": "Fechamentos",
+      "upTo": "Até o dia {{day}}",
+      "left": "Sobram",
+      "missing": "Faltam"
+    },
+    "lists": {
+      "fixed": "Fixos",
+      "card": "Cartão",
+      "income": "Entradas",
+      "fixedEmpty": "Nenhum gasto fixo neste mês.",
+      "cardEmpty": "Nenhum gasto de cartão neste mês.",
+      "incomeEmpty": "Nenhuma entrada neste mês."
+    },
+    "installment": "Parcela {{label}}",
+    "thirdParty": "gasto de {{name}}",
+    "reimbursementFrom": "Reembolso de {{name}}",
+    "paid": "{{name}} pago",
+    "edit": "Editar {{name}}",
+    "delete": "Excluir {{name}}",
+    "deleteTitle": "Excluir",
+    "deleteQuestion": "Excluir \"{{name}}\"? Isso não pode ser desfeito.",
+    "summary": {
+      "title": "Resumos",
+      "show": "Mostrar",
+      "hide": "Ocultar",
+      "ownBalance": "Saldo próprio",
+      "balance": "Saldo do mês",
+      "thirdParty": "Gastos de terceiros",
+      "reimbursements": "Reembolsos recebidos",
+      "ownBalanceHelp": "O saldo do mês somando os gastos de terceiros e tirando os reembolsos.",
+      "byCategory": "Por categoria",
+      "byPayment": "Por forma de pagamento",
+      "byCard": "Por cartão",
+      "byPerson": "Terceiros por pessoa e cartão",
+      "noExpenses": "Nenhum gasto neste mês.",
+      "noCredit": "Nenhum gasto no crédito neste mês.",
+      "noThirdParty": "Nenhum gasto de terceiros neste mês."
     }
   }
 }

@@ -222,6 +222,20 @@ class IncomeApiTest extends IsolationTestBase {
     }
 
     @Test
+    void editCannotPointToAnotherUsersPerson() throws Exception {
+        long id = salary(userA);
+        long ofB = person(userB, YEAR, "Mainha");
+
+        update(userA, id, """
+                {"name":"x","amountCents":100,"date":"%s","personId":%d}""".formatted(MONTH.atDay(5), ofB))
+                .andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("NOT_FOUND"));
+
+        Map<String, Object> row = row(id);
+        assertThat(row.get("PERSON_ID")).isNull();
+        assertThat(((Number) row.get("AMOUNT_CENTS")).longValue()).isEqualTo(500_000L);
+    }
+
+    @Test
     void onlyTheOwnerCanDeleteAnIncome() throws Exception {
         long idOfA = salary(userA);
         long idOfB = salary(userB);

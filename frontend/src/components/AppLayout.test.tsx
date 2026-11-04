@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { renderApp, stubApi } from '../test/renderApp'
@@ -25,10 +25,25 @@ describe('app shell', () => {
     expect(document.documentElement.lang).toBe('en')
   })
 
-  it('redirects / to the current month', () => {
+  it('redirects / to the current month', async () => {
     const router = renderAt('/')
-    expect(router.state.location.pathname).toMatch(/^\/month\/\d{4}-\d{2}$/)
-    expect(screen.getByRole('button', { name: 'Novo lançamento' })).toBeInTheDocument()
+    await waitFor(() => expect(router.state.location.pathname).toMatch(/^\/month\/\d{4}-\d{2}$/))
+    expect(await screen.findByRole('button', { name: 'Novo lançamento' })).toBeInTheDocument()
+  })
+
+  it('opens / and the menu in the current year from the settings (REQ-006)', async () => {
+    const thisMonth = new Date().getMonth() + 1
+    const expected = `2031-${String(thisMonth).padStart(2, '0')}`
+    stubApi({
+      'GET /api/me': { body: { id: 1, name: 'Ana', email: 'a@x.com', onboardingSeen: true } },
+      'GET /api/settings': { body: { currentYear: 2031, autoInstallments: true, closingsEnabled: true, closingDays: [15, 31] } },
+    })
+    const router = renderApp('/', { signedIn: true })
+
+    await waitFor(() => expect(router.state.location.pathname).toBe(`/month/${expected}`))
+    const links = within(screen.getByTestId('side-nav')).getAllByRole('link')
+    expect(links[0]).toHaveAttribute('href', `/month/${expected}`)
+    expect(links[1]).toHaveAttribute('href', '/overview/2031')
   })
 
   it('links every menu entry in both menus', () => {

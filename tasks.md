@@ -182,44 +182,55 @@ Nomes em inglês: ver "Nomenclatura em inglês" em `design.md` (os termos em por
 ## Phase 6: Tela do mês
 *Goal*: A tela principal junta tudo, com navegação entre meses e lançamento rápido.
 
-- [ ] **TASK-039** [REQ-041, REQ-040]: Página `/mes/:aaaa-mm` com cabeçalho (totais e posições), seletor de mês/ano e carga ao abrir.
+- [x] **TASK-039** [REQ-041, REQ-040]: Página `/mes/:aaaa-mm` com cabeçalho (totais e posições), seletor de mês/ano e carga ao abrir.
   - _Output_: página e hooks.
   - _Verify_: trocar de mês atualiza os números; valores exibidos vêm só da API.
-- [ ] **TASK-040** [REQ-041, REQ-015, REQ-016, REQ-024, REQ-023]: Listas de Fixos, Cartão e Entradas com "pago", editar e excluir, e indicador N/M.
+  - _Done_: `MonthPage` + `MonthHeader` (totais, posições só com `closingsEnabled`) + `MonthPicker` (anterior/próximo, mês, ano de `/api/years`); `useMonth` (`GET /api/months/{m}`, que faz a carga). Testes em `pages/month.test.tsx`.
+  - _Integração_: `/` e os menus "Mês"/"Panorama" abrem no ano vigente (REQ-006; `defaultMonth`, `useDefaultMonth`, `DefaultMonthRedirect`).
+- [x] **TASK-040** [REQ-041, REQ-015, REQ-016, REQ-024, REQ-023]: Listas de Fixos, Cartão e Entradas com "pago", editar e excluir, e indicador N/M.
   - _Output_: componentes de lista.
   - _Verify_: marcar pago não altera os totais exibidos; editar e excluir refletem na hora.
-- [ ] **TASK-041** [REQ-041, REQ-035..REQ-038, REQ-034]: Painel de resumos (categoria, forma, cartão, pessoa) e saldo próprio.
+  - _Done_: `EntryLists` (marca "pago" só nos fixos, via `PATCH .../paid`; N/M = `installmentLabel` da API); edição reusa `ExpenseFormDialog`/`IncomeFormDialog` (PUT; parcelas e tipo de parcela travados); exclusão com confirmação; tudo refaz `GET /api/months/{m}`.
+- [x] **TASK-041** [REQ-041, REQ-035..REQ-038, REQ-034]: Painel de resumos (categoria, forma, cartão, pessoa) e saldo próprio.
   - _Output_: componentes do painel.
   - _Verify_: números idênticos aos da API; sem cálculo no front.
-- [ ] **TASK-042** [REQ-042, REQ-024, REQ-026]: Botão de lançamento rápido na tela do mês para gasto e entrada (reuso da janela da TASK-029; entrada com parcelas e reembolso).
+  - _Done_: `SummaryPanel` (categoria com o `percent` da API, Pix/crédito, cartão com "Sem cartão" para `cardId` null, terceiros por pessoa e cartão, saldo próprio com saldo, terceiros e reembolsos da API).
+- [x] **TASK-042** [REQ-042, REQ-024, REQ-026]: Botão de lançamento rápido na tela do mês para gasto e entrada (reuso da janela da TASK-029; entrada com parcelas e reembolso).
   - _Output_: janela de entrada.
   - _Verify_: lançar um gasto em poucos segundos sem sair da tela.
-- [ ] **TASK-043** [REQ-043, NFR-006]: Ajustar a tela do mês para 360px (listas empilhadas, painel recolhível).
+  - _Done_: botões "Novo lançamento" e "Nova entrada"; `IncomeFormDialog` (parcela N de M, reembolso de pessoa ativa, "salvar e lançar outra").
+- [x] **TASK-043** [REQ-043, NFR-006]: Ajustar a tela do mês para 360px (listas empilhadas, painel recolhível).
   - _Output_: ajustes de CSS.
   - _Verify_: sem rolagem horizontal em 360px, 768px e 1280px.
+  - _Done_: listas empilhadas; painel em coluna lateral a partir de 1280px (`xl`); resumos recolhíveis abaixo de 768px. Medido com Playwright (API simulada, nomes e valores longos): sem rolagem horizontal nem elemento fora da tela em 360/768/1280px, com o painel aberto e com as janelas abertas.
 
 ## Phase 7: Panorama anual
 *Goal*: Visão dos 12 meses coerente com a tela do mês.
 
-- [ ] **TASK-044** [REQ-039, NFR-002]: `GET /api/anos/{ano}/panorama` calculando gastos, entradas e saldo dos 12 meses (sem persistir totais).
+- [x] **TASK-044** [REQ-039, NFR-002]: `GET /api/anos/{ano}/panorama` calculando gastos, entradas e saldo dos 12 meses (sem persistir totais).
   - _Output_: serviço, DTO, testes.
   - _Verify_: cada mês bate com `GET /api/meses/{mes}`.
-- [ ] **TASK-045** [REQ-039, REQ-040]: Tela do panorama com gráfico, tabela de saldo mensal e clique que abre o mês.
+  - _Done_ (feat/phase-7): `GET /api/years/{year}/overview` (`OverviewService` reusa `MonthTotals` via `MonthService.totalsOf`; carga D-19; 2 consultas para os 12 meses). `OverviewApiTest` compara cada mês com `GET /api/months/{m}`; `./mvnw verify` verde (339 testes, JaCoCo ok).
+- [x] **TASK-045** [REQ-039, REQ-040]: Tela do panorama com gráfico, tabela de saldo mensal e clique que abre o mês.
   - _Output_: página `/panorama/:ano`.
   - _Verify_: clicar em março abre `/mes/AAAA-03`; trocar de ano funciona.
+  - _Done_ (feat/phase-7): `OverviewPage` + `OverviewChart` (Recharts 3.10.1, carregado sob demanda), tabela com link por mês, clique na barra também abre o mês, seletor de ano. `overview.test.tsx` (março → `/month/2026-03`, troca de ano); sem rolagem horizontal em 360/768/1280 (medido com Chromium); test/lint/build verdes.
 
 ## Phase 8: Validação final do MVP
 *Goal*: Garantir que o MVP cumpre a spec antes do primeiro deploy de teste.
 
-- [ ] **TASK-046** [NFR-003]: Conferir que todos os cenários do PDF existem como testes (tabela cenário → teste).
+- [x] **TASK-046** [NFR-003]: Conferir que todos os cenários do PDF existem como testes (tabela cenário → teste).
   - _Output_: seção no final deste arquivo ou `docs/cobertura-cenarios.md`.
   - _Verify_: nenhum cenário sem teste; `mvn test` verde.
-- [ ] **TASK-047** [NFR-004, REQ-004]: Rodar a suíte de isolamento sobre todos os endpoints de dados.
+  - _Feito_: `docs/cobertura-cenarios.md` §1; 22 cenários, todos com teste ponta a ponta em `api.PdfScenariosTest` (`@DisplayName` = nome do cenário, números do PDF) além dos testes de regra; 8, 9 e 14 adaptados (REQ-048, REQ-031, REQ-022). Exibição do "N/M" na tela fica com a TASK-040.
+- [x] **TASK-047** [NFR-004, REQ-004]: Rodar a suíte de isolamento sobre todos os endpoints de dados.
   - _Output_: relatório de endpoints × teste de isolamento.
   - _Verify_: 100% dos endpoints de dados cobertos.
-- [ ] **TASK-048** [NFR-007]: Teste de carga simples do resumo do mês com 500 lançamentos.
+  - _Andamento_: `docs/cobertura-cenarios.md` §2; 24/24 endpoints existentes cobertos (novos: `ExpenseEditApiTest#editCannotPointToAnotherUsersCardOrPerson`, `IncomeApiTest#editCannotPointToAnotherUsersPerson`). Panorama coberto por `OverviewApiTest` após a integração das Phases 6–8: 25/25.
+- [x] **TASK-048** [NFR-007]: Teste de carga simples do resumo do mês com 500 lançamentos.
   - _Output_: resultado registrado.
   - _Verify_: p95 < 500 ms (ou meta revisada).
+  - _Feito_: `api.MonthResponseTimeTest` (tag `performance`, `./mvnw test -Dtest=MonthResponseTimeTest -Dtest.excludedGroups=none`); 300 requisições, p95 ≈ 14 ms, máx. ≈ 27 ms (H2, local); `docs/cobertura-cenarios.md` §3.
 - [ ] **TASK-049** [REQ-045]: Revisão de identidade visual: nada copiado da planilha.
   - _Output_: checklist assinado.
   - _Verify_: revisão manual.

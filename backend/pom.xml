@@ -24,6 +24,8 @@
         <!-- Minimum line coverage (NFR-010); the pipeline overrides with -Dcoverage.min=$COVERAGE_MIN. -->
         <coverage.min>0.80</coverage.min>
         <coverage.rules.min>0.80</coverage.rules.min>
+        <!-- Slow tests left out of the normal suite; run them with -Dtest.excludedGroups=none (TASK-048). -->
+        <test.excludedGroups>performance</test.excludedGroups>
     </properties>
 
     <dependencies>
@@ -180,6 +182,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
+                    <excludedGroups>${test.excludedGroups}</excludedGroups>
                     <environmentVariables>
                         <!-- Fixed secret for tests only; real environments must set their own. -->
                         <NIZE_JWT_SECRET>test-only-secret-test-only-secret-0123456789</NIZE_JWT_SECRET>

@@ -27,6 +27,11 @@ export function parseCents(typed: string): number | null {
   return Number.isSafeInteger(cents) && cents > 0 ? cents : null
 }
 
+/** Cents as an editable amount ("1234,56"): no thousands separator, so `parseCents` reads it back in any language. */
+export function centsToInput(cents: number): string {
+  return formatCents(cents, 'pt').replace(/\./g, '')
+}
+
 /** Formats cents for display ("1.234,56"), using integers only. */
 export function formatCents(cents: number, language: string): string {
   const negative = cents < 0
@@ -36,4 +41,14 @@ export function formatCents(cents: number, language: string): string {
   const decimal = language === 'pt' ? ',' : '.'
   const fraction = String(absolute % 100n).padStart(2, '0')
   return `${negative ? '-' : ''}${whole}${decimal}${fraction}`
+}
+
+/**
+ * Short label for chart axes ("1,2 mil", "12K"): whole units only, from cents, with integer arithmetic.
+ * An axis tick between two cents is cut to the whole cent first.
+ */
+export function formatCompactCents(cents: number, language: string): string {
+  const locale = language === 'pt' ? 'pt-BR' : 'en-US'
+  const units = BigInt(Math.trunc(cents)) / 100n
+  return new Intl.NumberFormat(locale, { notation: 'compact', maximumFractionDigits: 1 }).format(units)
 }

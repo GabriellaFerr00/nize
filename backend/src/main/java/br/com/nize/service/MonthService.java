@@ -92,11 +92,7 @@ public class MonthService {
         List<Expense> monthExpenses = expenses.findByUserIdAndMonthOrderByIdAsc(userId, month.toString());
         List<Income> monthIncomes = incomes.findByUserIdAndMonthOrderByIdAsc(userId, month.toString());
 
-        MonthTotals.Totals base = MonthTotals.of(
-                monthExpenses.stream().map(e -> new MonthTotals.Expense(
-                        e.getType() == ExpenseType.FIXED ? MonthTotals.Kind.FIXED : MonthTotals.Kind.CARD,
-                        e.getAmountCents())).toList(),
-                monthIncomes.stream().map(Income::getAmountCents).toList());
+        MonthTotals.Totals base = totalsOf(monthExpenses, monthIncomes);
         List<Long> thirdParty = monthExpenses.stream().filter(e -> e.getPersonId() != null).map(Expense::getAmountCents).toList();
         List<Long> reimbursements = monthIncomes.stream().filter(i -> i.getPersonId() != null).map(Income::getAmountCents).toList();
         Totals totals = new Totals(base.totalExpensesCents(), base.totalFixedCents(), base.totalIncomeCents(),
@@ -111,6 +107,15 @@ public class MonthService {
 
         return new MonthView(month.toString(), monthExpenses, monthIncomes, totals, userSettings.isClosingsEnabled(),
                 positions, summaries(userId, month.getYear(), monthExpenses, yearCards));
+    }
+
+    /** Totals and balance of one month from the rules; the overview uses it too, so both screens always agree. */
+    static MonthTotals.Totals totalsOf(List<Expense> monthExpenses, List<Income> monthIncomes) {
+        return MonthTotals.of(
+                monthExpenses.stream().map(e -> new MonthTotals.Expense(
+                        e.getType() == ExpenseType.FIXED ? MonthTotals.Kind.FIXED : MonthTotals.Kind.CARD,
+                        e.getAmountCents())).toList(),
+                monthIncomes.stream().map(Income::getAmountCents).toList());
     }
 
     private Summaries summaries(Long userId, int year, List<Expense> monthExpenses, List<Card> yearCards) {
