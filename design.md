@@ -86,7 +86,7 @@ As seções de modelo de dados, regras e API abaixo foram escritas em português
 | rotas do front `/mes/:aaaa-mm`, `/panorama/:ano` | `/month/:yyyy-mm`, `/overview/:year` |
 | rotas do front `/categorias`, `/cartoes`, `/pessoas`, `/configuracoes` | `/categories`, `/cards`, `/people`, `/settings` |
 
-Nomes de classes de regras: `Installments`, `InstallmentIndicator`, `MonthLoad`, `MonthTotals`, `ClosingPositions`, `OwnBalance`, `CategorySummary` etc. (mesma ordem das regras em português). Textos de erro e de interface são tratados pelo i18n (D-11); a API devolve códigos de erro estáveis em inglês.
+Nomes de classes de regras: `Installments`, `InstallmentIndicator`, `MonthLoad`, `MonthTotals`, `ClosingPositions`, `OwnBalance`, `CategorySummary`, `PaymentSummary` (forma e cartão), `ThirdPartySummary` (mesma ordem das regras em português). Textos de erro e de interface são tratados pelo i18n (D-11); a API devolve códigos de erro estáveis em inglês.
 
 ## Data Models
 Convenções: todas as tabelas têm `usuario_id BIGINT NOT NULL` (FK `usuario.id`) e índice por ele. `ano` é `SMALLINT`. Datas são `DATE`.
@@ -243,7 +243,7 @@ Semeadas em `category` para cada ano novo (REQ-010). A usuária pode renomear, d
 | saldoPróprio | saldo + Σ gastos com pessoa_id − Σ entradas com pessoa_id | REQ-034 |
 | dividirParcelas(total, n) | base = total ÷ n (inteira); n−1 parcelas = base; última = total − base×(n−1) | REQ-020 |
 | parcelasPorValor(valor, n) | n parcelas iguais | REQ-018 |
-| resumoPorCategoria | Σ por categoria; % = valor ÷ totalGastos (2 casas, HALF_UP só na exibição) | REQ-035 |
+| resumoPorCategoria | Σ por categoria; % = valor ÷ totalGastos (2 casas, HALF_UP só na exibição; aritmética decimal exata, nunca float; na API é um número com 2 casas, ex.: `23.86`) | REQ-035 |
 | resumoPorForma / PorCartão | Σ por forma de pagamento; Σ por cartão com grupo "Sem cartão" | REQ-036/037 |
 | resumoPorPessoa | Σ gastos com pessoa_id, por pessoa e por cartão | REQ-038 |
 | cargaDoMês(mesAnterior, mês) | copia os fixos (pago=false; gastos avulsos não são copiados); para cada parcela N/M do mês anterior com N < M cria a parcela N+1, **se a permissão de parcelas automáticas está ligada**, e se `(grupo, N+1)` ainda não existe (vale também para parcelas lançadas à mão, que recebem grupo próprio ao serem criadas); idem entradas parceladas; só se o mês não está em `loaded_month`. Referências (categoria, cartão, pessoa) trocam de ano pelo nome; item cuja categoria não existe no ano novo é ignorado | REQ-022 |

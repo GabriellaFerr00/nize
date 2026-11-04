@@ -170,6 +170,70 @@ class MonthApiTest extends IsolationTestBase {
                 .andExpect(jsonPath("$.totals.ownBalanceCents").value(51_000));
     }
 
+    // ---- Resumos (REQ-035..038, TASK-038) ----
+
+    private long categoryNamed(TestUser user, String name) throws Exception {
+        String body = as(user, get("/api/years/" + YEAR + "/categories")).andReturn().getResponse().getContentAsString();
+        List<Integer> ids = JsonPath.read(body, "$[?(@.name == '" + name + "')].id");
+        return ids.get(0);
+    }
+
+    private void expenseIn(TestUser user, String category, long cents, String type, String extra) throws Exception {
+        idOf(as(user, post("/api/months/" + APRIL + "/expenses").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Gasto\",\"categoryId\":%d,\"amountCents\":%d,\"type\":\"%s\",\"date\":\"%s\"%s}"
+                        .formatted(categoryNamed(user, category), cents, type, APRIL.atDay(9), extra))));
+    }
+
+    @Test
+    void summariesAlwaysAddUpToTheTotals() throws Exception {
+        long nubank = createIn(userA, "cards", "{\"name\":\"Nubank\",\"dueDay\":10}");
+        long inter = createIn(userA, "cards", "{\"name\":\"Inter\",\"dueDay\":20}");
+        long mainha = createIn(userA, "people", "{\"name\":\"Mainha\"}");
+        expenseIn(userA, "Aluguel", 99_399, "FIXED", "");
+        expenseIn(userA, "Assinaturas", 5_590, "FIXED", ",\"paymentMethod\":\"CREDIT\",\"cardId\":" + nubank);
+        expenseIn(userA, "Mercado", 141_814, "CARD", ",\"cardId\":" + nubank);
+        expenseIn(userA, "Mercado", 30_000, "CARD", ",\"cardId\":" + inter + ",\"personId\":" + mainha);
+        expenseIn(userA, "Lazer", 47_500, "CARD", "");
+        expenseIn(userA, "Roupa", 12_000, "CARD", ",\"cardId\":" + nubank + ",\"personId\":" + mainha);
+
+        String body = month(userA, APRIL.toString()).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+
+        long total = ((Number) JsonPath.read(body, "$.totals.totalExpensesCents")).longValue();
+        assertThat(total).isEqualTo(336_303);
+        List<Number> byCategory = JsonPath.read(body, "$.summaries.byCategory[*].amountCents");
+        assertThat(byCategory.stream().mapToLong(Number::longValue).sum()).isEqualTo(total);
+        assertThat((String) JsonPath.read(body, "$.summaries.byCategory[0].categoryName")).isEqualTo("Mercado");
+        assertThat(((Number) JsonPath.read(body, "$.summaries.byCategory[0].amountCents")).longValue()).isEqualTo(171_814);
+        assertThat(JsonPath.read(body, "$.summaries.byCategory[0].percent").toString()).isEqualTo("51.09");
+
+        long pix = ((Number) JsonPath.read(body, "$.summaries.byPayment.pixCents")).longValue();
+        long credit = ((Number) JsonPath.read(body, "$.summaries.byPayment.creditCents")).longValue();
+        assertThat(pix + credit).isEqualTo(total);
+        assertThat(credit).isEqualTo(236_904);
+        List<Number> byCard = JsonPath.read(body, "$.summaries.byCard[*].amountCents");
+        assertThat(byCard.stream().mapToLong(Number::longValue).sum()).isEqualTo(credit);
+        assertThat((Object) JsonPath.read(body, "$.summaries.byCard[-1].cardId")).isNull();
+        assertThat(((Number) JsonPath.read(body, "$.summaries.byCard[-1].amountCents")).longValue()).isEqualTo(47_500);
+        assertThat((String) JsonPath.read(body, "$.summaries.byCard[0].cardName")).isEqualTo("Nubank");
+
+        List<Number> byPerson = JsonPath.read(body, "$.summaries.byPerson[*].amountCents");
+        assertThat(byPerson.stream().mapToLong(Number::longValue).sum())
+                .isEqualTo(((Number) JsonPath.read(body, "$.totals.thirdPartyExpensesCents")).longValue())
+                .isEqualTo(42_000);
+        assertThat((String) JsonPath.read(body, "$.summaries.byPerson[0].personName")).isEqualTo("Mainha");
+        assertThat((List<?>) JsonPath.read(body, "$.summaries.byPerson[0].byCard")).hasSize(2);
+    }
+
+    @Test
+    void anEmptyMonthHasEmptySummaries() throws Exception {
+        month(userA, APRIL.toString())
+                .andExpect(jsonPath("$.summaries.byCategory", hasSize(0)))
+                .andExpect(jsonPath("$.summaries.byPayment.pixCents").value(0))
+                .andExpect(jsonPath("$.summaries.byPayment.creditCents").value(0))
+                .andExpect(jsonPath("$.summaries.byCard", hasSize(0)))
+                .andExpect(jsonPath("$.summaries.byPerson", hasSize(0)));
+    }
+
     // ---- Month load (REQ-022) and errors ----
 
     @Test

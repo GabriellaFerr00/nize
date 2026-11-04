@@ -166,16 +166,16 @@ Nomes em inglês: ver "Nomenclatura em inglês" em `design.md` (os termos em por
 ## Phase 5: Resumos
 *Goal*: Resumos por categoria, forma de pagamento, cartão e pessoa que sempre fecham com os totais.
 
-- [ ] **TASK-035** [REQ-035, NFR-003]: **Teste primeiro**, depois `regras.ResumoPorCategoria` com porcentagem.
+- [x] **TASK-035** [REQ-035, NFR-003]: **Teste primeiro**, depois `regras.ResumoPorCategoria` com porcentagem.
   - _Output_: testes e classe.
   - _Verify_: 141814/594288 = 23,86%; Σ categorias = total de gastos.
-- [ ] **TASK-036** [REQ-036, REQ-037, NFR-003]: **Teste primeiro**, depois resumos por forma de pagamento e por cartão com "Sem cartão".
+- [x] **TASK-036** [REQ-036, REQ-037, NFR-003]: **Teste primeiro**, depois resumos por forma de pagamento e por cartão com "Sem cartão".
   - _Output_: testes e classes.
   - _Verify_: Σ por cartão (com "Sem cartão") = total de crédito.
-- [ ] **TASK-037** [REQ-038, NFR-003]: **Teste primeiro**, depois resumo de terceiros por pessoa e por cartão.
+- [x] **TASK-037** [REQ-038, NFR-003]: **Teste primeiro**, depois resumo de terceiros por pessoa e por cartão.
   - _Output_: testes e classe.
   - _Verify_: Σ por pessoa = total de gastos de terceiros.
-- [ ] **TASK-038** [REQ-035..REQ-038]: Incluir os resumos em `GET /api/meses/{mes}`.
+- [x] **TASK-038** [REQ-035..REQ-038]: Incluir os resumos em `GET /api/meses/{mes}`.
   - _Output_: DTOs e testes de integração.
   - _Verify_: invariantes de soma verificadas em teste com dados mistos.
 
