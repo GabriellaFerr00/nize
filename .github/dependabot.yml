@@ -8,6 +8,12 @@ updates:
     cooldown: { default-days: 5 }
     groups:
       maven-minor-and-patch: { update-types: [minor, patch] }
+    # Moving the stack to a new line is the user's call (design.md "CI/CD").
+    ignore:
+      - dependency-name: org.springframework.boot:spring-boot-starter-parent
+        versions: [">=4.1.0"]
+      - dependency-name: "org.flywaydb:*"
+        versions: [">=12.0.0"]
   - package-ecosystem: npm
     directory: /frontend
     schedule: { interval: weekly, day: monday }

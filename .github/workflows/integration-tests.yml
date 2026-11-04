@@ -15,6 +15,9 @@ on:
       - frontend/**
       - scripts/ci/**
       - .github/workflows/integration-tests.yml
+      # The deploy workflows' gate waits for this one on the same commit, so it must run too.
+      - .github/workflows/backend.yml
+      - .github/workflows/frontend.yml
   pull_request:
     branches: [main]
     paths: *integration-paths
@@ -51,10 +54,12 @@ jobs:
               - 'backend/**'
               - 'scripts/ci/**'
               - '.github/workflows/integration-tests.yml'
+              - '.github/workflows/backend.yml'
             frontend:
               - 'frontend/**'
               - 'scripts/ci/**'
               - '.github/workflows/integration-tests.yml'
+              - '.github/workflows/frontend.yml'
 
   backend:
     name: Backend on MySQL 8.4 (least-privilege app + API flow)

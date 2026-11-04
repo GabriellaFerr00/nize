@@ -1,5 +1,5 @@
 # design.md
-> Nize — Version 0.2.2 (MVP web) — 2026-11-01
+> Nize — Version 0.2.3 (MVP web) — 2026-11-04
 
 ## Architecture Overview
 Monorepo com dois módulos independentes: `backend` (API REST) e `frontend` (SPA). **Toda regra de cálculo vive só no back-end** (totais, saldo, posição por quinzena, parcelas, carga do mês, saldo próprio, porcentagens). O front apenas exibe o que a API devolve e nunca recalcula valores. Como back (Java) e front (TypeScript) não compartilham código, o "pacote de regras compartilhado" do PDF vira o pacote Java `br.com.nize.rules`, puro (sem Spring, sem JPA), testado antes do código.
@@ -348,10 +348,11 @@ groupId `br.com.nize`, artifactId `nize-backend`, pacote raiz `br.com.nize`.
 GitHub Actions (detalhes em `docs/ci-cd.md`; NFR-010). **Um workflow por tema**, sem workflows aninhados; cada um dispara em push e Pull Request para a `main` só quando o seu código muda (filtro `paths`), e manualmente (`workflow_dispatch`):
 - **Back** (`backend.yml`; `backend/**`): `mvnw verify` (testes de regras, API em H2, segurança, isolamento, ArchUnit; JaCoCo ≥ 80% global e em `rules`) → imagem Docker + trivy → (só `main`) push GHCR → *gate* → Environment `production` (aprovação) → Flyway no Aiven com o usuário de migração → Render (API, por digest) → smoke.
 - **Front** (`frontend.yml`; `frontend/**`): `npm ci`, lint, typecheck, Vitest com cobertura ≥ 80%, build → *gate* → Cloudflare Pages: PR/branch publica preview (Environment `staging`), `main` publica produção (`production`, aprovação) → smoke.
-- **Testes integrados** (`integration-tests.yml`; um job por lado, cada um só se o seu código mudou): **back** — MySQL 8.4 descartável → migrações com o usuário de migração (duas vezes) → regras do esquema e privilégios do usuário de runtime → app no perfil `prod` (sem Flyway, só DML, TLS) → smoke → fluxo completo da API (`api-flow.sh`) → log sem segredos; **front** — E2E Playwright do site construído (CSP de produção) contra a API no perfil `h2` → log sem segredos.
+- **Testes integrados** (`integration-tests.yml`; um job por lado, cada um só se o seu código ou o workflow de deploy desse lado mudou, para o *gate* sempre ter o que esperar): **back** — MySQL 8.4 descartável → migrações com o usuário de migração (duas vezes) → regras do esquema e privilégios do usuário de runtime → app no perfil `prod` (sem Flyway, só DML, TLS) → smoke → fluxo completo da API (`api-flow.sh`) → log sem segredos; **front** — E2E Playwright do site construído (CSP de produção) contra a API no perfil `h2` → log sem segredos.
 - **Segurança** (`security.yml`; back ou front, semanal e manual): gitleaks e trufflehog no histórico, PII/arquivos proibidos, semgrep, CodeQL (Java e JS/TS), trivy no jar, npm audit, headers do front, DAST + ZAP contra o back local (perfil `h2`). Críticos/altos falham o workflow; médios/baixos viram issue (fora de PR).
 - **Gate**: workflows separados não se referenciam com `needs`; o job *gate* do back e do front espera (via API do GitHub) os workflows Segurança e Testes integrados **do mesmo commit** terminarem com sucesso antes de qualquer deploy (`scripts/ci/wait-for-workflows.sh`). A aprovação de `production` só é pedida depois do gate.
-- Actions fixadas por SHA e scanners por digest; `permissions: contents: read` por padrão; sem `pull_request_target`; PR de fork não recebe segredos (sem integração nem deploy de preview).
+- Actions fixadas por SHA e scanners por digest; `permissions: contents: read` por padrão; sem `pull_request_target`; PR de fork não recebe segredos (sem integração nem deploy de preview). PR do Dependabot também roda sem os segredos normais: não publica preview; o MySQL dos testes integrados usa a cópia de `NIZE_DB_ROOT_PASSWORD_TEST` em *Dependabot secrets*.
+- **Dependabot** (`dependabot.yml`): semanal, minor/patch agrupados; não propõe Spring Boot ≥ 4.1 nem Flyway ≥ 12 (troca de versão principal da stack é decisão da usuária).
 
 ## Open Questions
 - [x] ~~Lista das 15 categorias de fábrica~~ — resolvido em 2026-11-01: ver seção "Categorias de fábrica". "Mainha" não é categoria; é uma pessoa (terceiro), cadastrada em `pessoa`.
@@ -381,6 +382,7 @@ GitHub Actions (detalhes em `docs/ci-cd.md`; NFR-010). **Um workflow por tema**,
 | 0.1.7 | 2026-11-01 | Fixo pode ser no crédito (tipo e forma de pagamento independentes); regras de consistência do lançamento; Open Questions da Phase 3 resolvidas |
 | 0.1.8 | 2026-11-01 | `month` reservado no H2: coluna `month_ref`; data do lançamento `expense_date` |
 | 0.1.9 | 2026-11-01 | Carga do mês: continua parcelas à mão (grupo próprio) e respeita a permissão de parcelas automáticas |
+| 0.2.3 | 2026-11-04 | PR do Dependabot sem preview do front e com secret próprio para o MySQL dos testes; Dependabot ignora Spring Boot ≥ 4.1 e Flyway ≥ 12; Testes integrados também rodam quando muda `backend.yml`/`frontend.yml` (senão o *gate* falha por falta de run) |
 | 0.2.2 | 2026-11-02 | Um workflow por tema (back, front, segurança, testes integrados) sem aninhamento; deploys esperam Segurança e Testes integrados do mesmo commit (job *gate*); testes integrados em dois jobs (back: MySQL + fluxo da API; front: E2E com a API em `h2`) |
 | 0.2.1 | 2026-11-02 | `ci-cd.yml` também roda em Pull Request para a `main` (o `workflow_dispatch` só existe depois que o workflow está na `main`) |
 | 0.2.0 | 2026-11-01 | CI/CD e hospedagem (D-13 a D-18): perfil `prod` sem Flyway no boot, usuários de banco separados, TLS, proxy `/api` no Cloudflare Pages, limite de tentativas, Actuator health, `DisabledEmailSender`; File Structure com workflows, Dockerfile, scripts e docs |
