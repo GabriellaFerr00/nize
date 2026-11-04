@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { formatDay, formatMonth, formatPercent, monthNames } from './format'
 import { centsToInput, parseCents } from './money'
-import { currentMonth, defaultDate, isMonth, shiftMonth } from './month'
+import { currentMonth, defaultDate, defaultMonth, isMonth, shiftMonth } from './month'
 
 describe('month navigation helpers (REQ-040)', () => {
   it.each([
@@ -13,6 +13,13 @@ describe('month navigation helpers (REQ-040)', () => {
     ['2026-05', -17, '2024-12'],
   ])('%s %+i → %s', (month, delta, expected) => {
     expect(shiftMonth(month, delta)).toBe(expected)
+  })
+
+  it('opens today\'s calendar month inside the current year (REQ-006)', () => {
+    const today = new Date(2026, 10, 4)
+    expect(defaultMonth(2027, today)).toBe('2027-11')
+    expect(defaultMonth(2026, today)).toBe('2026-11')
+    expect(defaultMonth(undefined, today)).toBe('2026-11')
   })
 
   it('accepts only YYYY-MM with a real month', () => {

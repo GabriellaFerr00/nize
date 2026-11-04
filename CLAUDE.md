@@ -74,6 +74,7 @@ export LD_LIBRARY_PATH=~/tools/libs/x/usr/lib/x86_64-linux-gnu PATH=~/tools/node
 ## Comandos
 Back-end (a partir da raiz):
 - Testes: `cd backend && ./mvnw test`
+- Teste de carga (NFR-007, fora da suíte normal): `cd backend && ./mvnw test -Dtest=MonthResponseTimeTest -Dtest.excludedGroups=none`
 - Rodar com H2: `cd backend && NIZE_JWT_SECRET=<segredo> ./mvnw spring-boot:run -Dspring-boot.run.profiles=h2` (porta 8080)
 - Rodar com MySQL: o mesmo com `-Dspring-boot.run.profiles=local` e as variáveis `NIZE_DB_*`.
 

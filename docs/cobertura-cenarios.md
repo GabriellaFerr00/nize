@@ -20,7 +20,7 @@ ponta") e, quando é regra de cálculo, o teste da regra pura escrito antes do c
 | 3 | Resumo por categoria | Porcentagem sobre o total de gastos | REQ-035 | `percentageOverTheTotalExpenses` | `rules.CategorySummaryTest#percentageOverTheTotalExpenses` | ok |
 | 4 | Resumo por categoria | Categorias fecham com o total | REQ-035 | `categoriesAddUpToTheTotal` | `rules.CategorySummaryTest#categoriesAddUpToTheTotalExpenses`; `api.MonthApiTest#summariesAlwaysAddUpToTheTotals` | ok |
 | 5 | Parcelas | Compra dividida sem perder centavos | REQ-020 | `aPurchaseIsSplitWithoutLosingCents` | `rules.InstallmentsTest#oneHundredReaisInThreeInstallmentsLeavesTheDifferenceInTheLast`, `#theSumIsAlwaysTheTotalAndTheShapeIsAlwaysTheSame` | ok |
-| 6 | Parcelas | Indicador de parcela | REQ-021 | `installmentIndicator` (API devolve `installmentLabel` "7/12") | `rules.InstallmentIndicatorTest#seventhOfTwelveIsSevenSlashTwelve` | ok no back; **exibição na tela do mês pendente da Phase 6** (TASK-040) |
+| 6 | Parcelas | Indicador de parcela | REQ-021 | `installmentIndicator` (API devolve `installmentLabel` "7/12") | `rules.InstallmentIndicatorTest#seventhOfTwelveIsSevenSlashTwelve` | ok; exibido na tela do mês (TASK-040, `EntryLists`) |
 | 7 | Resumo por cartão | Lançamento sem cartão não some do resumo | REQ-037 | `anExpenseWithoutACardDoesNotVanishFromTheSummary` | `rules.PaymentSummaryTest#aCreditWithoutACardDoesNotVanishFromTheCardSummary` | ok |
 | 8 | Posição por quinzena | Falta ou sobra até o dia 15 | REQ-030, REQ-048 | `whatIsLeftOrMissingUntilThe15th` | `rules.ClosingPositionsTest#whatIsLeftOrMissingUntilThe15th` | ok — **adaptado (REQ-048)**: posição no 1º dia de fechamento (padrão 15) |
 | 9 | Posição por quinzena | Posição até o fim do mês | REQ-031, REQ-048 | `positionUntilTheEndOfTheMonth` | `rules.ClosingPositionsTest#positionUntilTheEndOfTheMonth`, `#thirtyAndThirtyOneInFebruaryBecomeASinglePositionOnTheLastDay` | ok — **adaptado (REQ-031, REQ-048)**: o PDF fala em "dia 30"; o padrão é o dia 31 = último dia do mês (30 em abril) |
@@ -48,7 +48,7 @@ nenhum defeito de código de produção encontrado.
 
 **Pendências de outras fases** (o PDF não tem cenário Gherkin para elas, mas a tela exibe o resultado):
 - Phase 6 (tela do mês): exibir o indicador "N/M" (cenário 6), totais, posições e resumos que a API já devolve.
-- Phase 7 (panorama anual, REQ-039): o PDF não traz cenário Gherkin do panorama; os testes de `GET /api/years/{year}/overview` vêm com a TASK-044.
+- Phase 7 (panorama anual, REQ-039): o PDF não traz cenário Gherkin do panorama; os testes de `GET /api/years/{year}/overview` estão em `api.OverviewApiTest` (TASK-044).
 
 ## 2. Endpoints de dados × teste de isolamento (TASK-047, REQ-004, NFR-004)
 
@@ -83,9 +83,9 @@ linha de A (e vice-versa), listas e o mês só mostram linhas da própria usuár
 | POST /api/months/{month}/incomes | IncomeController | `IncomeApiTest#aPersonOfAnotherUserOrYearIsNotFound`, teste do corpo com `userId` de B (a entrada fica com A) |
 | PUT /api/incomes/{id} | IncomeController | `IncomeApiTest#onlyTheOwnerCanEditAnIncome` (`assertOnlyOwnerCanAccess`), **`#editCannotPointToAnotherUsersPerson` (novo)** |
 | DELETE /api/incomes/{id} | IncomeController | `IncomeApiTest#onlyTheOwnerCanDeleteAnIncome` |
-| GET /api/years/{year}/overview | (Phase 7) | **pendente**: o endpoint chega com a TASK-044 (`feat/phase-7`) e precisa de um teste que estenda `IsolationTestBase` (`IsolationCoverageTest` falha sem ele) |
+| GET /api/years/{year}/overview | `OverviewApiTest#onlyTheOwnerCanReadTheOverviewOfHerYear`, `#anotherUsersMovementsNeverShowUp` | ok (TASK-044) |
 
-**Resultado**: 24 de 24 endpoints de dados existentes cobertos (100%). Faltavam dois casos de referência de outra
+**Resultado**: 25 de 25 endpoints de dados cobertos (100%), incluindo o panorama (TASK-044). Faltavam dois casos de referência de outra
 usuária na edição (cartão/pessoa no `PUT /api/expenses/{id}` e pessoa no `PUT /api/incomes/{id}`); os testes foram
 acrescentados e passam (o código já devolvia 404). TASK-047 fica aberta só pelo endpoint do panorama.
 

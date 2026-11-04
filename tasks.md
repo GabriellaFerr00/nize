@@ -186,6 +186,7 @@ Nomes em inglês: ver "Nomenclatura em inglês" em `design.md` (os termos em por
   - _Output_: página e hooks.
   - _Verify_: trocar de mês atualiza os números; valores exibidos vêm só da API.
   - _Done_: `MonthPage` + `MonthHeader` (totais, posições só com `closingsEnabled`) + `MonthPicker` (anterior/próximo, mês, ano de `/api/years`); `useMonth` (`GET /api/months/{m}`, que faz a carga). Testes em `pages/month.test.tsx`.
+  - _Integração_: `/` e os menus "Mês"/"Panorama" abrem no ano vigente (REQ-006; `defaultMonth`, `useDefaultMonth`, `DefaultMonthRedirect`).
 - [x] **TASK-040** [REQ-041, REQ-015, REQ-016, REQ-024, REQ-023]: Listas de Fixos, Cartão e Entradas com "pago", editar e excluir, e indicador N/M.
   - _Output_: componentes de lista.
   - _Verify_: marcar pago não altera os totais exibidos; editar e excluir refletem na hora.
@@ -222,10 +223,10 @@ Nomes em inglês: ver "Nomenclatura em inglês" em `design.md` (os termos em por
   - _Output_: seção no final deste arquivo ou `docs/cobertura-cenarios.md`.
   - _Verify_: nenhum cenário sem teste; `mvn test` verde.
   - _Feito_: `docs/cobertura-cenarios.md` §1; 22 cenários, todos com teste ponta a ponta em `api.PdfScenariosTest` (`@DisplayName` = nome do cenário, números do PDF) além dos testes de regra; 8, 9 e 14 adaptados (REQ-048, REQ-031, REQ-022). Exibição do "N/M" na tela fica com a TASK-040.
-- [ ] **TASK-047** [NFR-004, REQ-004]: Rodar a suíte de isolamento sobre todos os endpoints de dados.
+- [x] **TASK-047** [NFR-004, REQ-004]: Rodar a suíte de isolamento sobre todos os endpoints de dados.
   - _Output_: relatório de endpoints × teste de isolamento.
   - _Verify_: 100% dos endpoints de dados cobertos.
-  - _Andamento_: `docs/cobertura-cenarios.md` §2; 24/24 endpoints existentes cobertos (novos: `ExpenseEditApiTest#editCannotPointToAnotherUsersCardOrPerson`, `IncomeApiTest#editCannotPointToAnotherUsersPerson`). **Falta** `GET /api/years/{year}/overview` (TASK-044, Phase 7).
+  - _Andamento_: `docs/cobertura-cenarios.md` §2; 24/24 endpoints existentes cobertos (novos: `ExpenseEditApiTest#editCannotPointToAnotherUsersCardOrPerson`, `IncomeApiTest#editCannotPointToAnotherUsersPerson`). Panorama coberto por `OverviewApiTest` após a integração das Phases 6–8: 25/25.
 - [x] **TASK-048** [NFR-007]: Teste de carga simples do resumo do mês com 500 lançamentos.
   - _Output_: resultado registrado.
   - _Verify_: p95 < 500 ms (ou meta revisada).

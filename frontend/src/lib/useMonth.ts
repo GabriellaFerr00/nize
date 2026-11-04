@@ -1,6 +1,8 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { listItems, type CatalogItem } from '../api/catalogApi'
 import { getMonth } from '../api/monthApi'
+import { getSettings } from '../api/yearsApi'
+import { defaultMonth } from './month'
 
 /** Key prefix of every month query; saving an expense or income refreshes them all (installments reach later months). */
 export const MONTH_KEY = 'month'
@@ -8,6 +10,15 @@ export const MONTH_KEY = 'month'
 /** The month screen data, exactly as the API computed it (REQ-041). */
 export function useMonth(month: string, enabled = true) {
   return useQuery({ queryKey: [MONTH_KEY, month], queryFn: () => getMonth(month), enabled })
+}
+
+/**
+ * The month the app opens by default (REQ-006), from the saved current year. Until the settings arrive
+ * (or if they fail) it is today's month; {@code isLoading} lets a redirect wait for them.
+ */
+export function useDefaultMonth() {
+  const settings = useQuery({ queryKey: ['settings'], queryFn: getSettings })
+  return { month: defaultMonth(settings.data?.currentYear), isLoading: settings.isLoading }
 }
 
 /** Refetches the open months after a change, so lists, totals and summaries reflect it at once. */

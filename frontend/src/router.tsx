@@ -1,8 +1,7 @@
-import { Navigate, createBrowserRouter, createMemoryRouter, type RouteObject } from 'react-router-dom'
+import { createBrowserRouter, createMemoryRouter, type RouteObject } from 'react-router-dom'
 import { AppLayout } from './components/AppLayout'
 import { AuthLayout } from './components/AuthLayout'
-import { PublicOnly, RequireAuth } from './components/RouteGuards'
-import { currentMonth } from './lib/month'
+import { DefaultMonthRedirect, PublicOnly, RequireAuth } from './components/RouteGuards'
 import { CardsPage } from './pages/CardsPage'
 import { CategoriesPage } from './pages/CategoriesPage'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
@@ -37,7 +36,7 @@ export const routes: RouteObject[] = [
       {
         element: <AppLayout />,
         children: [
-          { path: '/', element: <Navigate to={`/month/${currentMonth()}`} replace /> },
+          { path: '/', element: <DefaultMonthRedirect /> },
           { path: '/month/:yyyyMm', element: <MonthPage /> },
           { path: '/overview/:year', element: <OverviewPage /> },
           { path: '/categories', element: <CategoriesPage /> },

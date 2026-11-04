@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../api/authState'
+import { useDefaultMonth } from '../lib/useMonth'
 
 /** Everything inside needs a signed-in user; others go to /sign-in and come back afterwards. */
 export function RequireAuth() {
@@ -19,4 +20,10 @@ export function PublicOnly() {
   const { isAuthenticated } = useAuth()
   const from = (useLocation().state as { from?: string } | null)?.from
   return isAuthenticated ? <Navigate to={from ?? '/'} replace /> : <Outlet />
+}
+
+/** `/` opens the default month (REQ-006); waits for the settings so it lands in the current year at once. */
+export function DefaultMonthRedirect() {
+  const { month, isLoading } = useDefaultMonth()
+  return isLoading ? null : <Navigate to={`/month/${month}`} replace />
 }

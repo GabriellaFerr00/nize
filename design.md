@@ -297,7 +297,7 @@ Limite de tentativas (REQ-047): os quatro `POST /api/auth/**` devolvem 429 `{cod
 | /categorias, /cartoes, /pessoas | Cadastros | REQ-044 |
 | /configuracoes | Ano vigente, parcelas automáticas, fechamentos (ligar/desligar, dias) | REQ-006, REQ-009, REQ-048 |
 
-Navegação: menu lateral (≥ 768px) e barra inferior (< 768px) — REQ-043. Identidade visual própria — REQ-045.
+Navegação: menu lateral (≥ 768px) e barra inferior (< 768px) — REQ-043. Mês padrão (`/`, menu "Mês" e "Panorama"): o mês do calendário dentro do ano vigente da usuária (nov/2026 com ano vigente 2027 → `2027-11`; `lib/month.defaultMonth`) — REQ-006, decisão da usuária 2026-11-04. Identidade visual própria — REQ-045.
 
 ## File Structure
 ```
@@ -401,7 +401,7 @@ GitHub Actions (detalhes em `docs/ci-cd.md`; NFR-010). **Um workflow por tema**,
 | 0.1.7 | 2026-11-01 | Fixo pode ser no crédito (tipo e forma de pagamento independentes); regras de consistência do lançamento; Open Questions da Phase 3 resolvidas |
 | 0.1.8 | 2026-11-01 | `month` reservado no H2: coluna `month_ref`; data do lançamento `expense_date` |
 | 0.1.9 | 2026-11-01 | Carga do mês: continua parcelas à mão (grupo próprio) e respeita a permissão de parcelas automáticas |
-| 0.2.5 | 2026-11-04 | Panorama faz a carga dos meses até o vigente (D-19); Open Questions da Phase 8 resolvidas (JUnit 5, NFR-007 confirmada); Maven 3.10.0 |
+| 0.2.5 | 2026-11-04 | Panorama faz a carga dos meses até o vigente (D-19); Open Questions da Phase 8 resolvidas (JUnit 5, NFR-007 confirmada); Maven 3.10.0; mês padrão no ano vigente (REQ-006); arquivos das Phases 6–8 na File Structure |
 | 0.2.4 | 2026-11-04 | Fechamentos opcionais (REQ-048): `settings.closings_enabled`, tabela `closing_day`, regra `ClosingPositions` (substitui `FortnightPosition`), `/api/settings` com `closingsEnabled`/`closingDays`. Diverge do PDF (15/30 fixos); decisão da usuária |
 | 0.2.3 | 2026-11-04 | PR do Dependabot sem preview do front e com secret próprio para o MySQL dos testes; Dependabot ignora Spring Boot ≥ 4.1 e Flyway ≥ 12; Testes integrados também rodam quando muda `backend.yml`/`frontend.yml` (senão o *gate* falha por falta de run) |
 | 0.2.2 | 2026-11-02 | Um workflow por tema (back, front, segurança, testes integrados) sem aninhamento; deploys esperam Segurança e Testes integrados do mesmo commit (job *gate*); testes integrados em dois jobs (back: MySQL + fluxo da API; front: E2E com a API em `h2`) |
