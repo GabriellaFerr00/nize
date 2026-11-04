@@ -2,5 +2,5 @@
 spring:
   datasource:
     url: ${NIZE_DB_URL:jdbc:mysql://localhost:3306/nize?createDatabaseIfNotExist=true}
-    username: ${NIZE_DB_USER:root}
-    password: ${NIZE_DB_PASSWORD:}
+    username: ${NIZE_DB_USER:nize}
+    password: ${NIZE_DB_PASSWORD}
