@@ -281,7 +281,7 @@ REST JSON sob `/api`. Todos os endpoints exceto `/api/auth/**` exigem `Authoriza
 | DELETE | /api/lancamentos/{id} | sim | REQ-023 | exclui |
 | POST | /api/meses/{aaaa-mm}/entradas | sim | REQ-024..026 | cria entrada (parcelada ou reembolso) |
 | PUT/DELETE | /api/entradas/{id} | sim | REQ-023 | edita / exclui |
-| GET | /api/anos/{ano}/panorama | sim | REQ-039 | 12 meses: gastos, entradas e saldo; faz a carga dos meses até o vigente (D-19) |
+| GET | /api/anos/{ano}/panorama | sim | REQ-039 | `GET /api/years/{year}/overview` → `{year, months: [{month, totalExpensesCents, totalIncomeCents, balanceCents}]}` (12 meses, janeiro primeiro; mesma regra `MonthTotals` do mês); faz a carga dos meses até o vigente (D-19); ano que a usuária não tem → 404 |
 | GET | /actuator/health | não | D-18 | `{"status":"UP"}`; usado pelo Docker e pelo smoke test |
 
 Erros sempre no formato `{code, fields}` (`ApiExceptionHandler`), inclusive os do framework: parâmetro de tipo errado → 400 `VALIDATION_ERROR`; rota inexistente → 404 `NOT_FOUND`; método errado → 405 `METHOD_NOT_ALLOWED`; tipo de conteúdo errado → 415 `UNSUPPORTED_MEDIA_TYPE`; erro inesperado → 500 `INTERNAL_ERROR` (causa só no log do servidor, nunca na resposta).
@@ -327,15 +327,19 @@ nize/
 │       │   ├── service/
 │       │   ├── api/             (controllers e DTOs)
 │       │   └── security/        (JWT, user_id do token)
+│       │                    (panorama: service/OverviewService, api/OverviewController e OverviewResponse)
 │       ├── main/resources/  application.yml, application-local.yml, application-h2.yml, application-prod.yml
 │       ├── main/resources/db/migration/   (Flyway)
 │       └── test/java/br/com/nize/  (rules/, service/, api/)
+│                                    (panorama: api/OverviewApiTest)
 └── frontend/
     ├── package.json  vite.config.ts  playwright.config.ts
     ├── public/  _redirects (fallback da SPA)  _headers (CSP, HSTS...)
     ├── functions/api/[[path]].ts  (Pages Function: proxy /api → Render; D-15)
     ├── e2e/  (Playwright, dados sintéticos)
     └── src/ (pages/, components/, api/, lib/, styles/, i18n/ com en.json e pt.json, test/)
+        (panorama: pages/OverviewPage.tsx, components/OverviewChart.tsx (Recharts, carregado sob demanda),
+         api/overviewApi.ts, pages/overview.test.tsx)
 ```
 groupId `br.com.nize`, artifactId `nize-backend`, pacote raiz `br.com.nize`.
 

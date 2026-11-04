@@ -201,12 +201,14 @@ Nomes em inglês: ver "Nomenclatura em inglês" em `design.md` (os termos em por
 ## Phase 7: Panorama anual
 *Goal*: Visão dos 12 meses coerente com a tela do mês.
 
-- [ ] **TASK-044** [REQ-039, NFR-002]: `GET /api/anos/{ano}/panorama` calculando gastos, entradas e saldo dos 12 meses (sem persistir totais).
+- [x] **TASK-044** [REQ-039, NFR-002]: `GET /api/anos/{ano}/panorama` calculando gastos, entradas e saldo dos 12 meses (sem persistir totais).
   - _Output_: serviço, DTO, testes.
   - _Verify_: cada mês bate com `GET /api/meses/{mes}`.
-- [ ] **TASK-045** [REQ-039, REQ-040]: Tela do panorama com gráfico, tabela de saldo mensal e clique que abre o mês.
+  - _Done_ (feat/phase-7): `GET /api/years/{year}/overview` (`OverviewService` reusa `MonthTotals` via `MonthService.totalsOf`; carga D-19; 2 consultas para os 12 meses). `OverviewApiTest` compara cada mês com `GET /api/months/{m}`; `./mvnw verify` verde (339 testes, JaCoCo ok).
+- [x] **TASK-045** [REQ-039, REQ-040]: Tela do panorama com gráfico, tabela de saldo mensal e clique que abre o mês.
   - _Output_: página `/panorama/:ano`.
   - _Verify_: clicar em março abre `/mes/AAAA-03`; trocar de ano funciona.
+  - _Done_ (feat/phase-7): `OverviewPage` + `OverviewChart` (Recharts 3.10.1, carregado sob demanda), tabela com link por mês, clique na barra também abre o mês, seletor de ano. `overview.test.tsx` (março → `/month/2026-03`, troca de ano); sem rolagem horizontal em 360/768/1280 (medido com Chromium); test/lint/build verdes.
 
 ## Phase 8: Validação final do MVP
 *Goal*: Garantir que o MVP cumpre a spec antes do primeiro deploy de teste.
