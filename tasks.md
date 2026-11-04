@@ -93,9 +93,9 @@ Nomes em inglês: ver "Nomenclatura em inglês" em `design.md` (os termos em por
 - [x] **TASK-022** [REQ-021, NFR-003]: Teste e implementação do indicador "N/M".
   - _Output_: `regras.IndicadorParcela`.
   - _Verify_: 7 de 12 → "7/12"; sem parcelas → vazio.
-- [~] **TASK-023** [REQ-015, REQ-016, REQ-017, REQ-019]: Migração V3 com `lancamento` e entidade/repositório; criação de lançamento único (fixo e cartão, terceiro, parcela manual).
+- [x] **TASK-023** [REQ-015, REQ-016, REQ-017, REQ-019]: Migração V3 com `lancamento` e entidade/repositório; criação de lançamento único (fixo e cartão, terceiro, parcela manual).
   - _Output_: `V3__lancamentos.sql`, `POST /api/meses/{mes}/lancamentos`.
-  - _Verify_: testes de criação; `data` fora do `mes` rejeitada; `valor_centavos ≤ 0` rejeitado. Aplicar as "Regras de consistência do lançamento" do `design.md` (fixo no crédito permitido; cartão só em crédito; parcelas só em tipo cartão). **Pendente: aplicar V3 no MySQL (validação do Hibernate); H2 verde (162 testes).**
+  - _Verify_: testes de criação; `data` fora do `mes` rejeitada; `valor_centavos ≤ 0` rejeitado. Aplicar as "Regras de consistência do lançamento" do `design.md` (fixo no crédito permitido; cartão só em crédito; parcelas só em tipo cartão). V3–V6 aplicadas no MySQL 8.4 local em 2026-11-04 (perfil `local`, `ddl-auto: validate` ok, app subiu).
 - [x] **TASK-024** [REQ-018, REQ-009, REQ-020]: Geração de parcelas automáticas (`gerarParcelas`) respeitando a permissão e usando `grupo_parcela_id`.
   - _Output_: serviço e testes.
   - _Verify_: cenários "Parcelas automáticas" do PDF (inclui permissão desligada e sem parcelas).
@@ -107,7 +107,7 @@ Nomes em inglês: ver "Nomenclatura em inglês" em `design.md` (os termos em por
   - _Verify_: todos verdes.
 - [x] **TASK-027** [REQ-022]: Migração `mes_carregado` e serviço que aplica `CargaDoMes` na primeira abertura do mês (idempotente), incluindo a virada dez→jan.
   - _Output_: migração, serviço.
-  - _Verify_: abrir o mês 2× não duplica; dezembro → janeiro abre o novo ano e copia estrutura. Verificado no H2 (`MonthLoadServiceTest`); **a V4 também precisa ser aplicada no MySQL** (junto da V3, TASK-023). O serviço `MonthLoadService.open` ainda não é chamado por nenhum endpoint: a TASK-034 (`GET /api/months/{mes}`) vai chamá-lo.
+  - _Verify_: abrir o mês 2× não duplica; dezembro → janeiro abre o novo ano e copia estrutura. Verificado no H2 (`MonthLoadServiceTest`); V4 aplicada no MySQL junto da V3 (TASK-023, 2026-11-04). O serviço `MonthLoadService.open` ainda não é chamado por nenhum endpoint: a TASK-034 (`GET /api/months/{mes}`) vai chamá-lo.
 - [x] **TASK-028** [REQ-023, REQ-004]: Testes de isolamento de todos os endpoints de lançamento.
   - _Output_: testes.
   - _Verify_: usuária B recebe 404 em PUT/DELETE/PATCH de lançamento de A. Coberto em `ExpenseCreateApiTest` (POST com categoria/cartão/pessoa alheios → 404, `userId` no corpo ignorado) e `ExpenseEditApiTest` (PUT/PATCH/DELETE → 404 e nada muda); o `GET` do mês entra na TASK-034.
