@@ -134,10 +134,10 @@ Nomes em inglês: ver "Nomenclatura em inglês" em `design.md` (os termos em por
   - _Verify_: E2E local contra o back no perfil `h2`.
 - [x] **TASK-058** [NFR-010]: Workflows (`ci-cd`, `backend-deploy`, `frontend-deploy`, `integration-tests`, `security`), `dependabot.yml`, `.semgrep/`, `.gitleaks.toml`, `.zap/rules.tsv`, `scripts/ci/`; actions fixadas por SHA.
   - _Verify_: `actionlint` sem erros; scripts SQL/shell rodados contra o MySQL local quando possível.
-- [~] **TASK-059** [NFR-010]: `.env.example` e `docs/ci-cd.md` (fluxo, segredos, checklist Cloudflare/Render/Aiven, rollback, rotação, cold start, achados).
-  - _Verify_: revisão da usuária (pendente).
-- [~] **TASK-060** [NFR-010]: Validar o pipeline em `ci/pipeline-test` por `workflow_dispatch` depois de cadastrar os segredos (precisa da usuária: contas e push).
-  - _Verify_: todos os jobs verdes até o preview do front (OK no PR #1 em 2026-11-02); deploy de produção só após aprovação (pendente: serviço no Render e merge na `main`).
+- [x] **TASK-059** [NFR-010]: `.env.example` e `docs/ci-cd.md` (fluxo, segredos, checklist Cloudflare/Render/Aiven, rollback, rotação, cold start, achados).
+  - _Verify_: revisão da usuária (OK em 2026-11-04).
+- [x] **TASK-060** [NFR-010]: Validar o pipeline em `ci/pipeline-test` por `workflow_dispatch` depois de cadastrar os segredos (precisa da usuária: contas e push).
+  - _Verify_: todos os jobs verdes até o preview do front (OK no PR #1 em 2026-11-02); deploy de produção só após aprovação (OK em 2026-11-04: Backend run 41752594996 — Flyway V1–V4 na Aiven, Render `dep-dbl9c10n74is739ek0t0`, smoke; Frontend run 41749872952 em https://nize.pages.dev com `/api` via proxy).
 
 ---
 
