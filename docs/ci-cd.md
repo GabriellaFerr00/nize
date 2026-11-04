@@ -112,7 +112,7 @@ Faça na ordem. **Crie os Environments antes do primeiro push dos workflows**: s
 
 ### Aiven (MySQL gratuito)
 Limites atuais do plano free (conferido em 2026-11-01 em aiven.io/docs/products/mysql/concepts/mysql-free-tier): 1 CPU, 1 GB de RAM, 1 GB de disco, `max_connections` 76, sem IP fixo, sem VPC. Um serviço free por tipo e por conta. O serviço pode ser desligado se ficar sem uso; nesse caso, religue pelo console.
-1. Crie a conta e o serviço **MySQL**, plano **Free**, na região mais próxima da do Render.
+1. Crie a conta e o serviço **MySQL**, plano **Free**, na região mais próxima da do Render. Espere o status **Running**: enquanto está *Rebuilding* (ou *Powered off*), o host não existe no DNS e a migração falha com `Unknown host`.
 2. Em *Overview*, anote host e porta. O usuário `avnadmin` só serve para administração.
 3. Conecte como `avnadmin` (o cliente pergunta a senha; não a coloque na linha de comando) e rode, com senhas fortes geradas na hora (`openssl rand -base64 24`):
    ```sql
@@ -135,7 +135,7 @@ Limites atuais do plano free (conferido em 2026-11-01 em aiven.io/docs/products/
 ### GHCR e Render
 1. Rode o pipeline do back uma vez na `main`, ou com `target: backend`. O job *image* publica `ghcr.io/gabriellaferr00/nize-backend:<sha>`. O job *deploy* fica esperando aprovação: **não aprove ainda**.
 2. GitHub → Packages → `nize-backend` → Package settings → **Change visibility → Public**. A imagem não contém segredos e o código já é público. Alternativa: deixar privada e cadastrar no Render uma credencial de registry com um token `read:packages`.
-3. Render → New → **Web Service** → *Existing image* → `ghcr.io/gabriellaferr00/nize-backend:<sha>`. Nome **`nize-api`**, instância **Free**, *Health Check Path* `/actuator/health`, *Auto-Deploy* **desligado** (quem faz o deploy é o pipeline). Cadastre as variáveis de ambiente do Render da seção 4. Gere o `NIZE_JWT_SECRET` com `openssl rand -base64 48`.
+3. Render → New → **Web Service** → *Existing image* → `ghcr.io/gabriellaferr00/nize-backend:<sha>`. Nome **`nize-api`**, instância **Free**, *Health Check Path* `/actuator/health`. Serviço de imagem não tem *Auto-Deploy*: só o pipeline (API do Render) faz deploy. O botão final é **Deploy Web Service**; esse primeiro deploy falha enquanto o banco não tem tabelas, o que é esperado. Cadastre as variáveis de ambiente do Render da seção 4. Gere o `NIZE_JWT_SECRET` com `openssl rand -base64 48`.
 4. Anote o `srv-...` (está na URL do serviço) em `RENDER_SERVICE_ID`. Em Account Settings → API Keys, crie a `RENDER_API_KEY`. Cadastre a variável de **repositório** `API_URL` (Settings → Secrets and variables → Actions → Variables).
 5. Volte ao run do passo 1 e aprove o `production`.
 
