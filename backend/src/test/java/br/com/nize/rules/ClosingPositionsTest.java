@@ -17,6 +17,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 /**
  * Features "Posição por quinzena" and "Pix e crédito na posição por quinzena" from the PDF, run with the default
  * closing days 15 and 31, plus the configurable closings (REQ-030, REQ-031, REQ-032, REQ-048, NFR-003).
+ * Adapted on purpose (REQ-030, user decision 2026-11-04): each position covers only its own interval between
+ * closings (1–15, 16–end), never the previous ones, and the last interval runs to the end of the month.
  * "Marcar como pago não altera" (REQ-033) holds by construction: "paid" is not an input of this rule; the API test of
  * TASK-034 checks it end to end.
  */
@@ -48,19 +50,31 @@ class ClosingPositionsTest {
         List<Position> positions = ClosingPositions.of(APRIL, expenses, incomes, DEFAULT_DAYS);
 
         // Então a sobra até o dia 15 é 180000 centavos
-        assertThat(positions.get(0)).isEqualTo(new Position(15, 180_000));
+        assertThat(positions.get(0)).isEqualTo(new Position(1, 15, 180_000));
     }
 
     @Test
-    void positionUntilTheEndOfTheMonth() {
-        // Dado entradas de 350000 centavos e gastos de 380000 centavos até o fim do mês
+    void theSecondIntervalDoesNotCarryTheFirstOne() {
+        // Dado entradas de 300000 e gastos de 120000 do dia 1 ao 15, e gastos de 30000 do dia 16 ao 30
+        List<Income> incomes = List.of(new Income(300_000, april(5)));
+        List<Expense> expenses = List.of(pix(120_000, april(10)), pix(30_000, april(20)));
+
+        List<Position> positions = ClosingPositions.of(APRIL, expenses, incomes, DEFAULT_DAYS);
+
+        // Então sobram 180000 no 1º intervalo e faltam 30000 no 2º (não 150000); dia 31 em abril = dia 30
+        assertThat(positions).containsExactly(new Position(1, 15, 180_000), new Position(16, 30, -30_000));
+    }
+
+    @Test
+    void positionOfTheSecondHalfOfTheMonth() {
+        // Dado entradas de 350000 e gastos de 380000 no mês, com 50000 e 180000 depois do dia 15
         List<Income> incomes = List.of(new Income(300_000, april(5)), new Income(50_000, april(25)));
         List<Expense> expenses = List.of(pix(200_000, april(8)), pix(180_000, april(30)));
 
         List<Position> positions = ClosingPositions.of(APRIL, expenses, incomes, DEFAULT_DAYS);
 
-        // Então a posição até o último dia é -30000 centavos (faltam R$ 300,00); dia 31 em abril = dia 30
-        assertThat(positions).containsExactly(new Position(15, 100_000), new Position(30, -30_000));
+        // Então o 2º intervalo só soma o que caiu nele: 50000 − 180000
+        assertThat(positions).containsExactly(new Position(1, 15, 100_000), new Position(16, 30, -130_000));
     }
 
     // ---- Pix e crédito ----
@@ -71,7 +85,7 @@ class ClosingPositionsTest {
         List<Position> positions = ClosingPositions.of(APRIL, List.of(pix(20_000, april(12))), List.of(), DEFAULT_DAYS);
 
         // Então ele pesa na posição até o dia 15 de abril
-        assertThat(positions.get(0)).isEqualTo(new Position(15, -20_000));
+        assertThat(positions.get(0)).isEqualTo(new Position(1, 15, -20_000));
     }
 
     @Test
@@ -83,7 +97,7 @@ class ClosingPositionsTest {
 
         // Então o gasto pesa na posição até o dia 15 de abril, e não na data da compra
         assertThat(ClosingPositions.effectiveDate(purchase, APRIL)).isEqualTo(april(10));
-        assertThat(positions.get(0)).isEqualTo(new Position(15, -50_000));
+        assertThat(positions).containsExactly(new Position(1, 15, -50_000), new Position(16, 30, 0));
     }
 
     @Test
@@ -92,7 +106,7 @@ class ClosingPositionsTest {
 
         assertThat(ClosingPositions.effectiveDate(purchase, APRIL)).isEqualTo(april(20));
         assertThat(ClosingPositions.of(APRIL, List.of(purchase), List.of(), DEFAULT_DAYS))
-                .containsExactly(new Position(15, 0), new Position(30, -7_000));
+                .containsExactly(new Position(1, 15, 0), new Position(16, 30, -7_000));
     }
 
     @Test
@@ -106,14 +120,15 @@ class ClosingPositionsTest {
     // ---- Configurable closings (REQ-048) ----
 
     @Test
-    void anyClosingDaysGiveOnePositionEachInAscendingOrder() {
+    void anyClosingDaysGiveOneIntervalEachInAscendingOrderAndTheLastRunsToTheEnd() {
         List<Income> incomes = List.of(new Income(100_000, april(1)));
         List<Expense> expenses = List.of(pix(10_000, april(5)), pix(20_000, april(11)), pix(30_000, april(20)));
 
         List<Position> positions = ClosingPositions.of(APRIL, expenses, incomes, List.of(20, 5, 10));
 
+        // 1–5, 6–10 and 11–30: the last closing (20) runs to the end of the month
         assertThat(positions).containsExactly(
-                new Position(5, 90_000), new Position(10, 90_000), new Position(20, 40_000));
+                new Position(1, 5, 90_000), new Position(6, 10, 0), new Position(11, 30, -50_000));
     }
 
     @Test
@@ -122,7 +137,7 @@ class ClosingPositionsTest {
         List<Income> incomes = List.of(new Income(10_000, february.atDay(28)));
 
         assertThat(ClosingPositions.of(february, List.of(), incomes, List.of(30, 31)))
-                .containsExactly(new Position(28, 10_000));
+                .containsExactly(new Position(1, 28, 10_000));
     }
 
     @Test
@@ -131,17 +146,32 @@ class ClosingPositionsTest {
         List<Income> incomes = List.of(new Income(10_000, leapFebruary.atDay(29)));
 
         assertThat(ClosingPositions.of(leapFebruary, List.of(), incomes, List.of(15, 31)))
-                .containsExactly(new Position(15, 0), new Position(29, 10_000));
+                .containsExactly(new Position(1, 15, 0), new Position(16, 29, 10_000));
     }
 
     @Test
     void aDayInsideTheMonthStaysAsChosen() {
-        // In a 31-day month, closing on the 30th leaves the 31st out.
+        // In a 31-day month, closings on the 30th and 31st give a one-day last interval.
         YearMonth may = YearMonth.of(2026, 5);
         List<Income> incomes = List.of(new Income(5_000, may.atDay(31)));
 
         assertThat(ClosingPositions.of(may, List.of(), incomes, Set.of(30, 31)))
-                .containsExactly(new Position(30, 0), new Position(31, 5_000));
+                .containsExactly(new Position(1, 30, 0), new Position(31, 31, 5_000));
+    }
+
+    @Test
+    void entriesAfterTheLastClosingDayFallInTheLastInterval() {
+        // Fechamentos 10 e 20: o que cai depois do dia 20 entra no intervalo 11–fim do mês
+        List<Expense> expenses = List.of(pix(4_000, april(10)), pix(5_000, april(25)));
+
+        assertThat(ClosingPositions.of(APRIL, expenses, List.of(), List.of(10, 20)))
+                .containsExactly(new Position(1, 10, -4_000), new Position(11, 30, -5_000));
+    }
+
+    @Test
+    void aSingleClosingDayCoversTheWholeMonth() {
+        assertThat(ClosingPositions.of(APRIL, List.of(pix(1_000, april(29))), List.of(), List.of(10)))
+                .containsExactly(new Position(1, 30, -1_000));
     }
 
     @Test

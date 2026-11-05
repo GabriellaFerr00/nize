@@ -23,8 +23,8 @@ const november = (): MonthView => ({
   },
   closingsEnabled: true,
   positions: [
-    { day: 15, balanceCents: 180_000 },
-    { day: 30, balanceCents: -30_000 },
+    { fromDay: 1, toDay: 15, balanceCents: 180_000 },
+    { fromDay: 16, toDay: 30, balanceCents: -30_000 },
   ],
   summaries: {
     byCategory: [
@@ -118,8 +118,8 @@ describe('month screen header and navigation (TASK-039: REQ-041, REQ-040)', () =
     expect(within(header).getByText('Saldo do mês').nextSibling).toHaveTextContent('R$ 680,70')
 
     const positions = section('Fechamentos')
-    expect(within(positions).getByText('Até o dia 15').parentElement).toHaveTextContent('Sobram R$ 1.800,00')
-    expect(within(positions).getByText('Até o dia 30').parentElement).toHaveTextContent('Faltam R$ 300,00')
+    expect(within(positions).getByText('Do dia 1 ao 15').parentElement).toHaveTextContent('Sobram R$ 1.800,00')
+    expect(within(positions).getByText('Do dia 16 ao 30').parentElement).toHaveTextContent('Faltam R$ 300,00')
   })
 
   it('shows no positions when the closings are turned off (REQ-048)', async () => {
@@ -522,7 +522,7 @@ describe('quick entry of income (TASK-042: REQ-042, REQ-024, REQ-026)', () => {
       await openMonth(baseReplies(), '/month/2026-11', 'Fixed')
       expect(screen.getByText('Total expenses').nextSibling).toHaveTextContent('R$ 5,942.88')
       expect(within(section('By category')).getByText('23.86%')).toBeInTheDocument()
-      expect(within(section('Closings')).getByText('Up to day 30').parentElement).toHaveTextContent('Missing R$ 300.00')
+      expect(within(section('Closings')).getByText('Day 16 to 30').parentElement).toHaveTextContent('Missing R$ 300.00')
       await userEvent.click(screen.getByRole('button', { name: 'New income' }))
       expect(await screen.findByRole('dialog', { name: 'New income' })).toBeInTheDocument()
     } finally {

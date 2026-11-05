@@ -150,6 +150,7 @@ Nomes em inglês: ver "Nomenclatura em inglês" em `design.md` (os termos em por
 - [x] **TASK-031** [REQ-030, REQ-031, REQ-032, REQ-033, REQ-048, NFR-003]: **Teste primeiro**, depois `rules.ClosingPositions` com `dataEfetiva` (Pix pela data; crédito pelo vencimento; dias de fechamento quaisquer; dia além do fim do mês = último dia).
   - _Output_: testes dos cenários "Posição por quinzena" e "Pix e crédito" (com os dias padrão 15 e 31) e dos fechamentos configuráveis.
   - _Verify_: sobra 180000; −30000; Pix 12/04 até o 15; crédito com vencimento 10 até o 15; "pago" não altera; dias 5/10/20 → três posições; 30 e 31 em fevereiro → uma posição no 28/29; sem dias → nenhuma.
+  - _Revisão 2026-11-04 (usuária)_: posição por intervalo entre fechamentos, sem acumular; último intervalo até o fim do mês; JSON `{fromDay, toDay, balanceCents}`; tela "Do dia A ao B" (REQ-030 0.1.7, design 0.2.6). Testes: `ClosingPositionsTest`, `MonthApiTest`, `PdfScenariosTest`, `month.test.tsx`.
 - [x] **TASK-032** [REQ-034, NFR-003]: **Teste primeiro**, depois `regras.SaldoProprio`.
   - _Output_: teste e classe.
   - _Verify_: 50000, 20000, 19000 → 51000.

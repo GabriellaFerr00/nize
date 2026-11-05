@@ -112,7 +112,7 @@
     "intro": "Em poucos passos você começa a acompanhar o seu mês.",
     "steps": {
       "log": "Lance seus gastos fixos, de cartão e suas entradas na tela do mês.",
-      "position": "Veja o saldo e quanto falta ou sobra até o dia 15 e até o dia 30.",
+      "position": "Veja o saldo e quanto falta ou sobra em cada período do mês (padrão: do dia 1 ao 15 e do 16 ao fim do mês).",
       "setup": "Ajuste categorias, cartões e pessoas quando quiser, em Categorias, Cartões e Pessoas."
     },
     "dismiss": "Entendi"
@@ -280,7 +280,7 @@
     },
     "positions": {
       "title": "Fechamentos",
-      "upTo": "Até o dia {{day}}",
+      "range": "Do dia {{from}} ao {{to}}",
       "left": "Sobram",
       "missing": "Faltam"
     },

@@ -29,7 +29,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * scenario → tests is in {@code docs/cobertura-cenarios.md}.
  * <p>
  * Adapted on purpose (requirements.md wins over the PDF): positions use the closing days (REQ-048, default 15 and 31,
- * where 31 is the last day of the month) instead of the fixed days 15 and 30.
+ * where 31 is the last day of the month) instead of the fixed days 15 and 30, and each position covers only its own
+ * interval between closings, not the running total (REQ-030, user decision 2026-11-04).
  */
 class PdfScenariosTest extends IsolationTestBase {
 
@@ -225,7 +226,7 @@ class PdfScenariosTest extends IsolationTestBase {
 
         String month = open(APRIL);
 
-        assertThat((Integer) JsonPath.read(month, "$.positions[0].day")).isEqualTo(15);
+        assertThat((Integer) JsonPath.read(month, "$.positions[0].toDay")).isEqualTo(15);
         assertThat(cents(month, "$.positions[0].balanceCents")).isEqualTo(180_000);
     }
 
@@ -239,9 +240,12 @@ class PdfScenariosTest extends IsolationTestBase {
 
         String month = open(APRIL);
 
-        // the default closing day 31 is the last day of April (REQ-031): -30000, "faltam R$ 300,00"
-        assertThat((Integer) JsonPath.read(month, "$.positions[1].day")).isEqualTo(30);
-        assertThat(cents(month, "$.positions[1].balanceCents")).isEqualTo(-30_000);
+        // Adapted (REQ-030): the 2nd interval, 16–30 (31 is the last day of April, REQ-031), counts only its own
+        // days: 50000 − 180000. The PDF's running total (−30000) is the month balance.
+        assertThat((Integer) JsonPath.read(month, "$.positions[1].fromDay")).isEqualTo(16);
+        assertThat((Integer) JsonPath.read(month, "$.positions[1].toDay")).isEqualTo(30);
+        assertThat(cents(month, "$.positions[1].balanceCents")).isEqualTo(-130_000);
+        assertThat(cents(month, "$.totals.balanceCents")).isEqualTo(-30_000);
     }
 
     @Test
@@ -270,7 +274,7 @@ class PdfScenariosTest extends IsolationTestBase {
 
         String month = open(APRIL);
 
-        assertThat((Integer) JsonPath.read(month, "$.positions[0].day")).isEqualTo(15);
+        assertThat((Integer) JsonPath.read(month, "$.positions[0].toDay")).isEqualTo(15);
         assertThat(cents(month, "$.positions[0].balanceCents")).isEqualTo(-20_000);
     }
 
@@ -282,7 +286,7 @@ class PdfScenariosTest extends IsolationTestBase {
 
         String month = open(APRIL);
 
-        assertThat((Integer) JsonPath.read(month, "$.positions[0].day")).isEqualTo(15);
+        assertThat((Integer) JsonPath.read(month, "$.positions[0].toDay")).isEqualTo(15);
         assertThat(cents(month, "$.positions[0].balanceCents")).isEqualTo(-50_000);
     }
 

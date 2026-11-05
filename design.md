@@ -1,5 +1,5 @@
 # design.md
-> Nize — Version 0.2.5 (MVP web) — 2026-11-04
+> Nize — Version 0.2.6 (MVP web) — 2026-11-04
 
 ## Architecture Overview
 Monorepo com dois módulos independentes: `backend` (API REST) e `frontend` (SPA). **Toda regra de cálculo vive só no back-end** (totais, saldo, posição nos fechamentos, parcelas, carga do mês, saldo próprio, porcentagens). O front apenas exibe o que a API devolve e nunca recalcula valores. Como back (Java) e front (TypeScript) não compartilham código, o "pacote de regras compartilhado" do PDF vira o pacote Java `br.com.nize.rules`, puro (sem Spring, sem JPA), testado antes do código.
@@ -240,7 +240,7 @@ Semeadas em `category` para cada ano novo (REQ-010). A usuária pode renomear, d
 | totalFixos | Σ valor de lancamento tipo fixo | REQ-028 |
 | saldo | Σ entradas − totalGastos | REQ-029 |
 | dataEfetiva | Pix: `data`; crédito com cartão: dia `min(dia_vencimento, último dia do mês)` do `mes` do lançamento; crédito sem cartão: `data` | REQ-032 |
-| posições(dias) | para cada dia de fechamento d: limite = `min(d, último dia do mês)`; posição = Σ entradas com `data.dia ≤ limite` − Σ gastos com `dataEfetiva.dia ≤ limite`. Em ordem crescente de limite; dias que caem no mesmo limite (30 e 31 em fevereiro) dão uma posição só. Fechamentos desligados ou sem dias → nenhuma posição | REQ-030/031/048 |
+| posições(dias) | limites = `min(d, último dia do mês)` de cada dia de fechamento, em ordem crescente e sem repetir (30 e 31 em fevereiro dão um só). Intervalos: `[1, L1]`, `[L1+1, L2]`, …, e o último vai até o último dia do mês (`[Ln-1+1, fim]`, mesmo que Ln seja antes do fim). Cada posição `{fromDay, toDay, balanceCents}` = Σ entradas com `data.dia` no intervalo − Σ gastos com `dataEfetiva.dia` no intervalo; não acumula os intervalos anteriores. Fechamentos desligados ou sem dias → nenhuma posição | REQ-030/031/048 |
 | saldoPróprio | saldo + Σ gastos com pessoa_id − Σ entradas com pessoa_id | REQ-034 |
 | dividirParcelas(total, n) | base = total ÷ n (inteira); n−1 parcelas = base; última = total − base×(n−1) | REQ-020 |
 | parcelasPorValor(valor, n) | n parcelas iguais | REQ-018 |
@@ -274,7 +274,7 @@ REST JSON sob `/api`. Todos os endpoints exceto `/api/auth/**` exigem `Authoriza
 | PUT | /api/cartoes/{id} | sim | REQ-013 | edita |
 | GET/POST | /api/anos/{ano}/pessoas | sim | REQ-014 | lista / cria |
 | PUT | /api/pessoas/{id} | sim | REQ-014 | edita |
-| GET | /api/meses/{aaaa-mm} | sim | REQ-022, REQ-027..041 | abre o mês (dispara carga na 1ª vez) e devolve listas, totais, posições, resumos e saldo próprio |
+| GET | /api/meses/{aaaa-mm} | sim | REQ-022, REQ-027..041 | abre o mês (dispara carga na 1ª vez) e devolve listas, totais, posições (`positions: [{fromDay, toDay, balanceCents}]`, uma por intervalo), resumos e saldo próprio |
 | POST | /api/meses/{aaaa-mm}/lancamentos | sim | REQ-015..020 | cria gasto; gera parcelas se `gerarParcelas` e permissão ligada |
 | PUT | /api/lancamentos/{id} | sim | REQ-023 | edita |
 | PATCH | /api/lancamentos/{id}/pago | sim | REQ-015, REQ-033 | marca/desmarca pago |
@@ -401,6 +401,7 @@ GitHub Actions (detalhes em `docs/ci-cd.md`; NFR-010). **Um workflow por tema**,
 | 0.1.7 | 2026-11-01 | Fixo pode ser no crédito (tipo e forma de pagamento independentes); regras de consistência do lançamento; Open Questions da Phase 3 resolvidas |
 | 0.1.8 | 2026-11-01 | `month` reservado no H2: coluna `month_ref`; data do lançamento `expense_date` |
 | 0.1.9 | 2026-11-01 | Carga do mês: continua parcelas à mão (grupo próprio) e respeita a permissão de parcelas automáticas |
+| 0.2.6 | 2026-11-04 | Posições por intervalo entre fechamentos, sem acumular; último intervalo até o fim do mês; JSON `{fromDay, toDay, balanceCents}`; tela "Do dia A ao B" (REQ-030, decisão da usuária) |
 | 0.2.5 | 2026-11-04 | Panorama faz a carga dos meses até o vigente (D-19); Open Questions da Phase 8 resolvidas (JUnit 5, NFR-007 confirmada); Maven 3.10.0; mês padrão no ano vigente (REQ-006); arquivos das Phases 6–8 na File Structure |
 | 0.2.4 | 2026-11-04 | Fechamentos opcionais (REQ-048): `settings.closings_enabled`, tabela `closing_day`, regra `ClosingPositions` (substitui `FortnightPosition`), `/api/settings` com `closingsEnabled`/`closingDays`. Diverge do PDF (15/30 fixos); decisão da usuária |
 | 0.2.3 | 2026-11-04 | PR do Dependabot sem preview do front e com secret próprio para o MySQL dos testes; Dependabot ignora Spring Boot ≥ 4.1 e Flyway ≥ 12; Testes integrados também rodam quando muda `backend.yml`/`frontend.yml` (senão o *gate* falha por falta de run) |
