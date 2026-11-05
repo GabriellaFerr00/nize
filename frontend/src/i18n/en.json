@@ -10,12 +10,18 @@
     "categories": "Categories",
     "cards": "Cards",
     "people": "People",
-    "settings": "Settings"
+    "settings": "Settings",
+    "skip": "Skip to content"
   },
   "language": {
     "label": "Language",
     "pt": "Português",
     "en": "English"
+  },
+  "theme": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark"
   },
   "pages": {
     "month": "Month",

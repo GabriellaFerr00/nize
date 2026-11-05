@@ -8,8 +8,8 @@ import { shiftMonth } from '../lib/month'
 type Props = { month: string; onChange: (month: string) => void }
 
 const control =
-  'rounded-lg border border-line bg-white px-2 py-1.5 text-sm text-ink capitalize focus:outline-2 focus:outline-brand-500'
-const arrow = 'grid size-9 shrink-0 place-items-center rounded-lg border border-line bg-white text-ink-soft hover:bg-brand-50'
+  'rounded-lg border border-line-strong bg-card px-2 py-1.5 text-sm text-ink capitalize'
+const arrow = 'grid size-9 shrink-0 place-items-center rounded-lg border border-line bg-card text-ink-soft hover:bg-soft'
 
 /** Previous/next month plus month and year selectors (REQ-040). The year list comes from the API. */
 export function MonthPicker({ month, onChange }: Props) {

@@ -1,5 +1,5 @@
 # requirements.md
-> Nize — Version 0.1.7 (MVP web) — 2026-11-04
+> Nize — Version 0.1.8 (MVP web) — 2026-11-05
 
 Fonte: `Nize — Funcionalidades e escopo do MVP web.pdf` (1 nov 2026). Em caso de dúvida entre este arquivo e o PDF, pergunte antes de implementar.
 
@@ -132,6 +132,7 @@ O Nize é a versão web da planilha "Finanças 2026". A usuária lança gastos e
   - _Acceptance_: cada tela permite as ações listadas nos REQ-009 a REQ-014.
 - **REQ-045**: O Nize shall ter identidade visual, textos e layout próprios, sem copiar o material da planilha.
   - _Acceptance_: revisão visual manual antes do primeiro deploy; nenhum texto ou imagem da planilha reaproveitado.
+  - Identidade "Verde Nize" (D-20): logotipo próprio, modo claro e escuro e contraste WCAG 2.2 AA. Um seletor com Claro e Escuro troca o tema na hora e a escolha é lembrada no próximo acesso; antes de qualquer escolha, o primeiro acesso abre no tema do aparelho. Valores e regras não mudam com o tema. (Seletor pedido pela usuária em 2026-11-05.)
 
 ### Idioma
 - **REQ-046**: A usuária shall poder escolher o idioma da interface entre inglês e português.
@@ -176,6 +177,7 @@ O Nize é a versão web da planilha "Finanças 2026". A usuária lança gastos e
 | 0.1.1 | 2026-11-01 | REQ-046 (idioma da interface en/pt) |
 | 0.1.2 | 2026-11-01 | REQ-015: fixo pode ser pago no crédito; glossário "Total de crédito" |
 | 0.1.3 | 2026-11-01 | REQ-022: carga continua parcelas à mão e respeita a permissão |
+| 0.1.8 | 2026-11-05 | REQ-045: identidade Verde Nize, modo claro/escuro com seletor de tema (pedido da usuária) |
 | 0.1.7 | 2026-11-04 | REQ-030: posição por intervalo entre fechamentos, sem acumular; o último intervalo vai até o fim do mês. Diverge do PDF (posição acumulada até 15/30); decisão da usuária |
 | 0.1.6 | 2026-11-04 | NFR-007 confirmada (p95 < 500 ms com 500 lançamentos) |
 | 0.1.5 | 2026-11-04 | REQ-048 (fechamentos opcionais, quantos dias quiser, padrão 15 e 31); REQ-030/031/041 passam a usar os dias de fechamento. Diverge do PDF (dias fixos 15 e 30); decisão da usuária |

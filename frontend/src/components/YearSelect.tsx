@@ -11,7 +11,7 @@ export function YearSelect({ years, value, onChange }: Props) {
       <select
         value={value ?? ''}
         onChange={(event) => onChange(Number(event.target.value))}
-        className="rounded-lg border border-line bg-white px-2 py-1.5 text-sm text-ink focus:outline-2 focus:outline-brand-500"
+        className="rounded-lg border border-line-strong bg-card px-2 py-1.5 text-sm text-ink"
       >
         {years.map((y) => (
           <option key={y.year} value={y.year}>

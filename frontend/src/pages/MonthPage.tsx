@@ -24,9 +24,10 @@ type DialogState =
   | { kind: 'delete'; target: { type: 'expense' | 'income'; id: number; name: string } }
   | null
 
-const primary = 'flex items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700'
+const primary =
+  'flex min-h-11 items-center gap-1.5 rounded-xl bg-brand px-4 text-sm font-semibold text-on-brand hover:bg-brand-hover'
 const secondary =
-  'flex items-center gap-1.5 rounded-xl border border-brand-600 bg-white px-4 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50'
+  'flex min-h-11 items-center gap-1.5 rounded-xl border border-line-strong bg-card px-4 text-sm font-medium text-ink hover:bg-soft'
 
 /**
  * The month screen (REQ-041): header with totals and closing positions, month/year navigation (REQ-040), lists of
@@ -70,7 +71,7 @@ export function MonthPage() {
   return (
     <section className="flex min-w-0 flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold text-brand-900 first-letter:uppercase">{formatMonth(yyyyMm, i18n.language)}</h1>
+        <h1 className="text-2xl font-semibold text-ink first-letter:uppercase">{formatMonth(yyyyMm, i18n.language)}</h1>
         <div className="flex flex-wrap gap-2">
           <button type="button" onClick={() => setDialog({ kind: 'expense' })} className={primary}>
             <Plus className="size-4" aria-hidden />
@@ -132,14 +133,14 @@ export function MonthPage() {
             {remove.isError && <FormMessage kind="error">{apiErrorMessage(t, remove.error)}</FormMessage>}
             <p className="text-ink">{t('month.deleteQuestion', { name: dialog.target.name })}</p>
             <div className="flex flex-wrap justify-end gap-2">
-              <button type="button" className="rounded-xl px-4 py-2 text-sm text-ink-soft" onClick={close}>
+              <button type="button" className="min-h-11 rounded-xl px-4 text-sm font-medium text-ink-soft hover:bg-soft hover:text-ink" onClick={close}>
                 {t('catalog.cancel')}
               </button>
               <button
                 type="button"
                 disabled={remove.isPending}
                 onClick={() => remove.mutate(dialog.target)}
-                className="rounded-xl bg-negative px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+                className="min-h-11 rounded-xl bg-negative px-4 text-sm font-semibold text-on-negative disabled:opacity-60"
               >
                 {t('catalog.delete')}
               </button>

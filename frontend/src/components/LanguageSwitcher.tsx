@@ -10,7 +10,7 @@ export function LanguageSwitcher() {
         aria-label={t('language.label')}
         value={i18n.language}
         onChange={(event) => setLanguage(event.target.value as Language)}
-        className="rounded-lg border border-line bg-white px-2 py-1.5 text-sm text-ink focus:outline-2 focus:outline-brand-500"
+        className="min-h-11 rounded-lg border border-line-strong bg-card px-1.5 text-sm text-ink sm:px-2"
       >
         {LANGUAGES.map((language) => (
           <option key={language} value={language}>

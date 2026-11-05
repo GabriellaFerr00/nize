@@ -1,5 +1,5 @@
 # design.md
-> Nize — Version 0.2.6 (MVP web) — 2026-11-04
+> Nize — Version 0.2.7 (MVP web) — 2026-11-05
 
 ## Architecture Overview
 Monorepo com dois módulos independentes: `backend` (API REST) e `frontend` (SPA). **Toda regra de cálculo vive só no back-end** (totais, saldo, posição nos fechamentos, parcelas, carga do mês, saldo próprio, porcentagens). O front apenas exibe o que a API devolve e nunca recalcula valores. Como back (Java) e front (TypeScript) não compartilham código, o "pacote de regras compartilhado" do PDF vira o pacote Java `br.com.nize.rules`, puro (sem Spring, sem JPA), testado antes do código.
@@ -55,6 +55,7 @@ Monorepo com dois módulos independentes: `backend` (API REST) e `frontend` (SPA
 | D-17 | `EmailSender` no perfil `prod` é `DisabledEmailSender` (não envia e não loga e-mail nem token); `LoggingEmailSender` só fora de `prod` | NFR-008, REQ-003 |
 | D-18 | Healthcheck por Spring Boot Actuator, expondo só `GET /actuator/health` (sem detalhes, sem autenticação) | Smoke test e `HEALTHCHECK` do Docker |
 | D-19 | `GET /api/years/{year}/overview` faz a carga do mês (`MonthLoadService.open`, idempotente) de cada mês do ano até o mês vigente, em ordem (janeiro primeiro, para cada mês copiar do anterior); ano passado → os 12 meses; ano futuro → nenhum. Meses depois do vigente só mostram o que já existe. Cada mês devolvido bate com `GET /api/months/{m}` (mesmos totais e saldo) | Decisão da usuária, 2026-11-04 |
+| D-20 | Identidade visual "Verde Nize" (substitui a verde-azulada): paleta, tokens e regras da skill `design-nize` (`.claude/skills/design-nize`). Cores só como tokens semânticos em `src/styles/index.css` (`page`, `sidebar`, `card`, `soft`, `line`, `line-strong`, `ink`, `ink-soft`, `brand`, `on-brand`, `brand-text`, `positive`, `negative`, `on-negative`, `warning`, `focus`, `backdrop`, `chart-*`), com valores para claro e escuro; as cores padrão do Tailwind ficam desligadas. O Verde Nize `#B8F45A` só é preenchimento no modo claro (texto verde usa `brand-text`). Tema: só Claro e Escuro; o seletor grava `nize.theme` (`light`/`dark`) no `localStorage` e o `<html>` sempre recebe `data-theme` (`lib/theme.ts`); sem escolha gravada, o tema inicial vem de `prefers-color-scheme` (decisão da usuária 2026-11-05: sem opção "Sistema"). Logotipo: o padrão de `public/logoPadrao/` (`nize-logo-n-bloco-verde-*`: bloco verde arredondado com o "N" + "ize"), mostrado por `components/Logo.tsx`; no modo escuro usa a variante `nize-logo-n-bloco-verde-fundo-escuro-*` (só a palavra "ize" em off-white `#F2F5EC`, gerada a partir do original) por meio da variante `dark:` do Tailwind, que acompanha o mesmo tema dos tokens. Ícones quadrados em `public/logotipo/` (favicon, `apple-touch-icon`, `site.webmanifest`). Fonte do sistema (a CSP não permite fonte externa). Menu lateral continua a partir de 768px (REQ-043), não 1024px como na skill | REQ-045, decisão da usuária 2026-11-05 |
 | D-9 | Posição por quinzena usa "data efetiva" (pela forma de pagamento, não pelo tipo): Pix = `data`; crédito com cartão = dia de vencimento do cartão dentro do mês do lançamento; crédito sem cartão = `data` (confirmado 2026-11-01) | REQ-032 |
 
 ## Nomenclatura em inglês
@@ -297,7 +298,7 @@ Limite de tentativas (REQ-047): os quatro `POST /api/auth/**` devolvem 429 `{cod
 | /categorias, /cartoes, /pessoas | Cadastros | REQ-044 |
 | /configuracoes | Ano vigente, parcelas automáticas, fechamentos (ligar/desligar, dias) | REQ-006, REQ-009, REQ-048 |
 
-Navegação: menu lateral (≥ 768px) e barra inferior (< 768px) — REQ-043. Mês padrão (`/`, menu "Mês" e "Panorama"): o mês do calendário dentro do ano vigente da usuária (nov/2026 com ano vigente 2027 → `2027-11`; `lib/month.defaultMonth`) — REQ-006, decisão da usuária 2026-11-04. Identidade visual própria — REQ-045.
+Navegação: menu lateral (≥ 768px) e barra inferior (< 768px) — REQ-043. Mês padrão (`/`, menu "Mês" e "Panorama"): o mês do calendário dentro do ano vigente da usuária (nov/2026 com ano vigente 2027 → `2027-11`; `lib/month.defaultMonth`) — REQ-006, decisão da usuária 2026-11-04. Identidade visual própria "Verde Nize", modo claro/escuro com seletor de tema ao lado do idioma (D-20) — REQ-045. Link "Pular para o conteúdo" no topo; ações com área de toque ≥ 44px.
 
 ## File Structure
 ```
@@ -337,7 +338,9 @@ nize/
 │                                    panorama: api/OverviewApiTest)
 └── frontend/
     ├── package.json  vite.config.ts  playwright.config.ts
-    ├── public/  _redirects (fallback da SPA)  _headers (CSP, HSTS...)
+    ├── public/  _redirects (fallback da SPA)  _headers (CSP, HSTS...)  site.webmanifest
+    │   └── logotipo/  ícones do Nize (SVG e PNG 192/256/512/1024; favicon e apple-touch-icon; D-20)
+    │   └── logoPadrao/  logotipo com nome (PNG 1000/2000 e variante para fundo escuro; D-20)
     ├── functions/api/[[path]].ts  (Pages Function: proxy /api → Render; D-15)
     ├── e2e/  (Playwright, dados sintéticos)
     └── src/ (pages/, components/, api/, lib/, styles/, i18n/ com en.json e pt.json, test/)
@@ -346,6 +349,7 @@ nize/
         testes pages/month.test.tsx, lib/month.test.ts
         panorama (Phase 7): pages/OverviewPage.tsx, components/OverviewChart.tsx (Recharts, carregado sob demanda),
         api/overviewApi.ts, pages/overview.test.tsx
+        identidade (D-20): components/Logo.tsx, components/ThemeSwitcher.tsx, lib/theme.ts, lib/theme.test.ts
 ```
 groupId `br.com.nize`, artifactId `nize-backend`, pacote raiz `br.com.nize`.
 
@@ -401,6 +405,7 @@ GitHub Actions (detalhes em `docs/ci-cd.md`; NFR-010). **Um workflow por tema**,
 | 0.1.7 | 2026-11-01 | Fixo pode ser no crédito (tipo e forma de pagamento independentes); regras de consistência do lançamento; Open Questions da Phase 3 resolvidas |
 | 0.1.8 | 2026-11-01 | `month` reservado no H2: coluna `month_ref`; data do lançamento `expense_date` |
 | 0.1.9 | 2026-11-01 | Carga do mês: continua parcelas à mão (grupo próprio) e respeita a permissão de parcelas automáticas |
+| 0.2.7 | 2026-11-05 | D-20: identidade Verde Nize (tokens claro/escuro, logotipo de `logoPadrao` com variante para fundo escuro, seletor de tema Claro/Escuro); arquivos novos na File Structure |
 | 0.2.6 | 2026-11-04 | Posições por intervalo entre fechamentos, sem acumular; último intervalo até o fim do mês; JSON `{fromDay, toDay, balanceCents}`; tela "Do dia A ao B" (REQ-030, decisão da usuária) |
 | 0.2.5 | 2026-11-04 | Panorama faz a carga dos meses até o vigente (D-19); Open Questions da Phase 8 resolvidas (JUnit 5, NFR-007 confirmada); Maven 3.10.0; mês padrão no ano vigente (REQ-006); arquivos das Phases 6–8 na File Structure |
 | 0.2.4 | 2026-11-04 | Fechamentos opcionais (REQ-048): `settings.closings_enabled`, tabela `closing_day`, regra `ClosingPositions` (substitui `FortnightPosition`), `/api/settings` com `closingsEnabled`/`closingDays`. Diverge do PDF (15/30 fixos); decisão da usuária |

@@ -12,9 +12,9 @@ type ListProps = { title: string; empty: string; totalCents?: number; children: 
 /** A titled list of the month (Fixos, Cartão, Entradas); the optional total comes from the API. */
 function EntryList({ title, empty, totalCents, children }: ListProps) {
   return (
-    <section aria-label={title} className="flex min-w-0 flex-col rounded-2xl border border-line bg-white p-4">
+    <section aria-label={title} className="flex min-w-0 flex-col rounded-2xl border border-line bg-card p-4 shadow-card">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-lg font-semibold text-brand-900">{title}</h2>
+        <h2 className="text-lg font-semibold text-ink">{title}</h2>
         {totalCents !== undefined && <Money cents={totalCents} className="text-sm font-semibold text-ink-soft" />}
       </div>
       {children.length === 0 ? (
@@ -31,12 +31,13 @@ type RowProps = {
   details: (string | undefined)[]
   installmentLabel?: string
   cents: number
+  tone?: boolean
   leading?: ReactNode
   onEdit: () => void
   onDelete: () => void
 }
 
-function Row({ name, details, installmentLabel, cents, leading, onEdit, onDelete }: RowProps) {
+function Row({ name, details, installmentLabel, cents, tone = false, leading, onEdit, onDelete }: RowProps) {
   const { t } = useTranslation()
   return (
     <li className="flex items-start gap-3 py-3">
@@ -47,14 +48,14 @@ function Row({ name, details, installmentLabel, cents, leading, onEdit, onDelete
             <span className="truncate font-medium text-ink">{name}</span>
             {installmentLabel && (
               <span
-                className="shrink-0 rounded-md bg-brand-100 px-1.5 py-0.5 text-xs font-semibold text-brand-700"
+                className="shrink-0 rounded-md bg-soft px-1.5 py-0.5 text-xs font-semibold text-ink tabular-nums"
                 title={t('month.installment', { label: installmentLabel })}
               >
                 {installmentLabel}
               </span>
             )}
           </p>
-          <Money cents={cents} className="text-sm font-semibold text-ink" />
+          <Money cents={cents} tone={tone} className={`text-sm font-semibold ${tone ? '' : 'text-ink'}`} />
         </div>
         <div className="flex min-w-0 items-center justify-between gap-2">
           <p className="min-w-0 text-xs break-words text-ink-soft">{details.filter(Boolean).join(' · ')}</p>
@@ -68,12 +69,12 @@ function Row({ name, details, installmentLabel, cents, leading, onEdit, onDelete
 function RowActions({ name, onEdit, onDelete }: { name: string; onEdit: () => void; onDelete: () => void }) {
   const { t } = useTranslation()
   return (
-      <div className="-my-1 flex shrink-0">
+      <div className="-my-2 -mr-2 flex shrink-0">
         <button
           type="button"
           onClick={onEdit}
           aria-label={t('month.edit', { name })}
-          className="grid size-8 place-items-center rounded-lg text-ink-soft hover:bg-brand-50"
+          className="grid size-11 place-items-center rounded-lg text-ink-soft hover:bg-soft hover:text-ink"
         >
           <Pencil className="size-4" aria-hidden />
         </button>
@@ -81,7 +82,7 @@ function RowActions({ name, onEdit, onDelete }: { name: string; onEdit: () => vo
           type="button"
           onClick={onDelete}
           aria-label={t('month.delete', { name })}
-          className="grid size-8 place-items-center rounded-lg text-ink-soft hover:bg-negative/10 hover:text-negative"
+          className="grid size-11 place-items-center rounded-lg text-ink-soft hover:bg-soft hover:text-negative"
         >
           <Trash2 className="size-4" aria-hidden />
         </button>
@@ -127,14 +128,17 @@ export function ExpenseList({ kind, expenses, catalogs, totalCents, onTogglePaid
             ]}
             leading={
               fixed && (
-                <input
-                  type="checkbox"
-                  checked={e.paid}
-                  onChange={() => onTogglePaid(e)}
-                  aria-label={t('month.paid', { name: e.name })}
-                  title={t('expense.fields.paid')}
-                  className="mt-0.5 size-5 shrink-0 accent-brand-600"
-                />
+                // the label around the box makes the touch area 44px (WCAG 2.5.8)
+                <label className="-my-2.5 -ml-2.5 grid size-11 shrink-0 cursor-pointer place-items-center">
+                  <input
+                    type="checkbox"
+                    checked={e.paid}
+                    onChange={() => onTogglePaid(e)}
+                    aria-label={t('month.paid', { name: e.name })}
+                    title={t('expense.fields.paid')}
+                    className="size-5 accent-brand-text"
+                  />
+                </label>
               )
             }
             onEdit={() => onEdit(e)}
@@ -167,6 +171,7 @@ export function IncomeList({ incomes, catalogs, totalCents, onEdit, onDelete }: 
             name={i.name}
             installmentLabel={i.installmentLabel}
             cents={i.amountCents}
+            tone
             details={[
               formatDay(i.date, i18n.language),
               i.reimbursement ? t('month.reimbursementFrom', { name: person ?? '' }) : undefined,

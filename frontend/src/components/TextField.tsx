@@ -19,7 +19,7 @@ export function TextField({ label, error, ref, ...input }: Props) {
         id={id}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? errorId : undefined}
-        className="rounded-xl border border-line bg-white px-3 py-2.5 text-base text-ink focus:outline-2 focus:outline-brand-500 aria-invalid:border-negative"
+        className="rounded-xl border border-line-strong bg-card px-3 py-2.5 text-base text-ink aria-invalid:border-negative"
         {...input}
       />
       {error && (

@@ -1,10 +1,10 @@
 # CLAUDE.md
-> Nize — Spec version 0.2.6
+> Nize — Spec version 0.2.7
 
 ═══════════════════════════════════════════════════════════
 SPEC DRIVEN DEVELOPMENT — PROJECT CONSTITUTION
 Project: Nize
-Version: 0.2.6
+Version: 0.2.7
 ═══════════════════════════════════════════════════════════
 
 This project uses Spec Driven Development. All work is
@@ -105,7 +105,7 @@ Front-end (a partir da raiz):
 - Todo texto visível vem de `src/i18n/{pt,en}.json` (padrão `pt`); chaves iguais nos dois arquivos. Erros da API: `apiErrorMessage` por código.
 - Chamadas à API só por `src/api/client.ts` (`apiRequest`); sessão em `src/api/session.ts` (`localStorage`, D-12). Cache de consultas é limpo ao entrar, sair e em 401.
 - Rotas do front em inglês (`/month/:yyyyMm`, `/overview/:year`, `/sign-in`...). Rotas protegidas ficam sob `RequireAuth`.
-- Tema e cores só como tokens em `src/styles/index.css` (`@theme`); sem cores soltas. Layout: menu lateral ≥ 768px, barra inferior abaixo; sem rolagem horizontal.
+- Tema e cores só como tokens semânticos em `src/styles/index.css` (`bg-card`, `text-ink`, `bg-brand text-on-brand`...; D-20), com valores claro/escuro; as cores padrão do Tailwind estão desligadas (`bg-white` não existe). Verde Nize no modo claro só como preenchimento; texto verde é `text-brand-text`. Cor nova: validar com `python3 .claude/skills/design-nize/scripts/contraste.py`. Layout: menu lateral ≥ 768px, barra inferior abaixo; sem rolagem horizontal.
 - Testes: `renderApp(path, {signedIn})` e `stubApi({...})` em `src/test/renderApp.tsx` (o objeto de respostas é lido a cada chamada: altere-o para simular o refetch).
 - Cadastros por ano (categorias, cartões, pessoas): reutilizar `CatalogManager` + `catalogApi`; ano da tela via `useSelectedYear` (`?year=`, padrão = ano vigente).
 
