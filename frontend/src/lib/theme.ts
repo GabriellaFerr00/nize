@@ -1,8 +1,8 @@
 /**
- * Light/dark theme (REQ-045, D-20). "system" follows the device; "light" and "dark" put `data-theme` on <html>,
- * which is what the tokens in styles/index.css react to. The choice is remembered in localStorage.
+ * Light/dark theme (REQ-045, D-20). The chosen theme goes on <html> as `data-theme`, which is what the tokens in
+ * styles/index.css react to, and is remembered in localStorage. Until the user picks one, the device theme is used.
  */
-export const THEMES = ['system', 'light', 'dark'] as const
+export const THEMES = ['light', 'dark'] as const
 export type Theme = (typeof THEMES)[number]
 
 const STORAGE_KEY = 'nize.theme'
@@ -11,27 +11,32 @@ function isTheme(value: string | null): value is Theme {
   return value !== null && (THEMES as readonly string[]).includes(value)
 }
 
+function deviceTheme(): Theme {
+  try {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  } catch {
+    return 'light'
+  }
+}
+
 export function storedTheme(): Theme {
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
-    return isTheme(stored) ? stored : 'system'
+    return isTheme(stored) ? stored : deviceTheme()
   } catch {
-    return 'system'
+    return deviceTheme()
   }
 }
 
 export function applyTheme(theme: Theme) {
-  const root = document.documentElement
-  if (theme === 'system') delete root.dataset.theme
-  else root.dataset.theme = theme
+  document.documentElement.dataset.theme = theme
 }
 
 /** Switches the theme right away and remembers the choice. */
 export function setTheme(theme: Theme) {
   applyTheme(theme)
   try {
-    if (theme === 'system') localStorage.removeItem(STORAGE_KEY)
-    else localStorage.setItem(STORAGE_KEY, theme)
+    localStorage.setItem(STORAGE_KEY, theme)
   } catch {
     // storage unavailable (private mode): the choice just isn't remembered
   }

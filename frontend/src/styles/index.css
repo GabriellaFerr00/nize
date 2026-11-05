@@ -36,7 +36,7 @@
   --nz-chart-glow: none;
 }
 
-/* ---------- Dark: follows the system unless the user picked light ---------- */
+/* ---------- Dark from the device, before the app sets data-theme (first paint only) ---------- */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     color-scheme: dark;
@@ -121,7 +121,7 @@
 }
 
 /*
- * `dark:` follows the same theme as the tokens: the system setting unless the user picked light, or dark when picked.
+ * `dark:` follows the same theme as the tokens (data-theme on <html>, or the device before the app starts).
  * Only for things a token cannot switch, such as which logo image to show.
  */
 @custom-variant dark {

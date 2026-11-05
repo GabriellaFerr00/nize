@@ -132,7 +132,7 @@ O Nize é a versão web da planilha "Finanças 2026". A usuária lança gastos e
   - _Acceptance_: cada tela permite as ações listadas nos REQ-009 a REQ-014.
 - **REQ-045**: O Nize shall ter identidade visual, textos e layout próprios, sem copiar o material da planilha.
   - _Acceptance_: revisão visual manual antes do primeiro deploy; nenhum texto ou imagem da planilha reaproveitado.
-  - Identidade "Verde Nize" (D-20): logotipo próprio, modo claro e escuro e contraste WCAG 2.2 AA. O tema segue o do aparelho por padrão; um seletor (Sistema, Claro, Escuro) troca o tema na hora e a escolha é lembrada no próximo acesso. Valores e regras não mudam com o tema. (Seletor pedido pela usuária em 2026-11-05.)
+  - Identidade "Verde Nize" (D-20): logotipo próprio, modo claro e escuro e contraste WCAG 2.2 AA. Um seletor com Claro e Escuro troca o tema na hora e a escolha é lembrada no próximo acesso; antes de qualquer escolha, o primeiro acesso abre no tema do aparelho. Valores e regras não mudam com o tema. (Seletor pedido pela usuária em 2026-11-05.)
 
 ### Idioma
 - **REQ-046**: A usuária shall poder escolher o idioma da interface entre inglês e português.

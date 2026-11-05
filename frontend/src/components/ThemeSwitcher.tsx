@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { setTheme, storedTheme, THEMES, type Theme } from '../lib/theme'
 
-/** System / light / dark selector, next to the language one (REQ-045, D-20). */
+/** Light / dark selector, next to the language one (REQ-045, D-20). */
 export function ThemeSwitcher() {
   const { t } = useTranslation()
   const [theme, setCurrent] = useState<Theme>(storedTheme)
