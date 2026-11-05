@@ -25,6 +25,22 @@ describe('app shell', () => {
     expect(document.documentElement.lang).toBe('en')
   })
 
+  it('switches the theme right away and remembers it (REQ-045)', async () => {
+    renderAt('/categories')
+    await userEvent.selectOptions(screen.getAllByLabelText('Tema')[0], 'dark')
+
+    expect(document.documentElement.dataset.theme).toBe('dark')
+    expect(localStorage.getItem('nize.theme')).toBe('dark')
+    delete document.documentElement.dataset.theme
+  })
+
+  it('has a skip link to the content and the logo with the app name', () => {
+    renderAt('/categories')
+    expect(screen.getByRole('link', { name: 'Pular para o conteúdo' })).toHaveAttribute('href', '#content')
+    expect(document.getElementById('content')?.tagName).toBe('MAIN')
+    expect(screen.getAllByRole('img', { name: 'Nize' })[0]).toHaveAttribute('src', '/logoPadrao/nize-logo-n-bloco-verde-1000.png')
+  })
+
   it('redirects / to the current month', async () => {
     const router = renderAt('/')
     await waitFor(() => expect(router.state.location.pathname).toMatch(/^\/month\/\d{4}-\d{2}$/))

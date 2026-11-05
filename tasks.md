@@ -232,6 +232,9 @@ Nomes em inglês: ver "Nomenclatura em inglês" em `design.md` (os termos em por
   - _Output_: resultado registrado.
   - _Verify_: p95 < 500 ms (ou meta revisada).
   - _Feito_: `api.MonthResponseTimeTest` (tag `performance`, `./mvnw test -Dtest=MonthResponseTimeTest -Dtest.excludedGroups=none`); 300 requisições, p95 ≈ 14 ms, máx. ≈ 27 ms (H2, local); `docs/cobertura-cenarios.md` §3.
+- [x] **TASK-062** [REQ-045, REQ-043, NFR-006]: Identidade Verde Nize (D-20): tokens claro/escuro, logotipo responsivo (menu, cabeçalho, login, favicon, manifesto), seletor de tema, acessibilidade (contraste AA, foco, toque ≥ 44px, pular para o conteúdo, entrada/saída com ícone além da cor). Pedido da usuária em 2026-11-05 (branch `feat/visual-identity`).
+  - _Verify_: test/lint/build verdes; sem rolagem horizontal em 360/768/1280px nos dois temas; capturas de tela para revisão da usuária.
+  - _Feito_: 143 testes front (novos: `lib/theme.test.ts`, tema e "pular para o conteúdo" em `AppLayout.test.tsx`), cobertura 96,6%; Playwright com API simulada (mês, panorama, categorias, ajustes, entrar) em 360/768/1280, claro e escuro: sem rolagem horizontal; barra inferior e cabeçalho cabem em 320px (pt e en).
 - [ ] **TASK-049** [REQ-045]: Revisão de identidade visual: nada copiado da planilha.
   - _Output_: checklist assinado.
   - _Verify_: revisão manual.

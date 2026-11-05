@@ -63,14 +63,14 @@ export function CatalogManager({ kind, fields, canDelete = false }: Props) {
   return (
     <section className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold text-brand-900">{t(`pages.${kind}`)}</h1>
+        <h1 className="text-2xl font-semibold text-ink">{t(`pages.${kind}`)}</h1>
         <div className="flex items-center gap-3">
           <YearSelect years={years} value={year} onChange={setYear} />
           <button
             type="button"
             disabled={year === null}
             onClick={() => setDialog({ mode: 'form' })}
-            className="rounded-xl bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-brand px-4 text-sm font-semibold text-on-brand hover:bg-brand-hover disabled:opacity-60"
           >
             {t(`catalog.${kind}.new`)}
           </button>
@@ -81,7 +81,7 @@ export function CatalogManager({ kind, fields, canDelete = false }: Props) {
       {items.isError && <FormMessage kind="error">{apiErrorMessage(t, items.error)}</FormMessage>}
 
       {!isLoading && items.data?.length === 0 && (
-        <p className="rounded-2xl border border-dashed border-line bg-white p-6 text-ink-soft">
+        <p className="rounded-2xl border border-dashed border-line bg-card p-6 text-ink-soft">
           {t(`catalog.${kind}.empty`)}
         </p>
       )}
@@ -90,13 +90,13 @@ export function CatalogManager({ kind, fields, canDelete = false }: Props) {
         {items.data?.map((item) => (
           <li
             key={item.id}
-            className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-white p-4"
+            className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-card p-4"
           >
             <div className="min-w-0">
               <p className="flex items-center gap-2 font-medium text-ink">
                 <span className={item.active ? '' : 'text-ink-soft line-through'}>{item.name}</span>
                 {!item.active && (
-                  <span className="rounded-full bg-line px-2 py-0.5 text-xs font-normal text-ink-soft">
+                  <span className="rounded-full border border-line-strong px-2 py-0.5 text-xs font-normal text-ink-soft">
                     {t('catalog.inactive')}
                   </span>
                 )}
@@ -106,20 +106,20 @@ export function CatalogManager({ kind, fields, canDelete = false }: Props) {
               )}
               {item.description && <p className="text-sm text-ink-soft">{item.description}</p>}
             </div>
-            <div className="flex gap-2 text-sm">
-              <button type="button" className="text-brand-600 underline" onClick={() => setDialog({ mode: 'form', item })}>
+            <div className="-mx-3 flex flex-wrap text-sm">
+              <button type="button" className="inline-flex min-h-11 items-center rounded-lg px-3 font-medium text-brand-text hover:bg-soft" onClick={() => setDialog({ mode: 'form', item })}>
                 {t('catalog.edit')}
               </button>
               <button
                 type="button"
-                className="text-brand-600 underline"
+                className="inline-flex min-h-11 items-center rounded-lg px-3 font-medium text-brand-text hover:bg-soft"
                 disabled={toggle.isPending}
                 onClick={() => toggle.mutate(item)}
               >
                 {item.active ? t('catalog.deactivate') : t('catalog.activate')}
               </button>
               {canDelete && (
-                <button type="button" className="text-negative underline" onClick={() => setDialog({ mode: 'delete', item })}>
+                <button type="button" className="inline-flex min-h-11 items-center rounded-lg px-3 font-medium text-negative hover:bg-soft" onClick={() => setDialog({ mode: 'delete', item })}>
                   {t('catalog.delete')}
                 </button>
               )}
@@ -157,12 +157,12 @@ export function CatalogManager({ kind, fields, canDelete = false }: Props) {
           <p className="text-sm text-ink">{t('catalog.inUse', { count: dialog.count, name: dialog.item.name })}</p>
           <p className="mt-2 text-sm text-ink-soft">{t('catalog.inUseQuestion')}</p>
           <div className="mt-5 flex justify-end gap-2">
-            <button type="button" className="rounded-xl px-4 py-2 text-sm text-ink-soft" onClick={() => setDialog(null)}>
+            <button type="button" className="min-h-11 rounded-xl px-4 text-sm font-medium text-ink-soft hover:bg-soft hover:text-ink" onClick={() => setDialog(null)}>
               {t('catalog.cancel')}
             </button>
             <button
               type="button"
-              className="rounded-xl bg-brand-600 px-4 py-2 text-sm font-medium text-white"
+              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-brand px-4 text-sm font-semibold text-on-brand"
               onClick={() => navigate(`/month/${defaultMonth}`)}
             >
               {t('catalog.changeExpenses')}
@@ -239,13 +239,13 @@ function ItemFormDialog({ kind, year, fields, item, onClose, onSaved }: FormProp
           />
         )}
         <div className="flex justify-end gap-2">
-          <button type="button" className="rounded-xl px-4 py-2 text-sm text-ink-soft" onClick={onClose}>
+          <button type="button" className="min-h-11 rounded-xl px-4 text-sm font-medium text-ink-soft hover:bg-soft hover:text-ink" onClick={onClose}>
             {t('catalog.cancel')}
           </button>
           <button
             type="submit"
             disabled={save.isPending}
-            className="rounded-xl bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-brand px-4 text-sm font-semibold text-on-brand hover:bg-brand-hover disabled:opacity-60"
           >
             {t('catalog.save')}
           </button>
@@ -278,13 +278,13 @@ function DeleteDialog({ item, onClose, onDeleted, onInUse }: DeleteProps) {
       <p className="text-sm text-ink">{t('catalog.deleteQuestion', { name: item.name })}</p>
       {showError && <FormMessage kind="error">{apiErrorMessage(t, remove.error)}</FormMessage>}
       <div className="mt-5 flex justify-end gap-2">
-        <button type="button" className="rounded-xl px-4 py-2 text-sm text-ink-soft" onClick={onClose}>
+        <button type="button" className="min-h-11 rounded-xl px-4 text-sm font-medium text-ink-soft hover:bg-soft hover:text-ink" onClick={onClose}>
           {t('catalog.cancel')}
         </button>
         <button
           type="button"
           disabled={remove.isPending}
-          className="rounded-xl bg-negative px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+          className="min-h-11 rounded-xl bg-negative px-4 text-sm font-semibold text-on-negative disabled:opacity-60"
           onClick={() => remove.mutate()}
         >
           {t('catalog.delete')}

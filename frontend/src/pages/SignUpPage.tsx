@@ -45,7 +45,7 @@ export function SignUpPage() {
 
   return (
     <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold text-brand-900">{t('auth.signUp.title')}</h1>
+      <h1 className="text-xl font-semibold text-ink">{t('auth.signUp.title')}</h1>
       {mutation.isError && <FormMessage kind="error">{apiErrorMessage(t, mutation.error)}</FormMessage>}
       <TextField
         label={t('auth.fields.name')}
@@ -73,11 +73,11 @@ export function SignUpPage() {
       <button
         type="submit"
         disabled={mutation.isPending}
-        className="rounded-xl bg-brand-600 px-4 py-2.5 font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+        className="min-h-11 rounded-xl bg-brand px-4 font-semibold text-on-brand hover:bg-brand-hover disabled:opacity-60"
       >
         {t('auth.signUp.submit')}
       </button>
-      <Link to="/sign-in" className="text-sm text-brand-600 underline">
+      <Link to="/sign-in" className="text-sm text-brand-text underline">
         {t('auth.signUp.toSignIn')}
       </Link>
     </form>

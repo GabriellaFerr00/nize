@@ -1,10 +1,10 @@
 # CONTEXT.md
 > Nize — Live session journal
-> Last updated: 2026-11-04 — Session 8
+> Last updated: 2026-11-05 — Session 10
 
 ## ⚡ Resume from here
 
-**Active task:** PR de `fix/closing-intervals` (posições por intervalo, REQ-030). Depois: TASK-049 (revisão visual, da usuária) e TASK-050 (conferir cadastro → lançamento → resumo em produção).
+**Active task:** branch `feat/visual-identity` (TASK-062, identidade Verde Nize, D-20) pronta para revisão da usuária; sem commit ainda. Depois: TASK-049 (revisão visual, da usuária) e TASK-050 (conferir cadastro → lançamento → resumo em produção).
 **Phase:** Phase 4 — TASK-030..034 e 061 [x]. Fechamentos opcionais (REQ-048, design 0.2.4): padrão 15 e 31, quantos dias quiser, liga/desliga; data do lançamento continua obrigatória.
 **Status:** Produção no ar (https://nize.pages.dev, API https://nize-api.onrender.com). `GET /api/months/{m}` abre o mês (carga) e devolve listas, totais, posições, saldo próprio e resumos (categoria com %, forma, cartão com "Sem cartão" = `cardId` null, terceiros por pessoa e cartão). Tela do mês ainda não usa esse endpoint (Phase 6).
 **Blocker (if any):** contas e segredos externos só a usuária pode criar.
@@ -20,6 +20,8 @@ Para rodar o app é preciso `export NIZE_JWT_SECRET=<>=32 bytes>` (os testes usa
 
 | # | Date | What was done | Files changed |
 |---|---|---|---|
+| 10 | 2026-11-05 | TASK-062 (skill `design-nize`): branch `feat/visual-identity` a partir de `fix/closing-intervals`. Identidade Verde Nize: tokens semânticos claro/escuro em `index.css` (cores padrão do Tailwind desligadas), logotipo padrão de `public/logoPadrao/` (`Logo`; `nize-logo-n-bloco-verde-*`, variante para fundo escuro gerada do original só com o "ize" em off-white; abaixo de 360px só o quadrado do "N"), favicon/apple-touch/manifesto com `public/logotipo/`, seletor de tema Sistema/Claro/Escuro (`lib/theme`, `ThemeSwitcher`; REQ-045 0.1.8), saldo do mês em destaque, setas além da cor em saldos e entradas, toque ≥ 44px, foco 3px, "pular para o conteúdo", contornos de input ≥ 3:1. Usuária: sem botão "ocultar valores" por ora. Specs: requirements 0.1.8, design 0.2.7 (D-20) | frontend/src/**, frontend/index.html, frontend/public/site.webmanifest, specs, CLAUDE.md |
+| 9 | 2026-11-05 | PR #11 (posições por intervalo, REQ-030) merged na `main` (`53a1335`) e publicado: deploy aprovado em `production` para back e front; migração, deploy no Render e smoke verdes; `/actuator/health` UP | CONTEXT.md |
 | 8 | 2026-11-04 | PR #10 merged e publicado (back ok; smoke do front falhou por propagação do Cloudflare em `/sign-in`, site ok; usuária reexecutou). Bug relatado pela usuária: posições acumuladas → agora por intervalo entre fechamentos, sem acumular, último até o fim do mês, rótulo "Do dia A ao B" (REQ-030 0.1.7, design 0.2.6), branch `fix/closing-intervals` | ClosingPositions, MonthResponse, MonthHeader, i18n, testes, specs |
 | 7 | 2026-11-04 | PR #8 merged (Maven 3.10.0; `mvnw.cmd` voltou a LF) e deploy ok. Phases 6, 7 e 8 (046–048) em paralelo por 3 agentes (branches `feat/phase-6/7/8` sobre `specs/phases-6-8`), integradas em `feat/phases-6-8`: tela do mês completa; `GET /api/years/{year}/overview` (carga até o mês vigente, D-19) + tela do panorama (Recharts 3.10.1); `PdfScenariosTest` (22 cenários), isolamento 25/25, carga p95 ≈ 14 ms (H2). Na integração: mês padrão no ano vigente (REQ-006). 363 testes back, 137 front | frontend/src/**, backend/src/**, docs/cobertura-cenarios.md, specs |
 | 6 | 2026-11-04 | PR #9: job "Backend on MySQL 8.4" falhou com 500 em `GET /api/settings` (`LazyInitializationException` em `Settings.closingDays`; `open-in-view: false` e os testes `@Transactional` escondiam). Correção: `@ElementCollection(fetch = EAGER)` + `SettingsOutsideTransactionTest` (sem transação no teste; apaga a usuária no fim). Smoke do Cloudflare falhou por cold start do Render (>3 min); rerun verde. Merge do #9 e deploy aprovados pela usuária (back: Flyway V5/V6 na Aiven 21:19; front: smoke ok); um run antigo do PR #7 também foi aprovado (republicou o front de `3a1177a`, depois substituído). TASK-023 fechada: app rodado no IntelliJ (Windows) com perfil `local`; exigiu usuário `nize`@`localhost` com GRANT | Settings.java, SettingsOutsideTransactionTest.java, tasks.md, backend/HELP.md 
@@ -66,6 +68,7 @@ Para rodar o app é preciso `export NIZE_JWT_SECRET=<>=32 bytes>` (os testes usa
 | Recuperação de senha desligada em prod (`DisabledEmailSender`) até haver provedor de e-mail | NFR-008; Open Question nova | 3 |
 | Cobertura mínima 80% no back e no front | Escolha da usuária | 3 |
 | Credenciais de teste geradas por execução no CI; só `NIZE_DB_ROOT_PASSWORD_TEST` é secret | Menos segredos para rotacionar (diverge do prompt) | 3 |
+| Identidade Verde Nize (skill `design-nize`) no lugar da verde-azulada; tema segue o sistema com seletor; sem "ocultar valores" | Pedido e escolhas da usuária (D-20) | 10 |
 | Tudo em inglês (código, banco, API) + i18n en/pt no front (REQ-046) | Escolha da usuária; tabela de nomes em design.md | 2 |
 | Recuperação de senha: token no log atrás de `EmailSender` | Escolha da usuária | 2 |
 | JDK/Maven em `~/tools` via tarball | Sem sudo p/ zip/unzip do SDKMAN | 2 |

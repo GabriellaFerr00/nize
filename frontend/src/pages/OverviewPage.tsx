@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { ArrowDownRight, ArrowUpRight } from 'lucide-react'
 import { lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -43,7 +44,7 @@ export function OverviewPage() {
   return (
     <section className="flex min-w-0 flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold text-brand-900">
+        <h1 className="text-2xl font-semibold text-ink">
           {t('pages.overview')}
           {year !== null && <span className="ml-2 text-ink-soft">{year}</span>}
         </h1>
@@ -58,7 +59,7 @@ export function OverviewPage() {
         <>
           <figure
             aria-label={t('overview.chart')}
-            className="min-w-0 rounded-2xl border border-line bg-white p-3 sm:p-4"
+            className="min-w-0 rounded-2xl border border-line bg-card p-3 shadow-card sm:p-4"
           >
             <figcaption className="mb-2 text-sm font-medium text-ink-soft">{t('overview.chart')}</figcaption>
             <Suspense fallback={<div className="h-[280px]" />}>
@@ -66,7 +67,12 @@ export function OverviewPage() {
             </Suspense>
           </figure>
 
-          <div className="min-w-0 overflow-x-auto rounded-2xl border border-line bg-white">
+          <div
+            role="region"
+            aria-label={t('overview.table')}
+            tabIndex={0}
+            className="min-w-0 overflow-x-auto rounded-2xl border border-line bg-card shadow-card"
+          >
             <table className="w-full text-xs tabular-nums sm:text-sm">
               <caption className="px-3 pt-3 text-left text-sm font-medium text-ink-soft sm:px-4">
                 {t('overview.table')}
@@ -81,24 +87,32 @@ export function OverviewPage() {
               </thead>
               <tbody>
                 {months.map((m) => (
-                  <tr key={m.month} className="border-b border-line last:border-0 hover:bg-brand-50">
+                  <tr key={m.month} className="border-b border-line last:border-0 hover:bg-soft">
                     <th scope="row" className="px-2 py-2 text-left font-medium sm:px-4">
                       <Link
                         to={`/month/${m.month}`}
                         aria-label={t('overview.openMonth', { month: monthLabel(m.month, i18n.language, 'long') })}
-                        className="capitalize text-brand-700 hover:underline"
+                        className="capitalize text-brand-text hover:underline"
                       >
                         {monthLabel(m.month, i18n.language, 'short')}
                       </Link>
                     </th>
                     <td className="px-1 py-2 text-right sm:px-2">{formatCents(m.totalIncomeCents, i18n.language)}</td>
                     <td className="px-1 py-2 text-right sm:px-2">{formatCents(m.totalExpensesCents, i18n.language)}</td>
-                    <td
-                      className={`px-2 py-2 text-right font-medium sm:px-4 ${
-                        m.balanceCents < 0 ? 'text-negative' : 'text-positive'
-                      }`}
-                    >
-                      {formatCents(m.balanceCents, i18n.language)}
+                    <td className="px-2 py-2 text-right font-medium sm:px-4">
+                      <span
+                        className={`inline-flex items-center justify-end gap-0.5 ${
+                          m.balanceCents < 0 ? 'text-negative' : 'text-positive'
+                        }`}
+                      >
+                        {m.balanceCents !== 0 &&
+                          (m.balanceCents < 0 ? (
+                            <ArrowDownRight className="size-[1em] shrink-0" aria-hidden />
+                          ) : (
+                            <ArrowUpRight className="size-[1em] shrink-0" aria-hidden />
+                          ))}
+                        {formatCents(m.balanceCents, i18n.language)}
+                      </span>
                     </td>
                   </tr>
                 ))}

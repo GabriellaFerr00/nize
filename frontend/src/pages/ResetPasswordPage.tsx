@@ -31,7 +31,7 @@ export function ResetPasswordPage() {
     return (
       <div className="flex flex-col gap-4">
         <FormMessage kind="error">{t('errors.INVALID_RESET_TOKEN')}</FormMessage>
-        <Link to="/forgot-password" className="text-sm text-brand-600 underline">
+        <Link to="/forgot-password" className="text-sm text-brand-text underline">
           {t('auth.reset.requestNew')}
         </Link>
       </div>
@@ -40,7 +40,7 @@ export function ResetPasswordPage() {
 
   return (
     <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold text-brand-900">{t('auth.reset.title')}</h1>
+      <h1 className="text-xl font-semibold text-ink">{t('auth.reset.title')}</h1>
       {mutation.isError && <FormMessage kind="error">{apiErrorMessage(t, mutation.error)}</FormMessage>}
       <TextField
         label={t('auth.fields.newPassword')}
@@ -53,7 +53,7 @@ export function ResetPasswordPage() {
       <button
         type="submit"
         disabled={mutation.isPending}
-        className="rounded-xl bg-brand-600 px-4 py-2.5 font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+        className="min-h-11 rounded-xl bg-brand px-4 font-semibold text-on-brand hover:bg-brand-hover disabled:opacity-60"
       >
         {t('auth.reset.submit')}
       </button>

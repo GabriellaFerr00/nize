@@ -52,10 +52,10 @@ export function SettingsPage() {
 
   return (
     <section className="flex max-w-xl flex-col gap-6">
-      <h1 className="text-2xl font-semibold text-brand-900">{t('pages.settings')}</h1>
+      <h1 className="text-2xl font-semibold text-ink">{t('pages.settings')}</h1>
 
-      <form onSubmit={onSave} className="flex flex-col gap-4 rounded-2xl border border-line bg-white p-5">
-        <h2 className="text-lg font-semibold text-brand-900">{t('settings.general')}</h2>
+      <form onSubmit={onSave} className="flex flex-col gap-4 rounded-2xl border border-line bg-card p-5">
+        <h2 className="text-lg font-semibold text-ink">{t('settings.general')}</h2>
         {save.isSuccess && <FormMessage kind="success">{t('settings.saved')}</FormMessage>}
         {save.isError && <FormMessage kind="error">{apiErrorMessage(t, save.error)}</FormMessage>}
         <label className="flex flex-col gap-1 text-sm font-medium text-ink">
@@ -63,7 +63,7 @@ export function SettingsPage() {
           <select
             value={currentYear ?? ''}
             onChange={(e) => setDraft({ ...draft, currentYear: Number(e.target.value) })}
-            className="rounded-xl border border-line bg-white px-3 py-2.5 text-base font-normal"
+            className="rounded-xl border border-line-strong bg-card px-3 py-2.5 text-base font-normal text-ink"
           >
             {(years.data ?? []).map((y) => (
               <option key={y.year} value={y.year}>
@@ -78,7 +78,7 @@ export function SettingsPage() {
             type="checkbox"
             checked={autoInstallments}
             onChange={(e) => setDraft({ ...draft, autoInstallments: e.target.checked })}
-            className="mt-1 size-4 accent-brand-600"
+            className="mt-1 size-4 accent-brand-text"
           />
           <span>
             <span className="font-medium">{t('settings.autoInstallments')}</span>
@@ -90,7 +90,7 @@ export function SettingsPage() {
             type="checkbox"
             checked={closingsEnabled}
             onChange={(e) => setDraft({ ...draft, closingsEnabled: e.target.checked })}
-            className="mt-1 size-4 accent-brand-600"
+            className="mt-1 size-4 accent-brand-text"
           />
           <span>
             <span className="font-medium">{t('settings.closings')}</span>
@@ -101,14 +101,14 @@ export function SettingsPage() {
         <button
           type="submit"
           disabled={save.isPending || settings.isLoading}
-          className="self-start rounded-xl bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+          className="self-start inline-flex min-h-11 items-center justify-center rounded-xl bg-brand px-4 text-sm font-semibold text-on-brand hover:bg-brand-hover disabled:opacity-60"
         >
           {t('catalog.save')}
         </button>
       </form>
 
-      <form onSubmit={onAddYear} noValidate className="flex flex-col gap-4 rounded-2xl border border-line bg-white p-5">
-        <h2 className="text-lg font-semibold text-brand-900">{t('settings.newYear')}</h2>
+      <form onSubmit={onAddYear} noValidate className="flex flex-col gap-4 rounded-2xl border border-line bg-card p-5">
+        <h2 className="text-lg font-semibold text-ink">{t('settings.newYear')}</h2>
         <p className="text-sm text-ink-soft">{t('settings.newYearHelp')}</p>
         {addYear.isSuccess && <FormMessage kind="success">{t('settings.yearCreated', { year: addYear.data.year })}</FormMessage>}
         {addYear.isError && <FormMessage kind="error">{apiErrorMessage(t, addYear.error)}</FormMessage>}
@@ -122,7 +122,7 @@ export function SettingsPage() {
         <button
           type="submit"
           disabled={addYear.isPending}
-          className="self-start rounded-xl bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+          className="self-start inline-flex min-h-11 items-center justify-center rounded-xl bg-brand px-4 text-sm font-semibold text-on-brand hover:bg-brand-hover disabled:opacity-60"
         >
           {t('settings.createYear')}
         </button>

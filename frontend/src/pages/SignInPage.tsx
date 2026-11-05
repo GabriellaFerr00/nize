@@ -41,7 +41,7 @@ export function SignInPage() {
 
   return (
     <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold text-brand-900">{t('auth.signIn.title')}</h1>
+      <h1 className="text-xl font-semibold text-ink">{t('auth.signIn.title')}</h1>
       {state?.notice === 'passwordReset' && <FormMessage kind="success">{t('auth.reset.done')}</FormMessage>}
       {mutation.isError && <FormMessage kind="error">{apiErrorMessage(t, mutation.error)}</FormMessage>}
       <TextField
@@ -63,15 +63,15 @@ export function SignInPage() {
       <button
         type="submit"
         disabled={mutation.isPending}
-        className="rounded-xl bg-brand-600 px-4 py-2.5 font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+        className="min-h-11 rounded-xl bg-brand px-4 font-semibold text-on-brand hover:bg-brand-hover disabled:opacity-60"
       >
         {t('auth.signIn.submit')}
       </button>
       <div className="flex flex-col gap-1 text-sm">
-        <Link to="/forgot-password" className="text-brand-600 underline">
+        <Link to="/forgot-password" className="text-brand-text underline">
           {t('auth.signIn.forgot')}
         </Link>
-        <Link to="/sign-up" className="text-brand-600 underline">
+        <Link to="/sign-up" className="text-brand-text underline">
           {t('auth.signIn.toSignUp')}
         </Link>
       </div>

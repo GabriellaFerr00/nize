@@ -30,12 +30,12 @@ export function ClosingDaysField({ days, onChange }: { days: number[]; onChange:
       ) : (
         <ul aria-labelledby="closing-days-label" className="flex flex-wrap gap-2">
           {days.map((day) => (
-            <li key={day} className="flex items-center gap-1 rounded-full border border-line bg-brand-50 py-1 pl-3 pr-1">
+            <li key={day} className="flex items-center gap-1 rounded-full border border-line bg-soft py-1 pl-3 pr-1">
               <span>{label(day)}</span>
               <button
                 type="button"
                 onClick={() => onChange(days.filter((d) => d !== day))}
-                className="rounded-full px-2 text-ink-soft hover:bg-brand-100 hover:text-ink"
+                className="grid size-8 place-items-center rounded-full text-ink-soft hover:bg-card hover:text-ink"
               >
                 <span aria-hidden="true">×</span>
                 <span className="sr-only">{t('settings.removeClosingDay', { label: label(day) })}</span>
@@ -58,13 +58,13 @@ export function ClosingDaysField({ days, onChange }: { days: number[]; onChange:
                 add()
               }
             }}
-            className="w-24 rounded-xl border border-line bg-white px-3 py-2 text-base text-ink"
+            className="min-h-11 w-24 rounded-xl border border-line-strong bg-card px-3 text-base text-ink"
           />
         </label>
         <button
           type="button"
           onClick={add}
-          className="rounded-xl border border-line px-3 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50"
+          className="min-h-11 rounded-xl border border-line-strong px-4 text-sm font-medium text-ink hover:bg-soft"
         >
           {t('settings.addClosingDay')}
         </button>

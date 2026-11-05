@@ -5,8 +5,8 @@ export function NotFoundPage() {
   const { t } = useTranslation()
   return (
     <section>
-      <h1 className="text-2xl font-semibold text-brand-900">{t('notFound.title')}</h1>
-      <Link to="/" className="mt-3 inline-block text-brand-600 underline">
+      <h1 className="text-2xl font-semibold text-ink">{t('notFound.title')}</h1>
+      <Link to="/" className="mt-3 inline-block text-brand-text underline">
         {t('notFound.back')}
       </Link>
     </section>

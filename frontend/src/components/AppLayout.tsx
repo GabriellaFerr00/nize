@@ -1,11 +1,13 @@
 import { CalendarDays, ChartColumn, CreditCard, LogOut, Settings, Tags, Users } from 'lucide-react'
 import type { ComponentType } from 'react'
 import { useTranslation } from 'react-i18next'
-import { NavLink, Outlet } from 'react-router-dom'
+import { Link, NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../api/authState'
 import { useDefaultMonth } from '../lib/useMonth'
 import { LanguageSwitcher } from './LanguageSwitcher'
+import { Logo } from './Logo'
 import { OnboardingModal } from './OnboardingModal'
+import { ThemeSwitcher } from './ThemeSwitcher'
 
 type NavItem = {
   key: string
@@ -25,19 +27,10 @@ function navItems(month: string): NavItem[] {
   ]
 }
 
-function Brand() {
-  const { t } = useTranslation()
-  return (
-    <div className="flex items-center gap-2">
-      <span className="grid size-8 place-items-center rounded-lg bg-brand-600 text-sm font-bold text-white">N</span>
-      <span className="text-lg font-semibold text-brand-900">{t('app.name')}</span>
-    </div>
-  )
-}
-
 /**
  * App shell: side menu from 768px up, bottom bar below (REQ-043).
  * Shown classes (`hidden md:flex` / `md:hidden`) are the single switch between the two.
+ * NavLink marks the open page with aria-current="page"; the active item also has a bar, not only a color.
  */
 export function AppLayout() {
   const { t } = useTranslation()
@@ -46,16 +39,27 @@ export function AppLayout() {
 
   return (
     <div className="min-h-screen">
-      <aside className="fixed inset-y-0 left-0 hidden w-60 flex-col gap-6 border-r border-line bg-white p-4 md:flex">
-        <Brand />
+      <a
+        href="#content"
+        className="sr-only z-50 rounded-lg bg-brand px-4 py-3 font-semibold text-on-brand focus:not-sr-only focus:fixed focus:left-3 focus:top-3"
+      >
+        {t('nav.skip')}
+      </a>
+
+      <aside className="fixed inset-y-0 left-0 hidden w-60 flex-col gap-6 border-r border-line bg-sidebar p-4 md:flex">
+        <Link to="/" className="self-start rounded-xl p-1">
+          <Logo />
+        </Link>
         <nav aria-label={t('nav.label')} data-testid="side-nav" className="flex flex-1 flex-col gap-1">
           {items.map(({ key, to, icon: Icon }) => (
             <NavLink
               key={key}
               to={to}
               className={({ isActive }) =>
-                `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium ${
-                  isActive ? 'bg-brand-100 text-brand-700' : 'text-ink-soft hover:bg-brand-50'
+                `relative flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm ${
+                  isActive
+                    ? 'bg-soft font-semibold text-ink before:absolute before:inset-y-2 before:left-0 before:w-[3px] before:rounded-full before:bg-brand-text'
+                    : 'font-medium text-ink-soft hover:bg-soft hover:text-ink'
                 }`
               }
             >
@@ -64,26 +68,32 @@ export function AppLayout() {
             </NavLink>
           ))}
         </nav>
-        <LanguageSwitcher />
+        <div className="flex flex-col gap-2">
+          <ThemeSwitcher />
+          <LanguageSwitcher />
+        </div>
         <button
           type="button"
           onClick={signOut}
-          className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-ink-soft hover:bg-brand-50"
+          className="flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium text-ink-soft hover:bg-soft hover:text-ink"
         >
           <LogOut className="size-5" aria-hidden />
           {t('auth.signOut')}
         </button>
       </aside>
 
-      <header className="flex items-center justify-between border-b border-line bg-white px-4 py-3 md:hidden">
-        <Brand />
-        <div className="flex items-center gap-2">
+      <header className="flex items-center justify-between gap-2 border-b border-line bg-sidebar px-4 py-2 md:hidden">
+        <Link to="/" className="rounded-xl p-0.5">
+          <Logo size="sm" />
+        </Link>
+        <div className="flex min-w-0 items-center gap-1 sm:gap-1.5">
+          <ThemeSwitcher />
           <LanguageSwitcher />
           <button
             type="button"
             onClick={signOut}
             aria-label={t('auth.signOut')}
-            className="grid size-9 place-items-center rounded-lg border border-line text-ink-soft"
+            className="grid size-11 shrink-0 place-items-center rounded-lg border border-line-strong text-ink-soft hover:text-ink"
           >
             <LogOut className="size-5" aria-hidden />
           </button>
@@ -92,22 +102,26 @@ export function AppLayout() {
 
       <OnboardingModal />
 
-      <main className="px-4 pb-24 pt-6 md:pb-8 md:pl-[17rem] md:pr-8">
-        <Outlet />
+      <main id="content" tabIndex={-1} className="px-4 pb-28 pt-6 outline-none md:pb-10 md:pl-[17rem] md:pr-8">
+        <div className="mx-auto w-full max-w-[1280px]">
+          <Outlet />
+        </div>
       </main>
 
       <nav
         aria-label={t('nav.label')}
         data-testid="bottom-nav"
-        className="fixed inset-x-0 bottom-0 z-10 grid grid-cols-6 border-t border-line bg-white md:hidden"
+        className="fixed inset-x-0 bottom-0 z-10 grid grid-cols-6 border-t border-line bg-sidebar pb-[env(safe-area-inset-bottom)] md:hidden"
       >
         {items.map(({ key, to, icon: Icon }) => (
           <NavLink
             key={key}
             to={to}
             className={({ isActive }) =>
-              `flex min-w-0 flex-col items-center gap-0.5 px-0.5 py-2 text-[10px] font-medium ${
-                isActive ? 'text-brand-700' : 'text-ink-soft'
+              `relative flex min-h-14 min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 text-[11px] leading-tight ${
+                isActive
+                  ? 'font-medium text-brand-text before:absolute before:inset-x-3 before:top-0 before:h-[3px] before:rounded-b-full before:bg-brand-text'
+                  : 'font-medium text-ink-soft'
               }`
             }
           >

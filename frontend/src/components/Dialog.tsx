@@ -17,7 +17,7 @@ export function Dialog({ title, onClose, children }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-40 grid place-items-center bg-ink/50 p-4"
+      className="fixed inset-0 z-40 grid place-items-center bg-backdrop p-4"
       onMouseDown={(event) => event.target === event.currentTarget && onClose()}
     >
       <div
@@ -25,9 +25,9 @@ export function Dialog({ title, onClose, children }: Props) {
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="max-h-full w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-xl"
+        className="max-h-full w-full max-w-md overflow-y-auto rounded-2xl border border-line bg-card p-6 shadow-xl"
       >
-        <h2 className="text-lg font-semibold text-brand-900">{title}</h2>
+        <h2 className="text-lg font-semibold text-ink">{title}</h2>
         <div className="mt-4">{children}</div>
       </div>
     </div>

@@ -24,7 +24,7 @@ type Props = { month: string; expense?: Expense; onClose: () => void }
 type Parceling = 'none' | 'auto' | 'manual'
 
 export const selectClass =
-  'rounded-xl border border-line bg-white px-3 py-2.5 text-base text-ink focus:outline-2 focus:outline-brand-500'
+  'rounded-xl border border-line-strong bg-card px-3 py-2.5 text-base text-ink'
 
 /** The "Novo lançamento" window (REQ-016..019, REQ-042): one expense, optionally in installments. */
 export function ExpenseFormDialog({ month, expense, onClose }: Props) {
@@ -233,7 +233,7 @@ export function ExpenseFormDialog({ month, expense, onClose }: Props) {
 
         {type === 'FIXED' && (
           <label className="flex items-center gap-2 text-sm text-ink">
-            <input type="checkbox" checked={paid} onChange={(e) => setPaid(e.target.checked)} className="size-4 accent-brand-600" />
+            <input type="checkbox" checked={paid} onChange={(e) => setPaid(e.target.checked)} className="size-4 accent-brand-text" />
             {t('expense.fields.paid')}
           </label>
         )}
@@ -299,7 +299,7 @@ export function ExpenseFormDialog({ month, expense, onClose }: Props) {
         )}
 
         <div className="flex flex-wrap justify-end gap-2">
-          <button type="button" className="rounded-xl px-4 py-2 text-sm text-ink-soft" onClick={onClose}>
+          <button type="button" className="min-h-11 rounded-xl px-4 text-sm font-medium text-ink-soft hover:bg-soft hover:text-ink" onClick={onClose}>
             {t('catalog.cancel')}
           </button>
           {!editing && (
@@ -307,7 +307,7 @@ export function ExpenseFormDialog({ month, expense, onClose }: Props) {
               type="button"
               disabled={save.isPending}
               onClick={(e) => submit(e, true)}
-              className="rounded-xl border border-brand-600 px-4 py-2 text-sm font-medium text-brand-700 disabled:opacity-60"
+              className="min-h-11 rounded-xl border border-line-strong px-4 text-sm font-medium text-ink hover:bg-soft disabled:opacity-60"
             >
               {t('expense.saveAndAnother')}
             </button>
@@ -315,7 +315,7 @@ export function ExpenseFormDialog({ month, expense, onClose }: Props) {
           <button
             type="submit"
             disabled={save.isPending}
-            className="rounded-xl bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-brand px-4 text-sm font-semibold text-on-brand hover:bg-brand-hover disabled:opacity-60"
           >
             {t('catalog.save')}
           </button>

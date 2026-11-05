@@ -8,7 +8,7 @@ import { Money } from './Money'
 function Block({ title, empty, children }: { title: string; empty?: string; children: ReactNode }) {
   return (
     <section aria-label={title} className="flex min-w-0 flex-col gap-2">
-      <h3 className="text-sm font-semibold text-brand-900">{title}</h3>
+      <h3 className="text-sm font-semibold text-ink">{title}</h3>
       {empty ? <p className="text-sm text-ink-soft">{empty}</p> : <ul className="flex flex-col gap-1.5">{children}</ul>}
     </section>
   )
@@ -39,24 +39,24 @@ export function SummaryPanel({ view }: { view: MonthView }) {
   const noExpenses = summaries.byCategory.length === 0 ? t('month.summary.noExpenses') : undefined
 
   return (
-    <aside aria-label={t('month.summary.title')} className="flex min-w-0 flex-col gap-4 rounded-2xl border border-line bg-white p-4">
+    <aside aria-label={t('month.summary.title')} className="flex min-w-0 flex-col gap-4 rounded-2xl border border-line bg-card p-4 shadow-card">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold text-brand-900">{t('month.summary.title')}</h2>
+        <h2 className="text-lg font-semibold text-ink">{t('month.summary.title')}</h2>
         <button
           type="button"
           aria-expanded={open}
           aria-controls="month-summaries"
           onClick={() => setOpen(!open)}
-          className="flex items-center gap-1 rounded-lg px-2 py-1 text-sm font-medium text-brand-700 hover:bg-brand-50 md:hidden"
+          className="flex min-h-11 items-center gap-1 rounded-lg px-3 text-sm font-medium text-brand-text hover:bg-soft md:hidden"
         >
           {open ? t('month.summary.hide') : t('month.summary.show')}
           <ChevronDown className={`size-4 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden />
         </button>
       </div>
 
-      <section aria-label={t('month.summary.ownBalance')} className="flex flex-col gap-2 rounded-xl bg-brand-50 p-3">
+      <section aria-label={t('month.summary.ownBalance')} className="flex flex-col gap-2 rounded-xl bg-soft p-3">
         <div className="flex items-baseline justify-between gap-2">
-          <h3 className="text-sm font-semibold text-brand-900">{t('month.summary.ownBalance')}</h3>
+          <h3 className="text-sm font-semibold text-ink">{t('month.summary.ownBalance')}</h3>
           <Money cents={totals.ownBalanceCents} tone className="text-lg font-semibold" />
         </div>
         <ul className="flex flex-col gap-1">
