@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { fetchMe, markOnboardingSeen, type Me } from '../api/meApi'
+import { primaryButton } from '../lib/ui'
 
 const STEPS = ['log', 'position', 'setup'] as const
 
@@ -60,7 +61,7 @@ export function OnboardingModal() {
           ref={closeButton}
           type="button"
           onClick={() => dismiss.mutate()}
-          className="mt-6 w-full min-h-11 rounded-xl bg-brand px-4 font-semibold text-on-brand hover:bg-brand-hover"
+          className={`${primaryButton} mt-6 w-full`}
         >
           {t('onboarding.dismiss')}
         </button>

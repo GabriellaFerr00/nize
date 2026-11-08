@@ -16,12 +16,14 @@
   "language": {
     "label": "Language",
     "pt": "Português",
-    "en": "English"
+    "en": "English",
+    "short": {
+      "pt": "PT",
+      "en": "EN"
+    }
   },
   "theme": {
-    "label": "Theme",
-    "light": "Light",
-    "dark": "Dark"
+    "darkMode": "Dark theme"
   },
   "pages": {
     "month": "Month",
@@ -45,7 +47,8 @@
     "balance": "Balance",
     "openMonth": "Open {{month}}",
     "loading": "Loading the overview...",
-    "unknownYear": "This year does not exist in your account. Pick another year."
+    "unknownYear": "This year does not exist in your account. Pick another year.",
+    "thisMonth": "this month"
   },
   "errors": {
     "INVALID_CREDENTIALS": "Incorrect email or password.",
@@ -111,7 +114,12 @@
       "done": "Password changed. Sign in with your new password.",
       "requestNew": "Request a new link"
     },
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "pitch": {
+      "month": "Record fixed costs, card spending and income for each month.",
+      "closings": "See what is left or missing at each closing of the month.",
+      "noBank": "No bank connection: you write it down and Nize does the math."
+    }
   },
   "onboarding": {
     "title": "Welcome to Nize, {{name}}!",
@@ -125,7 +133,6 @@
   },
   "catalog": {
     "year": "Year",
-    "inactive": "Inactive",
     "edit": "Edit",
     "activate": "Reactivate",
     "deactivate": "Deactivate",
@@ -147,17 +154,20 @@
     "categories": {
       "new": "New category",
       "edit": "Edit category",
-      "empty": "No categories this year."
+      "empty": "No categories this year.",
+      "inactiveGroup": "Inactive"
     },
     "cards": {
       "new": "New card",
       "edit": "Edit card",
-      "empty": "No cards this year. Add yours to record credit expenses."
+      "empty": "No cards this year. Add yours to record credit expenses.",
+      "inactiveGroup": "Inactive"
     },
     "people": {
       "new": "New person",
       "edit": "Edit person",
-      "empty": "No people this year. Add whoever uses your card, like your mother."
+      "empty": "No people this year. Add whoever uses your card, like your mother.",
+      "inactiveGroup": "Inactive"
     },
     "deleteTitle": "Delete category",
     "deleteQuestion": "Delete the category \"{{name}}\"? This cannot be undone.",
@@ -165,7 +175,12 @@
     "inUse_one": "The category \"{{name}}\" has {{count}} expense and cannot be deleted.",
     "inUse_other": "The category \"{{name}}\" has {{count}} expenses and cannot be deleted.",
     "inUseQuestion": "Do you want to change those expenses first? The category stays as it is.",
-    "changeExpenses": "Change expenses"
+    "changeExpenses": "Change expenses",
+    "due": "due",
+    "editItem": "Edit {{name}}",
+    "deactivateItem": "Deactivate {{name}}",
+    "activateItem": "Reactivate {{name}}",
+    "deleteItem": "Delete {{name}}"
   },
   "settings": {
     "general": "Preferences",

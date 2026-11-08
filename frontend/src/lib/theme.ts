@@ -32,9 +32,24 @@ export function applyTheme(theme: Theme) {
   document.documentElement.dataset.theme = theme
 }
 
+const CHANGE_EVENT = 'nize-theme-change'
+
+/** Lets every theme control on screen follow the same choice (side menu and phone header). */
+export function subscribeTheme(onChange: () => void) {
+  window.addEventListener(CHANGE_EVENT, onChange)
+  return () => window.removeEventListener(CHANGE_EVENT, onChange)
+}
+
+/** The theme on screen now: the one on <html>, or the stored/device one before the app sets it. */
+export function currentTheme(): Theme {
+  const shown = document.documentElement.dataset.theme ?? null
+  return isTheme(shown) ? shown : storedTheme()
+}
+
 /** Switches the theme right away and remembers the choice. */
 export function setTheme(theme: Theme) {
   applyTheme(theme)
+  window.dispatchEvent(new Event(CHANGE_EVENT))
   try {
     localStorage.setItem(STORAGE_KEY, theme)
   } catch {

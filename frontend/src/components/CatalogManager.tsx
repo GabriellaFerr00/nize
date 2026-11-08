@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Archive, ArchiveRestore, Pencil, Trash2 } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
@@ -19,6 +20,7 @@ import { Dialog } from './Dialog'
 import { FormMessage } from './FormMessage'
 import { TextField } from './TextField'
 import { YearSelect } from './YearSelect'
+import { dangerButton, iconButton, pageTitle, primaryButton, quietButton } from '../lib/ui'
 
 type Props = {
   kind: CatalogKind
@@ -60,17 +62,27 @@ export function CatalogManager({ kind, fields, canDelete = false }: Props) {
     onSuccess: refresh,
   })
 
+  const active = items.data?.filter((item) => item.active) ?? []
+  const inactive = items.data?.filter((item) => !item.active) ?? []
+  const rowActions = {
+    canDelete,
+    busy: toggle.isPending,
+    onEdit: (item: CatalogItem) => setDialog({ mode: 'form', item }),
+    onToggle: (item: CatalogItem) => toggle.mutate(item),
+    onDelete: (item: CatalogItem) => setDialog({ mode: 'delete', item }),
+  }
+
   return (
-    <section className="flex flex-col gap-4">
+    <section className="flex max-w-3xl flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold text-ink">{t(`pages.${kind}`)}</h1>
+        <h1 className={pageTitle}>{t(`pages.${kind}`)}</h1>
         <div className="flex items-center gap-3">
           <YearSelect years={years} value={year} onChange={setYear} />
           <button
             type="button"
             disabled={year === null}
             onClick={() => setDialog({ mode: 'form' })}
-            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-brand px-4 text-sm font-semibold text-on-brand hover:bg-brand-hover disabled:opacity-60"
+            className={primaryButton}
           >
             {t(`catalog.${kind}.new`)}
           </button>
@@ -81,52 +93,29 @@ export function CatalogManager({ kind, fields, canDelete = false }: Props) {
       {items.isError && <FormMessage kind="error">{apiErrorMessage(t, items.error)}</FormMessage>}
 
       {!isLoading && items.data?.length === 0 && (
-        <p className="rounded-2xl border border-dashed border-line bg-card p-6 text-ink-soft">
+        <p className="rounded-2xl border border-dashed border-line-strong bg-card p-6 text-ink-soft">
           {t(`catalog.${kind}.empty`)}
         </p>
       )}
 
-      <ul className="flex flex-col gap-2">
-        {items.data?.map((item) => (
-          <li
-            key={item.id}
-            className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-card p-4"
-          >
-            <div className="min-w-0">
-              <p className="flex items-center gap-2 font-medium text-ink">
-                <span className={item.active ? '' : 'text-ink-soft line-through'}>{item.name}</span>
-                {!item.active && (
-                  <span className="rounded-full border border-line-strong px-2 py-0.5 text-xs font-normal text-ink-soft">
-                    {t('catalog.inactive')}
-                  </span>
-                )}
-              </p>
-              {item.dueDay !== undefined && (
-                <p className="text-sm text-ink-soft">{t('catalog.dueOn', { day: item.dueDay })}</p>
-              )}
-              {item.description && <p className="text-sm text-ink-soft">{item.description}</p>}
-            </div>
-            <div className="-mx-3 flex flex-wrap text-sm">
-              <button type="button" className="inline-flex min-h-11 items-center rounded-lg px-3 font-medium text-brand-text hover:bg-soft" onClick={() => setDialog({ mode: 'form', item })}>
-                {t('catalog.edit')}
-              </button>
-              <button
-                type="button"
-                className="inline-flex min-h-11 items-center rounded-lg px-3 font-medium text-brand-text hover:bg-soft"
-                disabled={toggle.isPending}
-                onClick={() => toggle.mutate(item)}
-              >
-                {item.active ? t('catalog.deactivate') : t('catalog.activate')}
-              </button>
-              {canDelete && (
-                <button type="button" className="inline-flex min-h-11 items-center rounded-lg px-3 font-medium text-negative hover:bg-soft" onClick={() => setDialog({ mode: 'delete', item })}>
-                  {t('catalog.delete')}
-                </button>
-              )}
-            </div>
-          </li>
-        ))}
-      </ul>
+      {active.length > 0 && (
+        <ul className="flex flex-col divide-y divide-line rounded-2xl border border-line bg-card px-4 shadow-card sm:px-5">
+          {active.map((item) => (
+            <CatalogRow key={item.id} item={item} {...rowActions} />
+          ))}
+        </ul>
+      )}
+
+      {inactive.length > 0 && (
+        <section aria-label={t(`catalog.${kind}.inactiveGroup`)} className="flex flex-col gap-2">
+          <h2 className="text-sm font-semibold text-ink-soft">{t(`catalog.${kind}.inactiveGroup`)}</h2>
+          <ul className="flex flex-col divide-y divide-line rounded-2xl border border-dashed border-line-strong px-4 sm:px-5">
+            {inactive.map((item) => (
+              <CatalogRow key={item.id} item={item} {...rowActions} />
+            ))}
+          </ul>
+        </section>
+      )}
 
       {dialog?.mode === 'form' && year !== null && (
         <ItemFormDialog
@@ -156,13 +145,13 @@ export function CatalogManager({ kind, fields, canDelete = false }: Props) {
         <Dialog title={t('catalog.inUseTitle')} onClose={() => setDialog(null)}>
           <p className="text-sm text-ink">{t('catalog.inUse', { count: dialog.count, name: dialog.item.name })}</p>
           <p className="mt-2 text-sm text-ink-soft">{t('catalog.inUseQuestion')}</p>
-          <div className="mt-5 flex justify-end gap-2">
-            <button type="button" className="min-h-11 rounded-xl px-4 text-sm font-medium text-ink-soft hover:bg-soft hover:text-ink" onClick={() => setDialog(null)}>
+          <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
+            <button type="button" className={quietButton} onClick={() => setDialog(null)}>
               {t('catalog.cancel')}
             </button>
             <button
               type="button"
-              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-brand px-4 text-sm font-semibold text-on-brand"
+              className={primaryButton}
               onClick={() => navigate(`/month/${defaultMonth}`)}
             >
               {t('catalog.changeExpenses')}
@@ -171,6 +160,62 @@ export function CatalogManager({ kind, fields, canDelete = false }: Props) {
         </Dialog>
       )}
     </section>
+  )
+}
+
+type RowProps = {
+  item: CatalogItem
+  canDelete: boolean
+  busy: boolean
+  onEdit: (item: CatalogItem) => void
+  onToggle: (item: CatalogItem) => void
+  onDelete: (item: CatalogItem) => void
+}
+
+/** One line of the list; a card leads with its due day, like the day of an entry on the month screen. */
+function CatalogRow({ item, canDelete, busy, onEdit, onToggle, onDelete }: RowProps) {
+  const { t } = useTranslation()
+  const name = item.name
+  return (
+    <li className="flex items-start gap-3 py-3">
+      {item.dueDay !== undefined && (
+        <span className="flex w-9 shrink-0 flex-col items-center">
+          <span aria-hidden className="text-lg leading-6 font-semibold text-ink tabular-nums">{item.dueDay}</span>
+          <span aria-hidden className="text-xs text-ink-soft">{t('catalog.due')}</span>
+          <span className="sr-only">{t('catalog.dueOn', { day: item.dueDay })}</span>
+        </span>
+      )}
+      <div className="flex min-w-0 flex-1 flex-col pt-px">
+        <span className={`leading-6 font-medium break-words ${item.active ? 'text-ink' : 'text-ink-soft'}`}>{name}</span>
+        {item.description && <span className="text-sm text-ink-soft">{item.description}</span>}
+      </div>
+      <div className="-my-1.5 -mr-2 flex shrink-0">
+        <button type="button" className={iconButton} aria-label={t('catalog.editItem', { name })} title={t('catalog.edit')} onClick={() => onEdit(item)}>
+          <Pencil className="size-4" aria-hidden />
+        </button>
+        <button
+          type="button"
+          className={iconButton}
+          disabled={busy}
+          aria-label={t(item.active ? 'catalog.deactivateItem' : 'catalog.activateItem', { name })}
+          title={item.active ? t('catalog.deactivate') : t('catalog.activate')}
+          onClick={() => onToggle(item)}
+        >
+          {item.active ? <Archive className="size-4" aria-hidden /> : <ArchiveRestore className="size-4" aria-hidden />}
+        </button>
+        {canDelete && (
+          <button
+            type="button"
+            className={`${iconButton} hover:text-negative`}
+            aria-label={t('catalog.deleteItem', { name })}
+            title={t('catalog.delete')}
+            onClick={() => onDelete(item)}
+          >
+            <Trash2 className="size-4" aria-hidden />
+          </button>
+        )}
+      </div>
+    </li>
   )
 }
 
@@ -238,14 +283,14 @@ function ItemFormDialog({ kind, year, fields, item, onClose, onSaved }: FormProp
             error={errors.dueDay}
           />
         )}
-        <div className="flex justify-end gap-2">
-          <button type="button" className="min-h-11 rounded-xl px-4 text-sm font-medium text-ink-soft hover:bg-soft hover:text-ink" onClick={onClose}>
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
+          <button type="button" className={quietButton} onClick={onClose}>
             {t('catalog.cancel')}
           </button>
           <button
             type="submit"
             disabled={save.isPending}
-            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-brand px-4 text-sm font-semibold text-on-brand hover:bg-brand-hover disabled:opacity-60"
+            className={primaryButton}
           >
             {t('catalog.save')}
           </button>
@@ -277,14 +322,14 @@ function DeleteDialog({ item, onClose, onDeleted, onInUse }: DeleteProps) {
     <Dialog title={t('catalog.deleteTitle')} onClose={onClose}>
       <p className="text-sm text-ink">{t('catalog.deleteQuestion', { name: item.name })}</p>
       {showError && <FormMessage kind="error">{apiErrorMessage(t, remove.error)}</FormMessage>}
-      <div className="mt-5 flex justify-end gap-2">
-        <button type="button" className="min-h-11 rounded-xl px-4 text-sm font-medium text-ink-soft hover:bg-soft hover:text-ink" onClick={onClose}>
+      <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
+        <button type="button" className={quietButton} onClick={onClose}>
           {t('catalog.cancel')}
         </button>
         <button
           type="button"
           disabled={remove.isPending}
-          className="min-h-11 rounded-xl bg-negative px-4 text-sm font-semibold text-on-negative disabled:opacity-60"
+          className={dangerButton}
           onClick={() => remove.mutate()}
         >
           {t('catalog.delete')}

@@ -7,6 +7,7 @@ import { FormMessage } from '../components/FormMessage'
 import { TextField } from '../components/TextField'
 import { apiErrorMessage } from '../lib/apiErrorMessage'
 import { isEmail } from '../lib/validation'
+import { pageTitle, primaryButton } from '../lib/ui'
 
 export function ForgotPasswordPage() {
   const { t } = useTranslation()
@@ -23,7 +24,7 @@ export function ForgotPasswordPage() {
 
   return (
     <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold text-ink">{t('auth.forgot.title')}</h1>
+      <h1 className={pageTitle}>{t('auth.forgot.title')}</h1>
       <p className="text-sm text-ink-soft">{t('auth.forgot.help')}</p>
       {mutation.isSuccess && <FormMessage kind="success">{t('auth.forgot.sent')}</FormMessage>}
       {mutation.isError && <FormMessage kind="error">{apiErrorMessage(t, mutation.error)}</FormMessage>}
@@ -38,7 +39,7 @@ export function ForgotPasswordPage() {
       <button
         type="submit"
         disabled={mutation.isPending}
-        className="min-h-11 rounded-xl bg-brand px-4 font-semibold text-on-brand hover:bg-brand-hover disabled:opacity-60"
+        className={primaryButton}
       >
         {t('auth.forgot.submit')}
       </button>

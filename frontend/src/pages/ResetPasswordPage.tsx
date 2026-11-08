@@ -7,6 +7,7 @@ import { FormMessage } from '../components/FormMessage'
 import { TextField } from '../components/TextField'
 import { apiErrorMessage } from '../lib/apiErrorMessage'
 import { passwordProblem } from '../lib/validation'
+import { pageTitle, primaryButton } from '../lib/ui'
 
 export function ResetPasswordPage() {
   const { t } = useTranslation()
@@ -40,7 +41,7 @@ export function ResetPasswordPage() {
 
   return (
     <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold text-ink">{t('auth.reset.title')}</h1>
+      <h1 className={pageTitle}>{t('auth.reset.title')}</h1>
       {mutation.isError && <FormMessage kind="error">{apiErrorMessage(t, mutation.error)}</FormMessage>}
       <TextField
         label={t('auth.fields.newPassword')}
@@ -53,7 +54,7 @@ export function ResetPasswordPage() {
       <button
         type="submit"
         disabled={mutation.isPending}
-        className="min-h-11 rounded-xl bg-brand px-4 font-semibold text-on-brand hover:bg-brand-hover disabled:opacity-60"
+        className={primaryButton}
       >
         {t('auth.reset.submit')}
       </button>

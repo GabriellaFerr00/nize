@@ -4,12 +4,12 @@ import { useTranslation } from 'react-i18next'
 import { listYears } from '../api/yearsApi'
 import { monthNames } from '../lib/format'
 import { shiftMonth } from '../lib/month'
+import { compactSelect, iconButton } from '../lib/ui'
 
 type Props = { month: string; onChange: (month: string) => void }
 
-const control =
-  'rounded-lg border border-line-strong bg-card px-2 py-1.5 text-sm text-ink capitalize'
-const arrow = 'grid size-9 shrink-0 place-items-center rounded-lg border border-line bg-card text-ink-soft hover:bg-soft'
+const control = `${compactSelect} capitalize`
+const arrow = `${iconButton} border border-line-strong bg-card`
 
 /** Previous/next month plus month and year selectors (REQ-040). The year list comes from the API. */
 export function MonthPicker({ month, onChange }: Props) {

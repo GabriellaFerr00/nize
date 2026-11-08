@@ -1,5 +1,5 @@
 # design.md
-> Nize — Version 0.2.7 (MVP web) — 2026-11-05
+> Nize — Version 0.2.9 (MVP web) — 2026-11-05
 
 ## Architecture Overview
 Monorepo com dois módulos independentes: `backend` (API REST) e `frontend` (SPA). **Toda regra de cálculo vive só no back-end** (totais, saldo, posição nos fechamentos, parcelas, carga do mês, saldo próprio, porcentagens). O front apenas exibe o que a API devolve e nunca recalcula valores. Como back (Java) e front (TypeScript) não compartilham código, o "pacote de regras compartilhado" do PDF vira o pacote Java `br.com.nize.rules`, puro (sem Spring, sem JPA), testado antes do código.
@@ -300,6 +300,17 @@ Limite de tentativas (REQ-047): os quatro `POST /api/auth/**` devolvem 429 `{cod
 
 Navegação: menu lateral (≥ 768px) e barra inferior (< 768px) — REQ-043. Mês padrão (`/`, menu "Mês" e "Panorama"): o mês do calendário dentro do ano vigente da usuária (nov/2026 com ano vigente 2027 → `2027-11`; `lib/month.defaultMonth`) — REQ-006, decisão da usuária 2026-11-04. Identidade visual própria "Verde Nize", modo claro/escuro com seletor de tema ao lado do idioma (D-20) — REQ-045. Link "Pular para o conteúdo" no topo; ações com área de toque ≥ 44px.
 
+Layout da tela do mês (REQ-041, D-20; aprovado pela usuária em 2026-11-05): uma faixa de topo com o saldo do mês primeiro e maior, os outros totais numa linha logo abaixo (entradas, gastos, fixos) e, com os fechamentos ligados, uma lista simples com o total de cada intervalo ("Do dia A ao B" e "Sobram/Faltam R$ X"), sem barra nem marca de hoje (decisão da usuária 2026-11-05). Com os fechamentos desligados a lista não aparece. As listas (Fixos, Cartão, Entradas) ficam numa só superfície, em estilo de livro-caixa: o dia do lançamento em destaque à esquerda de cada linha. Os resumos ficam numa superfície verde suave, com uma barra fina por categoria do tamanho da porcentagem que a API devolveu. Só os tokens de cor existentes; fonte do sistema.
+
+Layout das demais telas (D-20; aprovado pela usuária em 2026-11-05), no mesmo estilo da tela do mês (título grande, uma superfície por bloco, linhas de livro-caixa, só os tokens de cor, fonte do sistema):
+- **Base comum**: classes de botão (primário, secundário, perigo, ícone) e de campo em `lib/ui.ts`, usadas por todas as telas.
+- **Menu**: tema por um botão que alterna Claro/Escuro no lugar da lista (rótulo fixo "Tema escuro" com `aria-pressed`, ligado no escuro); idioma com rótulo curto (PT/EN) no cabeçalho do celular. Continua gravando `nize.theme`.
+- **Cadastros** (`CatalogManager`): uma superfície com linhas; ações por ícone (editar, desativar/reativar, excluir) com rótulo acessível; nos cartões o dia de vencimento em destaque à esquerda; inativos num grupo "Inativos" no fim.
+- **Configurações**: cada opção numa linha (título e ajuda à esquerda, controle à direita); dias de fechamento só com os fechamentos ligados; "Novo ano" num bloco separado.
+- **Panorama**: gráfico mais leve (barras finas, mês atual destacado no eixo); a tabela vira lista de livro-caixa (mês, entradas, gastos, saldo com seta), a linha abre o mês; meses depois do mês atual aparecem esmaecidos. Sem total do ano (a API não devolve; o front não soma).
+- **Janelas** (`Dialog`): abaixo de 640px sobem de baixo, na largura toda; a partir de 640px, centralizadas; botões Cancelar/Salvar no fim.
+- **Entrar/criar conta/recuperar senha** (`AuthLayout`): a partir de 768px, tela dividida com um painel verde suave (logotipo, slogan e 3 frases sobre o Nize) e o formulário; no celular, o formulário direto na página.
+
 ## File Structure
 ```
 nize/
@@ -349,7 +360,7 @@ nize/
         testes pages/month.test.tsx, lib/month.test.ts
         panorama (Phase 7): pages/OverviewPage.tsx, components/OverviewChart.tsx (Recharts, carregado sob demanda),
         api/overviewApi.ts, pages/overview.test.tsx
-        identidade (D-20): components/Logo.tsx, components/ThemeSwitcher.tsx, lib/theme.ts, lib/theme.test.ts
+        identidade (D-20): components/Logo.tsx, components/ThemeSwitcher.tsx, lib/theme.ts, lib/theme.test.ts, lib/ui.ts (classes comuns de botão e campo, 0.2.9)
 ```
 groupId `br.com.nize`, artifactId `nize-backend`, pacote raiz `br.com.nize`.
 
@@ -405,6 +416,8 @@ GitHub Actions (detalhes em `docs/ci-cd.md`; NFR-010). **Um workflow por tema**,
 | 0.1.7 | 2026-11-01 | Fixo pode ser no crédito (tipo e forma de pagamento independentes); regras de consistência do lançamento; Open Questions da Phase 3 resolvidas |
 | 0.1.8 | 2026-11-01 | `month` reservado no H2: coluna `month_ref`; data do lançamento `expense_date` |
 | 0.1.9 | 2026-11-01 | Carga do mês: continua parcelas à mão (grupo próprio) e respeita a permissão de parcelas automáticas |
+| 0.2.9 | 2026-11-05 | Layout das demais telas (menu, cadastros, configurações, panorama, janelas, entrar) no estilo da tela do mês; tema por botão que alterna; `lib/ui.ts` (aprovado pela usuária) |
+| 0.2.8 | 2026-11-05 | Layout da tela do mês: saldo em destaque com totais numa linha, lista simples com o total de cada fechamento (a régua proposta foi descartada pela usuária), listas em estilo livro-caixa, resumos com barra por categoria (aprovado pela usuária) |
 | 0.2.7 | 2026-11-05 | D-20: identidade Verde Nize (tokens claro/escuro, logotipo de `logoPadrao` com variante para fundo escuro, seletor de tema Claro/Escuro); arquivos novos na File Structure |
 | 0.2.6 | 2026-11-04 | Posições por intervalo entre fechamentos, sem acumular; último intervalo até o fim do mês; JSON `{fromDay, toDay, balanceCents}`; tela "Do dia A ao B" (REQ-030, decisão da usuária) |
 | 0.2.5 | 2026-11-04 | Panorama faz a carga dos meses até o vigente (D-19); Open Questions da Phase 8 resolvidas (JUnit 5, NFR-007 confirmada); Maven 3.10.0; mês padrão no ano vigente (REQ-006); arquivos das Phases 6–8 na File Structure |

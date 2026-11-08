@@ -30,8 +30,10 @@ describe('categories screen (REQ-011, REQ-012)', () => {
     expect(await screen.findByText('Mercado')).toBeInTheDocument()
     expect(screen.getByText('Descrição de Mercado')).toBeInTheDocument()
     expect(screen.getByText('Lazer')).toBeInTheDocument()
-    expect(screen.getByText('Inativa')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Reativar' })).toBeInTheDocument()
+    const inactive = screen.getByRole('region', { name: 'Inativas' })
+    expect(within(inactive).getByText('Lazer')).toBeInTheDocument()
+    expect(within(inactive).queryByText('Mercado')).not.toBeInTheDocument()
+    expect(within(inactive).getByRole('button', { name: 'Reativar Lazer' })).toBeInTheDocument()
   })
 
   it('creates a category and shows it in the list', async () => {
@@ -80,7 +82,7 @@ describe('categories screen (REQ-011, REQ-012)', () => {
       'PUT /api/categories/1': { body: category(1, 'Feira', false) },
     })
     renderApp('/categories', { signedIn: true })
-    await userEvent.click(await screen.findByRole('button', { name: 'Editar' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar Mercado' }))
     const dialog = await screen.findByRole('dialog', { name: 'Editar categoria' })
     const name = within(dialog).getByLabelText('Nome')
     await userEvent.clear(name)
@@ -100,7 +102,7 @@ describe('categories screen (REQ-011, REQ-012)', () => {
       'PUT /api/categories/1': { body: category(1, 'Mercado', false) },
     })
     renderApp('/categories', { signedIn: true })
-    await userEvent.click(await screen.findByRole('button', { name: 'Desativar' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Desativar Mercado' }))
 
     await waitFor(() => expect(calls.some((c) => c.key === 'PUT /api/categories/1')).toBe(true))
     expect(calls.find((c) => c.key === 'PUT /api/categories/1')?.body).toMatchObject({ name: 'Mercado', active: false })
@@ -114,7 +116,7 @@ describe('categories screen (REQ-011, REQ-012)', () => {
     }
     const calls = stubApi(replies)
     renderApp('/categories', { signedIn: true })
-    await userEvent.click(await screen.findByRole('button', { name: 'Excluir' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Excluir Mercado' }))
     const dialog = await screen.findByRole('dialog', { name: 'Excluir categoria' })
     replies['GET /api/years/2026/categories'] = { body: [] }
     await userEvent.click(within(dialog).getByRole('button', { name: 'Excluir' }))
@@ -131,7 +133,7 @@ describe('categories screen (REQ-011, REQ-012)', () => {
       'DELETE /api/categories/1': { status: 409, body: { code: 'CATEGORY_IN_USE', fields: {}, count: 3 } },
     })
     const router = renderApp('/categories', { signedIn: true })
-    await userEvent.click(await screen.findByRole('button', { name: 'Excluir' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Excluir Mercado' }))
     await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Excluir' }))
 
     const dialog = await screen.findByRole('dialog', { name: 'Categoria em uso' })
@@ -142,7 +144,7 @@ describe('categories screen (REQ-011, REQ-012)', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(screen.getByText('Mercado')).toBeInTheDocument()
 
-    await userEvent.click(screen.getByRole('button', { name: 'Excluir' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Excluir Mercado' }))
     await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Excluir' }))
     await userEvent.click(within(await screen.findByRole('dialog', { name: 'Categoria em uso' })).getByRole('button', { name: 'Alterar lançamentos' }))
     await waitFor(() => expect(router.state.location.pathname).toMatch(/^\/month\//))
@@ -155,7 +157,7 @@ describe('categories screen (REQ-011, REQ-012)', () => {
       'DELETE /api/categories/1': { status: 409, body: { code: 'CATEGORY_IN_USE', fields: {}, count: 1 } },
     })
     renderApp('/categories', { signedIn: true })
-    await userEvent.click(await screen.findByRole('button', { name: 'Excluir' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Excluir Mercado' }))
     await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Excluir' }))
     expect(await screen.findByRole('dialog', { name: 'Categoria em uso' })).toHaveTextContent('tem 1 lançamento e não')
   })
@@ -246,9 +248,9 @@ describe('people screen (REQ-014)', () => {
 
     expect(await screen.findByText('Mainha')).toBeInTheDocument()
     expect(calls.find((c) => c.key === 'POST /api/years/2026/people')?.body).toEqual({ name: 'Mainha' })
-    expect(screen.queryByRole('button', { name: 'Excluir' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Excluir/ })).not.toBeInTheDocument()
 
-    await userEvent.click(screen.getByRole('button', { name: 'Desativar' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Desativar Mainha' }))
     await waitFor(() => expect(calls.some((c) => c.key === 'PUT /api/people/1')).toBe(true))
     expect(calls.find((c) => c.key === 'PUT /api/people/1')?.body).toEqual({ name: 'Mainha', active: false })
   })
