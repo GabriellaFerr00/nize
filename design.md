@@ -280,9 +280,9 @@ REST JSON sob `/api`. Todos os endpoints exceto `/api/auth/**` exigem `Authoriza
 | POST | /api/meses/{aaaa-mm}/lancamentos | sim | REQ-015..020 | cria gasto; gera parcelas se `gerarParcelas` e permissão ligada |
 | PUT | /api/lancamentos/{id} | sim | REQ-023 | edita |
 | PATCH | /api/lancamentos/{id}/pago | sim | REQ-015, REQ-033 | marca/desmarca pago |
-| DELETE | /api/lancamentos/{id} | sim | REQ-023 | exclui |
+| DELETE | /api/lancamentos/{id} | sim | REQ-023, REQ-050 | exclui (204). Parcela: `?scope=this` (padrão) só ela; `?scope=following` ela e as de número maior do mesmo `installment_group_id` (meses seguintes). Com `this`, se a parcela seguinte ainda não existe e o mês seguinte ainda não foi carregado (parcelas automáticas ligadas), ela é criada na hora no mês seguinte, para a carga não perder a sequência |
 | POST | /api/meses/{aaaa-mm}/entradas | sim | REQ-024..026 | cria entrada (parcelada ou reembolso) |
-| PUT/DELETE | /api/entradas/{id} | sim | REQ-023 | edita / exclui |
+| PUT/DELETE | /api/entradas/{id} | sim | REQ-023, REQ-050 | edita / exclui; `scope` como em lançamentos |
 | GET | /api/anos/{ano}/panorama | sim | REQ-039 | `GET /api/years/{year}/overview` → `{year, months: [{month, totalExpensesCents, totalIncomeCents, balanceCents}]}` (12 meses, janeiro primeiro; mesma regra `MonthTotals` do mês); faz a carga dos meses até o vigente (D-19); ano que a usuária não tem → 404 |
 | GET | /actuator/health | não | D-18 | `{"status":"UP"}`; usado pelo Docker e pelo smoke test |
 

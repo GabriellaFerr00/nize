@@ -351,6 +351,46 @@ describe('month lists (TASK-040: REQ-015, REQ-016, REQ-021, REQ-023, REQ-024)', 
     expect(within(dialog).getByLabelText('Reembolso de (pessoa)')).toHaveValue('8')
   })
 
+  it('an installment asks: only this one (default) or this one and the next ones (TASK-066, REQ-050)', async () => {
+    const replies = baseReplies()
+    replies['DELETE /api/expenses/12'] = { status: 204 }
+    replies['DELETE /api/expenses/12?scope=following'] = { status: 204 }
+    const { calls } = await openMonth(replies)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Excluir Sofá' }))
+    let dialog = await screen.findByRole('dialog', { name: 'Excluir' })
+    expect(within(dialog).getByRole('radio', { name: 'Só esta parcela (7/12)' })).toBeChecked()
+    expect(within(dialog).getByRole('radio', { name: 'Esta e as próximas (7/12 até 12/12)' })).not.toBeChecked()
+    // just confirming deletes only this one
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Excluir' }))
+    await waitFor(() => expect(sent(calls, 'DELETE /api/expenses/12')).toHaveLength(1))
+
+    await userEvent.click(screen.getByRole('button', { name: 'Excluir Sofá' }))
+    dialog = await screen.findByRole('dialog', { name: 'Excluir' })
+    // the choice starts over at "only this one" every time
+    expect(within(dialog).getByRole('radio', { name: 'Só esta parcela (7/12)' })).toBeChecked()
+    await userEvent.click(within(dialog).getByRole('radio', { name: 'Esta e as próximas (7/12 até 12/12)' }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Excluir' }))
+    await waitFor(() => expect(sent(calls, 'DELETE /api/expenses/12?scope=following')).toHaveLength(1))
+  })
+
+  it('an income in installments offers the same choice; a single entry does not', async () => {
+    const replies = baseReplies()
+    replies['DELETE /api/incomes/22?scope=following'] = { status: 204 }
+    const { calls } = await openMonth(replies)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Excluir Aluguel' }))
+    let dialog = await screen.findByRole('dialog', { name: 'Excluir' })
+    expect(within(dialog).queryByRole('radio')).not.toBeInTheDocument()
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }))
+
+    await userEvent.click(screen.getByRole('button', { name: 'Excluir Devolução' }))
+    dialog = await screen.findByRole('dialog', { name: 'Excluir' })
+    await userEvent.click(within(dialog).getByRole('radio', { name: 'Esta e as próximas (1/3 até 3/3)' }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Excluir' }))
+    await waitFor(() => expect(sent(calls, 'DELETE /api/incomes/22?scope=following')).toHaveLength(1))
+  })
+
   it('deletes an expense after confirming and the list updates at once', async () => {
     const replies = baseReplies()
     replies['DELETE /api/expenses/13'] = { status: 204 }

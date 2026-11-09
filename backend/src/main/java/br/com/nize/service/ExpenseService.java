@@ -53,10 +53,11 @@ public class ExpenseService {
     private final UserYearRepository years;
     private final YearService yearService;
     private final YearGuard yearGuard;
+    private final MonthLoadService monthLoad;
 
     public ExpenseService(ExpenseRepository expenses, CategoryRepository categories, CardRepository cards,
                           PersonRepository people, SettingsRepository settings, UserYearRepository years,
-                          YearService yearService, YearGuard yearGuard) {
+                          YearService yearService, YearGuard yearGuard, MonthLoadService monthLoad) {
         this.expenses = expenses;
         this.categories = categories;
         this.cards = cards;
@@ -65,6 +66,7 @@ public class ExpenseService {
         this.years = years;
         this.yearService = yearService;
         this.yearGuard = yearGuard;
+        this.monthLoad = monthLoad;
     }
 
     /**
@@ -268,7 +270,18 @@ public class ExpenseService {
     }
 
     @Transactional
-    public void delete(Long userId, Long id) {
-        expenses.delete(expenses.findByIdAndUserId(id, userId).orElseThrow(ResourceNotFoundException::new));
+    public void delete(Long userId, Long id, DeleteScope scope) {
+        Expense expense = expenses.findByIdAndUserId(id, userId).orElseThrow(ResourceNotFoundException::new);
+        String group = expense.getInstallmentGroupId();
+        Integer number = expense.getInstallmentNumber();
+        if (scope == DeleteScope.FOLLOWING && group != null && number != null) {
+            // this installment and the ones after it (later months) of the same purchase (REQ-050)
+            expenses.deleteAll(expenses.findByUserIdAndInstallmentGroupIdIn(userId, List.of(group)).stream()
+                    .filter(e -> e.getInstallmentNumber() != null && e.getInstallmentNumber() >= number)
+                    .toList());
+            return;
+        }
+        expenses.delete(expense);
+        monthLoad.keepInstallmentsComing(userId, expense);
     }
 }

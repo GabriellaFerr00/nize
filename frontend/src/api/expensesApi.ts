@@ -62,4 +62,8 @@ export const updateExpense = (id: number, expense: ExpenseEdit) =>
 export const setExpensePaid = (id: number, paid: boolean) =>
   apiRequest<Expense>(`/expenses/${id}/paid`, { method: 'PATCH', body: { paid } })
 
-export const deleteExpense = (id: number) => apiRequest(`/expenses/${id}`, { method: 'DELETE' })
+/** What deleting an installment removes (REQ-050): only it, or it and the next ones of the same purchase. */
+export type DeleteScope = 'this' | 'following'
+
+export const deleteExpense = (id: number, scope: DeleteScope = 'this') =>
+  apiRequest(scope === 'following' ? `/expenses/${id}?scope=following` : `/expenses/${id}`, { method: 'DELETE' })

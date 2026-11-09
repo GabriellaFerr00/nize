@@ -257,8 +257,9 @@ Nomes em inglês: ver "Nomenclatura em inglês" em `design.md` (os termos em por
 - [x] **TASK-065** [REQ-049]: Ocultar valores (olho), lembrado no navegador, em todas as telas.
   - _Verify_: testes de `Money` e do botão; nenhum valor legível com os valores ocultos.
   - _Feito_: `lib/privacy.ts` (localStorage `nize.hideValues`, evento para todos os controles), `ValuesToggle` (olho / olho riscado) no menu lateral e no cabeçalho do celular, `Money` mostra "R$ ••••" (leitor de tela: "valor oculto"), eixo e dica do gráfico com "••••"; 2 testes em `month.test.tsx`.
-- [ ] **TASK-066** [REQ-050]: Excluir parcela: "só esta" ou "esta e as próximas" (gastos e entradas); a carga não recria as excluídas.
+- [x] **TASK-066** [REQ-050]: Excluir parcela: "só esta" ou "esta e as próximas" (gastos e entradas); a carga não recria as excluídas.
   - _Verify_: testes de regra/serviço e de API (4/10 → apaga 4..10 e a carga de meses seguintes não cria 5..10) e de tela.
+  - _Feito_: `DELETE /api/expenses|incomes/{id}?scope=this|following` (`DeleteScope`); "só esta" com o mês seguinte ainda não aberto cria a próxima parcela na hora (`MonthLoadService.keepInstallmentsComing`), para a sequência lançada à mão continuar; não cria ano novo. `ExpenseInstallmentDeleteTest` (13 testes); janela com a escolha na tela do mês (2 testes).
 - [ ] **TASK-067** [REQ-015, REQ-016]: Cartão obrigatório no crédito (novo e editado) e criar cartão no formulário de lançamento.
   - _Verify_: testes de API (crédito sem cartão → 400; antigo sem cartão continua listado e no "Sem cartão") e de tela.
 - [ ] **TASK-068** [REQ-051]: Limite mensal opcional por categoria, aviso a 80% e acima de 100% sem bloquear; "usado de limite" no resumo.

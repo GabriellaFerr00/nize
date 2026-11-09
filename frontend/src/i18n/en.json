@@ -331,6 +331,11 @@
     "delete": "Delete {{name}}",
     "deleteTitle": "Delete",
     "deleteQuestion": "Delete \"{{name}}\"? This cannot be undone.",
+    "deleteScope": {
+      "title": "What to delete",
+      "this": "Only this installment ({{number}}/{{count}})",
+      "following": "This one and the next ones ({{number}}/{{count}} to {{count}}/{{count}})"
+    },
     "summary": {
       "title": "Summaries",
       "show": "Show",

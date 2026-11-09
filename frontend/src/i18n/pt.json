@@ -331,6 +331,11 @@
     "delete": "Excluir {{name}}",
     "deleteTitle": "Excluir",
     "deleteQuestion": "Excluir \"{{name}}\"? Isso não pode ser desfeito.",
+    "deleteScope": {
+      "title": "O que excluir",
+      "this": "Só esta parcela ({{number}}/{{count}})",
+      "following": "Esta e as próximas ({{number}}/{{count}} até {{count}}/{{count}})"
+    },
     "summary": {
       "title": "Resumos",
       "show": "Mostrar",
