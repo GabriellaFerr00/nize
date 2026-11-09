@@ -417,7 +417,7 @@ GitHub Actions (detalhes em `docs/ci-cd.md`; NFR-010). **Um workflow por tema**,
 | 0.1.7 | 2026-11-01 | Fixo pode ser no crédito (tipo e forma de pagamento independentes); regras de consistência do lançamento; Open Questions da Phase 3 resolvidas |
 | 0.1.8 | 2026-11-01 | `month` reservado no H2: coluna `month_ref`; data do lançamento `expense_date` |
 | 0.1.9 | 2026-11-01 | Carga do mês: continua parcelas à mão (grupo próprio) e respeita a permissão de parcelas automáticas |
-| 0.3.0 | 2026-11-09 | Dinheiro em `DECIMAL(12,2)` no banco (V7: `expense.amount`, `income.amount`), `MoneyColumnConverter`; centavos no resto (D-2, NFR-001). `DELETE /api/cards/{id}` (REQ-013). Pedidos da usuária |
+| 0.3.0 | 2026-11-09 | Front: `lib/privacy.ts` + `ValuesToggle` (REQ-049, olho ao lado do tema), ícone sol/lua no `ThemeSwitcher` (REQ-045). Dinheiro em `DECIMAL(12,2)` no banco (V7: `expense.amount`, `income.amount`), `MoneyColumnConverter`; centavos no resto (D-2, NFR-001). `DELETE /api/cards/{id}` (REQ-013). Pedidos da usuária |
 | 0.2.10 | 2026-11-09 | Posição = só a soma dos gastos do intervalo (sem entradas); JSON `{fromDay, toDay, totalExpensesCents}`; tela "Gastos R$ X" sem sobra/falta (REQ-030 0.1.9, decisão da usuária) |
 | 0.2.9 | 2026-11-05 | Layout das demais telas (menu, cadastros, configurações, panorama, janelas, entrar) no estilo da tela do mês; tema por botão que alterna; `lib/ui.ts` (aprovado pela usuária) |
 | 0.2.8 | 2026-11-05 | Layout da tela do mês: saldo em destaque com totais numa linha, lista simples com o total de cada fechamento (a régua proposta foi descartada pela usuária), listas em estilo livro-caixa, resumos com barra por categoria (aprovado pela usuária) |

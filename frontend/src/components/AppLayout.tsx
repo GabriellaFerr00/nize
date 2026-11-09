@@ -8,6 +8,7 @@ import { LanguageSwitcher } from './LanguageSwitcher'
 import { Logo } from './Logo'
 import { OnboardingModal } from './OnboardingModal'
 import { ThemeSwitcher } from './ThemeSwitcher'
+import { ValuesToggle } from './ValuesToggle'
 
 type NavItem = {
   key: string
@@ -69,6 +70,7 @@ export function AppLayout() {
           ))}
         </nav>
         <div className="flex flex-col gap-1 border-t border-line pt-4">
+          <ValuesToggle showLabel />
           <ThemeSwitcher showLabel />
           <div className="px-3">
             <LanguageSwitcher />
@@ -89,6 +91,7 @@ export function AppLayout() {
           <Logo size="sm" />
         </Link>
         <div className="flex min-w-0 items-center gap-1 sm:gap-1.5">
+          <ValuesToggle />
           <ThemeSwitcher />
           <LanguageSwitcher compact />
           <button

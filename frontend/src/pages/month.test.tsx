@@ -196,6 +196,39 @@ describe('month screen header and navigation (TASK-039: REQ-041, REQ-040)', () =
   })
 })
 
+describe('hide values (TASK-065: REQ-049)', () => {
+  it('the eye hides every amount, is remembered, and shows them again', async () => {
+    await openMonth()
+    const header = screen.getByText('Total de gastos').closest('dl') as HTMLElement
+    const balance = () => within(header).getByText('Saldo do mês').nextSibling
+    const eye = screen.getAllByRole('button', { name: 'Ocultar valores' })[0]
+    expect(eye).toHaveAttribute('aria-pressed', 'false')
+    expect(balance()).toHaveTextContent('R$ 680,70')
+
+    await userEvent.click(eye)
+
+    expect(eye).toHaveAttribute('aria-pressed', 'true')
+    // every control on screen follows the same choice
+    expect(screen.getAllByRole('button', { name: 'Ocultar valores' })[1]).toHaveAttribute('aria-pressed', 'true')
+    expect(localStorage.getItem('nize.hideValues')).toBe('true')
+    const main = document.body.textContent ?? ''
+    for (const amount of ['680,70', '5.942,88', '993,99', '6.623,58', '1.200,00']) expect(main).not.toContain(amount)
+    expect(balance()).toHaveTextContent('R$ ••••')
+    expect(balance()).toHaveTextContent('valor oculto')
+
+    await userEvent.click(eye)
+    expect(balance()).toHaveTextContent('R$ 680,70')
+    expect(localStorage.getItem('nize.hideValues')).toBe('false')
+  })
+
+  it('opens with the values hidden when that was the last choice', async () => {
+    localStorage.setItem('nize.hideValues', 'true')
+    await openMonth()
+    expect(screen.getByText('Total de gastos').nextSibling).toHaveTextContent('R$ ••••')
+    expect(document.body.textContent).not.toContain('5.942,88')
+  })
+})
+
 describe('month lists (TASK-040: REQ-015, REQ-016, REQ-021, REQ-023, REQ-024)', () => {
   it('splits fixed, card and income entries, with names of category, card and person and the N/M indicator', async () => {
     await openMonth()

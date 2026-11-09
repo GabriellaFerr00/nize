@@ -254,8 +254,9 @@ Nomes em inglês: ver "Nomenclatura em inglês" em `design.md` (os termos em por
 - [x] **TASK-064** [REQ-045]: Botão de tema com sol (no escuro) e lua (no claro).
   - _Verify_: teste do `ThemeSwitcher`.
   - _Feito_: `ThemeSwitcher` troca `Moon`/`Sun` (lucide) conforme o tema; teste em `AppLayout.test.tsx`.
-- [ ] **TASK-065** [REQ-049]: Ocultar valores (olho), lembrado no navegador, em todas as telas.
+- [x] **TASK-065** [REQ-049]: Ocultar valores (olho), lembrado no navegador, em todas as telas.
   - _Verify_: testes de `Money` e do botão; nenhum valor legível com os valores ocultos.
+  - _Feito_: `lib/privacy.ts` (localStorage `nize.hideValues`, evento para todos os controles), `ValuesToggle` (olho / olho riscado) no menu lateral e no cabeçalho do celular, `Money` mostra "R$ ••••" (leitor de tela: "valor oculto"), eixo e dica do gráfico com "••••"; 2 testes em `month.test.tsx`.
 - [ ] **TASK-066** [REQ-050]: Excluir parcela: "só esta" ou "esta e as próximas" (gastos e entradas); a carga não recria as excluídas.
   - _Verify_: testes de regra/serviço e de API (4/10 → apaga 4..10 e a carga de meses seguintes não cria 5..10) e de tela.
 - [ ] **TASK-067** [REQ-015, REQ-016]: Cartão obrigatório no crédito (novo e editado) e criar cartão no formulário de lançamento.

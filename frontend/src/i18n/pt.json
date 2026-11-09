@@ -25,6 +25,10 @@
   "theme": {
     "darkMode": "Tema escuro"
   },
+  "privacy": {
+    "hideValues": "Ocultar valores",
+    "hidden": "valor oculto"
+  },
   "pages": {
     "month": "Mês",
     "overview": "Panorama anual",
