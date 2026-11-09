@@ -111,10 +111,11 @@ class MonthApiTest extends IsolationTestBase {
 
         month(userA, APRIL.toString())
                 .andExpect(jsonPath("$.positions[0].toDay").value(15))
-                .andExpect(jsonPath("$.positions[0].balanceCents").value(230_000))
-                // 16–30 only: 50000 − 360000, without the first interval (REQ-030)
+                // 1–15: Pix of the 12th + card due on the 10th; incomes do not count (REQ-030)
+                .andExpect(jsonPath("$.positions[0].totalExpensesCents").value(70_000))
+                // 16–30 only, without the first interval
                 .andExpect(jsonPath("$.positions[1].fromDay").value(16))
-                .andExpect(jsonPath("$.positions[1].balanceCents").value(-310_000));
+                .andExpect(jsonPath("$.positions[1].totalExpensesCents").value(360_000));
     }
 
     @Test
@@ -142,11 +143,11 @@ class MonthApiTest extends IsolationTestBase {
 
         month(userA, APRIL.toString())
                 .andExpect(jsonPath("$.positions", hasSize(3)))
-                .andExpect(jsonPath("$.positions[0].balanceCents").value(100_000))   // 1–5
-                .andExpect(jsonPath("$.positions[1].balanceCents").value(-10_000))   // 6–10
+                .andExpect(jsonPath("$.positions[0].totalExpensesCents").value(0))        // 1–5 (only an income)
+                .andExpect(jsonPath("$.positions[1].totalExpensesCents").value(10_000))   // 6–10
                 .andExpect(jsonPath("$.positions[2].fromDay").value(11))             // 11–end of the month
                 .andExpect(jsonPath("$.positions[2].toDay").value(30))
-                .andExpect(jsonPath("$.positions[2].balanceCents").value(0));
+                .andExpect(jsonPath("$.positions[2].totalExpensesCents").value(0));
 
         as(userA, put("/api/settings").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"currentYear\":%d,\"autoInstallments\":true,\"closingsEnabled\":false}".formatted(YEAR)))

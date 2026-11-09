@@ -17,7 +17,8 @@ export type MonthTotals = {
  * What is left (positive) or missing (negative) in one interval between closings, from `fromDay` to `toDay`; each
  * interval counts only its own days and the last one ends on the month's last day (REQ-030).
  */
-export type Position = { fromDay: number; toDay: number; balanceCents: number }
+/** Sum of the expenses from fromDay to toDay (REQ-030). */
+export type Position = { fromDay: number; toDay: number; totalExpensesCents: number }
 
 /** `cardId` null is the "no card" group (REQ-037). */
 export type CardEntry = { cardId: number | null; cardName: string | null; amountCents: number }

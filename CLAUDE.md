@@ -1,10 +1,10 @@
 # CLAUDE.md
-> Nize — Spec version 0.2.9
+> Nize — Spec version 0.2.10
 
 ═══════════════════════════════════════════════════════════
 SPEC DRIVEN DEVELOPMENT — PROJECT CONSTITUTION
 Project: Nize
-Version: 0.2.9
+Version: 0.2.10
 ═══════════════════════════════════════════════════════════
 
 This project uses Spec Driven Development. All work is
@@ -47,7 +47,7 @@ DIVERGENCE PROTOCOL:
 - Atualizar `CONTEXT.md` ao fim de cada sessão de trabalho.
 
 ## Projeto
-- **O que é**: app web de finanças pessoais mensais (gastos fixos e de cartão, entradas, saldo, posição até o dia 15/30). Não conecta a bancos nem executa Pix.
+- **O que é**: app web de finanças pessoais mensais (gastos fixos e de cartão, entradas, saldo, gastos por intervalo entre fechamentos). Não conecta a bancos nem executa Pix.
 - **Stack**: back-end Java 25 + Spring Boot 4.0.9 + Maven (`backend/`, via `./mvnw`); front-end React 19 + TypeScript + Vite + Tailwind 4 + TanStack Query + i18next (`frontend/`); banco MySQL 8.4 local (perfil `local`) e H2 em memória (perfil `h2`); Flyway.
 - **Deploy**: provisório e gratuito para testes (Render + Vercel/Netlify/Cloudflare Pages).
 - **Estrutura**: monorepo; `backend/` e `frontend/` independentes (ver "File Structure" em `design.md`). Pacote Java raiz `br.com.nize` (`rules`, `domain`, `repository`, `service`, `api`, `security`).

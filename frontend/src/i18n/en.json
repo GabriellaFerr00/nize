@@ -117,7 +117,7 @@
     "signOut": "Sign out",
     "pitch": {
       "month": "Record fixed costs, card spending and income for each month.",
-      "closings": "See what is left or missing at each closing of the month.",
+      "closings": "See how much you spent at each closing of the month.",
       "noBank": "No bank connection: you write it down and Nize does the math."
     }
   },
@@ -126,7 +126,7 @@
     "intro": "In a few steps you start tracking your month.",
     "steps": {
       "log": "Add your fixed expenses, card expenses and income on the month screen.",
-      "position": "See your balance and what is missing or left over in each part of the month (by default: day 1 to 15 and 16 to the end).",
+      "position": "See your balance and how much you spent in each part of the month (by default: day 1 to 15 and 16 to the end).",
       "setup": "Adjust categories, cards and people whenever you like, under Categories, Cards and People."
     },
     "dismiss": "Got it"
@@ -195,7 +195,7 @@
     "createYear": "Create year",
     "yearCreated": "Year {{year}} created.",
     "closings": "Month closings",
-    "closingsHelp": "Shows on the month screen what is left or missing up to each chosen day. A day past the end of the month counts as the last day.",
+    "closingsHelp": "Shows on the month screen the sum of the expenses of each period up to the chosen day. A day past the end of the month counts as the last day.",
     "closingDays": "Closing days",
     "closingDay": "Day {{day}}",
     "lastDay": "Last day",
@@ -302,8 +302,7 @@
     "positions": {
       "title": "Closings",
       "range": "Day {{from}} to {{to}}",
-      "left": "Left",
-      "missing": "Missing"
+      "spent": "Spent"
     },
     "lists": {
       "fixed": "Fixed",

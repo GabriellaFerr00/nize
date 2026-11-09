@@ -102,7 +102,7 @@ public class MonthService {
         List<Card> yearCards = cards.findByUserIdAndYearNumberOrderByIdAsc(userId, month.getYear());
         Settings userSettings = settings.findById(userId).orElseThrow();
         List<Position> positions = userSettings.isClosingsEnabled()
-                ? positions(month, monthExpenses, monthIncomes, userSettings.getClosingDays(), yearCards)
+                ? positions(month, monthExpenses, userSettings.getClosingDays(), yearCards)
                 : List.of();
 
         return new MonthView(month.toString(), monthExpenses, monthIncomes, totals, userSettings.isClosingsEnabled(),
@@ -145,14 +145,13 @@ public class MonthService {
         return new Summaries(byCategory, new PaymentEntry(payments.pixCents(), payments.creditCents()), byCard, byPerson);
     }
 
-    private static List<Position> positions(YearMonth month, List<Expense> monthExpenses, List<Income> monthIncomes,
-                                            List<Integer> closingDays, List<Card> yearCards) {
+    private static List<Position> positions(YearMonth month, List<Expense> monthExpenses, List<Integer> closingDays,
+                                            List<Card> yearCards) {
         Map<Long, Integer> dueDayByCard = yearCards.stream().collect(Collectors.toMap(Card::getId, Card::getDueDay));
         return ClosingPositions.of(month,
                 monthExpenses.stream().map(e -> new ClosingPositions.Expense(e.getAmountCents(),
                         e.getPaymentMethod() == PaymentMethod.CREDIT ? ClosingPositions.Payment.CREDIT : ClosingPositions.Payment.PIX,
                         e.getDate(), e.getCardId() == null ? null : dueDayByCard.get(e.getCardId()))).toList(),
-                monthIncomes.stream().map(i -> new ClosingPositions.Income(i.getAmountCents(), i.getDate())).toList(),
                 closingDays);
     }
 

@@ -1,10 +1,10 @@
 # requirements.md
-> Nize — Version 0.1.8 (MVP web) — 2026-11-05
+> Nize — Version 0.1.9 (MVP web) — 2026-11-09
 
 Fonte: `Nize — Funcionalidades e escopo do MVP web.pdf` (1 nov 2026). Em caso de dúvida entre este arquivo e o PDF, pergunte antes de implementar.
 
 ## Overview
-O Nize é a versão web da planilha "Finanças 2026". A usuária lança gastos e entradas mês a mês e vê saldo, gastos por categoria e quanto falta ou sobra até o dia 15 e até o dia 30. Não conecta a bancos nem executa Pix: "Pix" e os nomes de cartão (Nubank, Bradesco etc.) são apenas rótulos de organização. O MVP cobre tudo o que a aba do mês da planilha faz, mais o panorama anual.
+O Nize é a versão web da planilha "Finanças 2026". A usuária lança gastos e entradas mês a mês e vê saldo, gastos por categoria e quanto gastou em cada intervalo entre os dias de fechamento. Não conecta a bancos nem executa Pix: "Pix" e os nomes de cartão (Nubank, Bradesco etc.) são apenas rótulos de organização. O MVP cobre tudo o que a aba do mês da planilha faz, mais o panorama anual.
 
 ## Actors
 - **Usuária**: pessoa autenticada que controla suas próprias finanças. Só ela enxerga seus dados.
@@ -13,7 +13,7 @@ O Nize é a versão web da planilha "Finanças 2026". A usuária lança gastos e
 ## Glossário
 - **Fixo**: gasto recorrente (tipo `fixo`), com marca "pago".
 - **Cartão**: gasto de crédito (tipo `cartao`), com cartão e parcelas.
-- **Posição**: entradas menos gastos com data até o dia 15 (ou até o dia 30) do mês.
+- **Posição**: soma dos gastos com data efetiva dentro de um intervalo entre fechamentos (as entradas não entram).
 - **Saldo próprio**: saldo do mês + gastos de terceiros − reembolsos de terceiros.
 - **Total de crédito**: soma dos gastos com forma de pagamento crédito (cartão ou fixo no crédito).
 - Valores em dinheiro: inteiros em centavos. Mês: texto `AAAA-MM`.
@@ -94,10 +94,10 @@ O Nize é a versão web da planilha "Finanças 2026". A usuária lança gastos e
   - _Acceptance_: o total de fixos é a soma apenas dos lançamentos de tipo `fixo`.
 - **REQ-029**: O sistema shall calcular o saldo do mês como entradas menos total de gastos.
   - _Acceptance_: entradas 662358 − gastos 594288 = 68070 centavos.
-- **REQ-030**: Com os fechamentos ligados (REQ-048), o sistema shall calcular a posição de cada intervalo entre fechamentos, sem acumular os intervalos anteriores: o primeiro vai do dia 1 até o primeiro fechamento, cada um dos seguintes vai do dia seguinte ao fechamento anterior até o seu, e o último vai até o fim do mês. Cada posição soma só as entradas e os gastos com data dentro do seu intervalo e mostra o que falta ou sobra nele.
-  - _Acceptance_: entradas 300000 e gastos 120000 do dia 1 ao 15 → sobra 180000; gastos 30000 do dia 16 ao 30 e nenhuma entrada → falta 30000 (não 150000); com fechamentos 10 e 20, os intervalos são 1–10 e 11–fim do mês.
+- **REQ-030**: Com os fechamentos ligados (REQ-048), o sistema shall calcular a posição de cada intervalo entre fechamentos, sem acumular os intervalos anteriores: o primeiro vai do dia 1 até o primeiro fechamento, cada um dos seguintes vai do dia seguinte ao fechamento anterior até o seu, e o último vai até o fim do mês. Cada posição é só a soma dos gastos com data efetiva (REQ-032) dentro do seu intervalo; as entradas não entram e não há "sobra" nem "falta".
+  - _Acceptance_: entradas 300000 e gastos 120000 do dia 1 ao 15 → 120000; gastos 30000 do dia 16 ao 30 → 30000 (não 150000); intervalo sem gastos → 0; com fechamentos 10 e 20, os intervalos são 1–10 e 11–fim do mês.
 - **REQ-031**: Um dia de fechamento além do fim do mês shall valer como o último dia do mês (o padrão 31 é sempre o último dia; 30 e 31 em fevereiro viram 28/29).
-  - _Acceptance_: entradas 350000 e gastos 380000 até o último dia → posição −30000 ("faltam R$ 300,00"); em fevereiro, o limite é o dia 28/29.
+  - _Acceptance_: com fechamentos 15 e 31 em abril, gastos 180000 no dia 30 entram no intervalo 16–30; em fevereiro, o limite é o dia 28/29.
 - **REQ-032**: O sistema shall datar gastos no Pix pela data do pagamento e gastos no crédito pelo dia de vencimento do cartão, e cada parcela shall pesar no mês em que aparece.
   - _Acceptance_: Pix de 20000 pago em 12/04 pesa até o dia 15; compra de 50000 no crédito, cartão com vencimento dia 10, lançada em abril, pesa até o dia 15 de abril e não na data da compra.
 - **REQ-033**: A marca "pago" shall ser apenas controle e não alterar totais nem posições.
@@ -177,6 +177,7 @@ O Nize é a versão web da planilha "Finanças 2026". A usuária lança gastos e
 | 0.1.1 | 2026-11-01 | REQ-046 (idioma da interface en/pt) |
 | 0.1.2 | 2026-11-01 | REQ-015: fixo pode ser pago no crédito; glossário "Total de crédito" |
 | 0.1.3 | 2026-11-01 | REQ-022: carga continua parcelas à mão e respeita a permissão |
+| 0.1.9 | 2026-11-09 | REQ-030/031: cada posição é só a soma dos gastos do intervalo (sem entradas, sem sobra/falta); decisão da usuária |
 | 0.1.8 | 2026-11-05 | REQ-045: identidade Verde Nize, modo claro/escuro com seletor de tema (pedido da usuária) |
 | 0.1.7 | 2026-11-04 | REQ-030: posição por intervalo entre fechamentos, sem acumular; o último intervalo vai até o fim do mês. Diverge do PDF (posição acumulada até 15/30); decisão da usuária |
 | 0.1.6 | 2026-11-04 | NFR-007 confirmada (p95 < 500 ms com 500 lançamentos) |

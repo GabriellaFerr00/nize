@@ -23,8 +23,8 @@ const november = (): MonthView => ({
   },
   closingsEnabled: true,
   positions: [
-    { fromDay: 1, toDay: 15, balanceCents: 180_000 },
-    { fromDay: 16, toDay: 30, balanceCents: -30_000 },
+    { fromDay: 1, toDay: 15, totalExpensesCents: 120_000 },
+    { fromDay: 16, toDay: 30, totalExpensesCents: 30_000 },
   ],
   summaries: {
     byCategory: [
@@ -118,8 +118,8 @@ describe('month screen header and navigation (TASK-039: REQ-041, REQ-040)', () =
     expect(within(header).getByText('Saldo do mês').nextSibling).toHaveTextContent('R$ 680,70')
 
     const positions = section('Fechamentos')
-    expect(within(positions).getByText('Do dia 1 ao 15').closest('li')).toHaveTextContent('Sobram R$ 1.800,00')
-    expect(within(positions).getByText('Do dia 16 ao 30').closest('li')).toHaveTextContent('Faltam R$ 300,00')
+    expect(within(positions).getByText('Do dia 1 ao 15').closest('li')).toHaveTextContent('Gastos R$ 1.200,00')
+    expect(within(positions).getByText('Do dia 16 ao 30').closest('li')).toHaveTextContent('Gastos R$ 300,00')
   })
 
   it('shows no positions when the closings are turned off (REQ-048)', async () => {
@@ -240,7 +240,7 @@ describe('month lists (TASK-040: REQ-015, REQ-016, REQ-021, REQ-023, REQ-024)', 
     expect(sent(calls, 'PATCH /api/expenses/11/paid')).toEqual([{ paid: true }])
     expect(monthLoads(calls)).toBe(2)
     expect(screen.getByText('Total de gastos').nextSibling).toHaveTextContent('R$ 5.942,88')
-    expect(section('Fechamentos')).toHaveTextContent('Sobram R$ 1.800,00')
+    expect(section('Fechamentos')).toHaveTextContent('Gastos R$ 1.200,00')
   })
 
   it('reports a failure to mark paid', async () => {
@@ -524,7 +524,7 @@ describe('quick entry of income (TASK-042: REQ-042, REQ-024, REQ-026)', () => {
       await openMonth(baseReplies(), '/month/2026-11', 'Fixed')
       expect(screen.getByText('Total expenses').nextSibling).toHaveTextContent('R$ 5,942.88')
       expect(within(section('By category')).getByText('23.86%')).toBeInTheDocument()
-      expect(within(section('Closings')).getByText('Day 16 to 30').closest('li')).toHaveTextContent('Missing R$ 300.00')
+      expect(within(section('Closings')).getByText('Day 16 to 30').closest('li')).toHaveTextContent('Spent R$ 300.00')
       await userEvent.click(screen.getByRole('button', { name: 'New income' }))
       expect(await screen.findByRole('dialog', { name: 'New income' })).toBeInTheDocument()
     } finally {

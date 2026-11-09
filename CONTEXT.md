@@ -1,10 +1,10 @@
 # CONTEXT.md
 > Nize — Live session journal
-> Last updated: 2026-11-05 — Session 10
+> Last updated: 2026-11-09 — Session 11
 
 ## ⚡ Resume from here
 
-**Active task:** branch `feat/visual-identity` (TASK-062, identidade Verde Nize, D-20) pronta para revisão da usuária; sem commit ainda. Depois: TASK-049 (revisão visual, da usuária) e TASK-050 (conferir cadastro → lançamento → resumo em produção).
+**Active task:** branch `fix/closing-expenses-sum` (a partir da `main` após o PR #15): cada fechamento mostra só a soma dos gastos do intervalo (REQ-030 0.1.9, design 0.2.10); testes verdes, sem commit. Depois: TASK-049 (revisão visual, da usuária) e TASK-050.
 **Phase:** Phase 4 — TASK-030..034 e 061 [x]. Fechamentos opcionais (REQ-048, design 0.2.4): padrão 15 e 31, quantos dias quiser, liga/desliga; data do lançamento continua obrigatória.
 **Status:** Produção no ar (https://nize.pages.dev, API https://nize-api.onrender.com). `GET /api/months/{m}` abre o mês (carga) e devolve listas, totais, posições, saldo próprio e resumos (categoria com %, forma, cartão com "Sem cartão" = `cardId` null, terceiros por pessoa e cartão). Tela do mês ainda não usa esse endpoint (Phase 6).
 **Blocker (if any):** contas e segredos externos só a usuária pode criar.
@@ -20,6 +20,7 @@ Para rodar o app é preciso `export NIZE_JWT_SECRET=<>=32 bytes>` (os testes usa
 
 | # | Date | What was done | Files changed |
 |---|---|---|---|
+| 11 | 2026-11-09 | PR #15 (redesenho Verde Nize) criado, merged (`804cbd7`) e publicado no front (preview falhou 1x por cold start do Render; rerun ok). Pedido da usuária: fechamentos = só a soma dos gastos de cada intervalo (sem entradas, sem sobra/falta). `ClosingPositions.of(month, expenses, closingDays)` sem `Income`; JSON `positions[].totalExpensesCents`; tela "Gastos R$ X". 366 testes back, 144 front | ClosingPositions(+Test), MonthService, MonthResponse, MonthApiTest, PdfScenariosTest, MonthHeader, monthApi.ts, i18n, month.test.tsx, specs, docs/cobertura-cenarios.md |
 | 10c | 2026-11-05 | Redesenho das demais telas com a skill `frontend-design` (design 0.2.9, aprovado): `lib/ui.ts`, `ThemeSwitcher` virou botão `aria-pressed` "Tema escuro" (estado comum via evento em `lib/theme`), `LanguageSwitcher compact`, `CatalogManager` (ícones, "Inativos"), `SettingsPage` (linhas `Toggle`), `OverviewPage`/`OverviewChart`, `Dialog` (folha de baixo no celular), `AuthLayout` (painel + `auth.pitch`), `Money compactCurrency`. Back conferido: 366 testes verdes, nenhum impacto. Sem commit | frontend/src/**, design.md, CLAUDE.md, tasks.md |
 | 10b | 2026-11-05 | Plugin `frontend-design` instalado. Redesenho da tela do mês (design 0.2.8, aprovado; fonte do sistema mantida por escolha da usuária): `MonthHeader` (fechamentos como lista simples; a régua com "Hoje" foi descartada pela usuária), `EntryLists` (livro-caixa, `EntryLists` wrapper), `SummaryPanel` (barra por categoria), título maior; testes ajustados + 1 novo (dia da linha). Sem commit | frontend/src/components/*, pages/MonthPage.tsx, pages/month.test.tsx, i18n, design.md, CLAUDE.md, tasks.md |
 | 10 | 2026-11-05 | TASK-062 (skill `design-nize`): branch `feat/visual-identity` a partir de `fix/closing-intervals`. Identidade Verde Nize: tokens semânticos claro/escuro em `index.css` (cores padrão do Tailwind desligadas), logotipo padrão de `public/logoPadrao/` (`Logo`; `nize-logo-n-bloco-verde-*`, variante para fundo escuro gerada do original só com o "ize" em off-white; abaixo de 360px só o quadrado do "N"), favicon/apple-touch/manifesto com `public/logotipo/`, seletor de tema Claro/Escuro, sem "Sistema" por decisão da usuária (`lib/theme`, `ThemeSwitcher`; REQ-045 0.1.8); PR #12, saldo do mês em destaque, setas além da cor em saldos e entradas, toque ≥ 44px, foco 3px, "pular para o conteúdo", contornos de input ≥ 3:1. Usuária: sem botão "ocultar valores" por ora. Specs: requirements 0.1.8, design 0.2.7 (D-20) | frontend/src/**, frontend/index.html, frontend/public/site.webmanifest, specs, CLAUDE.md |
