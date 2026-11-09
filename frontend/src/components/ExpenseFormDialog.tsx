@@ -18,13 +18,12 @@ import { selectable, useRefreshMonths, useYearCatalogs } from '../lib/useMonth'
 import { Dialog } from './Dialog'
 import { FormMessage } from './FormMessage'
 import { TextField } from './TextField'
+import { field, primaryButton, quietButton, secondaryButton } from '../lib/ui'
 
 /** Without `expense` the window records a new one; with it, edits that expense (REQ-023). */
 type Props = { month: string; expense?: Expense; onClose: () => void }
 type Parceling = 'none' | 'auto' | 'manual'
 
-export const selectClass =
-  'rounded-xl border border-line-strong bg-card px-3 py-2.5 text-base text-ink'
 
 /** The "Novo lançamento" window (REQ-016..019, REQ-042): one expense, optionally in installments. */
 export function ExpenseFormDialog({ month, expense, onClose }: Props) {
@@ -149,7 +148,7 @@ export function ExpenseFormDialog({ month, expense, onClose }: Props) {
         <label className="flex flex-col gap-1 text-sm font-medium text-ink">
           {t('expense.fields.type')}
           <select
-            className={selectClass}
+            className={field}
             value={type}
             disabled={typeLocked}
             onChange={(e) => setType(e.target.value as ExpenseType)}
@@ -162,7 +161,7 @@ export function ExpenseFormDialog({ month, expense, onClose }: Props) {
         {!isCard && (
           <label className="flex flex-col gap-1 text-sm font-medium text-ink">
             {t('expense.fields.payment')}
-            <select className={selectClass} value={payment} onChange={(e) => setPayment(e.target.value as PaymentMethod)}>
+            <select className={field} value={payment} onChange={(e) => setPayment(e.target.value as PaymentMethod)}>
               <option value="PIX">{t('expense.payment.PIX')}</option>
               <option value="CREDIT">{t('expense.payment.CREDIT')}</option>
             </select>
@@ -175,7 +174,7 @@ export function ExpenseFormDialog({ month, expense, onClose }: Props) {
           </label>
           <select
             id="expense-category"
-            className={selectClass}
+            className={field}
             value={categoryId}
             aria-invalid={errors.category ? true : undefined}
             aria-describedby={errors.category ? 'expense-category-error' : undefined}
@@ -198,7 +197,7 @@ export function ExpenseFormDialog({ month, expense, onClose }: Props) {
         {usesCredit && (
           <label className="flex flex-col gap-1 text-sm font-medium text-ink">
             {t('expense.fields.card')}
-            <select className={selectClass} value={cardId} onChange={(e) => setCardId(e.target.value)}>
+            <select className={field} value={cardId} onChange={(e) => setCardId(e.target.value)}>
               <option value="">{t('expense.noCard')}</option>
               {selectable(catalogs.cards, expense?.cardId).map((c) => (
                 <option key={c.id} value={c.id}>
@@ -212,7 +211,7 @@ export function ExpenseFormDialog({ month, expense, onClose }: Props) {
         {isCard && (
           <label className="flex flex-col gap-1 text-sm font-medium text-ink">
             {t('expense.fields.person')}
-            <select className={selectClass} value={personId} onChange={(e) => setPersonId(e.target.value)}>
+            <select className={field} value={personId} onChange={(e) => setPersonId(e.target.value)}>
               <option value="">{t('expense.nobody')}</option>
               {selectable(catalogs.people, expense?.personId).map((p) => (
                 <option key={p.id} value={p.id}>
@@ -247,7 +246,7 @@ export function ExpenseFormDialog({ month, expense, onClose }: Props) {
             <legend className="px-1 text-sm font-medium text-ink">{t('expense.parceling.title')}</legend>
             <label className="flex flex-col gap-1 text-sm font-medium text-ink">
               {t('expense.parceling.mode')}
-              <select className={selectClass} value={parcelingChoice} onChange={(e) => setParceling(e.target.value as Parceling)}>
+              <select className={field} value={parcelingChoice} onChange={(e) => setParceling(e.target.value as Parceling)}>
                 <option value="none">{t('expense.parceling.none')}</option>
                 {autoAllowed && <option value="auto">{t('expense.parceling.auto')}</option>}
                 <option value="manual">{t('expense.parceling.manual')}</option>
@@ -266,7 +265,7 @@ export function ExpenseFormDialog({ month, expense, onClose }: Props) {
                 />
                 <label className="flex flex-col gap-1 text-sm font-medium text-ink">
                   {t('expense.parceling.amountIs')}
-                  <select className={selectClass} value={amountIsTotal ? 'total' : 'each'} onChange={(e) => setAmountIsTotal(e.target.value === 'total')}>
+                  <select className={field} value={amountIsTotal ? 'total' : 'each'} onChange={(e) => setAmountIsTotal(e.target.value === 'total')}>
                     <option value="total">{t('expense.parceling.total')}</option>
                     <option value="each">{t('expense.parceling.each')}</option>
                   </select>
@@ -298,8 +297,8 @@ export function ExpenseFormDialog({ month, expense, onClose }: Props) {
           </fieldset>
         )}
 
-        <div className="flex flex-wrap justify-end gap-2">
-          <button type="button" className="min-h-11 rounded-xl px-4 text-sm font-medium text-ink-soft hover:bg-soft hover:text-ink" onClick={onClose}>
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
+          <button type="button" className={quietButton} onClick={onClose}>
             {t('catalog.cancel')}
           </button>
           {!editing && (
@@ -307,7 +306,7 @@ export function ExpenseFormDialog({ month, expense, onClose }: Props) {
               type="button"
               disabled={save.isPending}
               onClick={(e) => submit(e, true)}
-              className="min-h-11 rounded-xl border border-line-strong px-4 text-sm font-medium text-ink hover:bg-soft disabled:opacity-60"
+              className={secondaryButton}
             >
               {t('expense.saveAndAnother')}
             </button>
@@ -315,7 +314,7 @@ export function ExpenseFormDialog({ month, expense, onClose }: Props) {
           <button
             type="submit"
             disabled={save.isPending}
-            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-brand px-4 text-sm font-semibold text-on-brand hover:bg-brand-hover disabled:opacity-60"
+            className={primaryButton}
           >
             {t('catalog.save')}
           </button>

@@ -61,10 +61,11 @@ describe('annual overview (REQ-039, REQ-040)', () => {
     expect(rows).toHaveLength(13) // header + 12 months
     const march = within(rows[3])
     expect(march.getByRole('link', { name: 'Abrir março' })).toBeInTheDocument()
-    expect(march.getByText('6.623,58')).toBeInTheDocument()
-    expect(march.getByText('5.942,88')).toBeInTheDocument()
-    expect(march.getByText('680,70')).toHaveClass('text-positive')
-    expect(within(rows[4]).getByText('-993,99')).toHaveClass('text-negative')
+    // income and expenses keep the "R$" for screen readers even when it is hidden on phones
+    expect(rows[3]).toHaveTextContent('R$ 6.623,58')
+    expect(rows[3]).toHaveTextContent('R$ 5.942,88')
+    expect(march.getByText('R$ 680,70')).toHaveClass('text-positive')
+    expect(within(rows[4]).getByText('-R$ 993,99')).toHaveClass('text-negative')
     expect(screen.getByRole('figure', { name: 'Gastos e entradas por mês' })).toBeInTheDocument()
   })
 
@@ -75,7 +76,7 @@ describe('annual overview (REQ-039, REQ-040)', () => {
     renderApp('/overview/2026', { signedIn: true })
 
     const january = within(within(await table()).getAllByRole('row')[1])
-    expect(january.getByText('123,45')).toBeInTheDocument()
+    expect(january.getByText('R$ 123,45')).toBeInTheDocument()
   })
 
   it('opens the month when its row is clicked', async () => {
@@ -107,7 +108,7 @@ describe('annual overview (REQ-039, REQ-040)', () => {
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/overview/2025'))
     const january = within(within(await table()).getAllByRole('row')[1])
-    expect(await january.findByText('990,00')).toBeInTheDocument()
+    expect(await january.findByText('R$ 990,00')).toBeInTheDocument()
     expect(calls.some((c) => c.key === 'GET /api/years/2025/overview')).toBe(true)
   })
 
@@ -145,6 +146,6 @@ describe('annual overview (REQ-039, REQ-040)', () => {
 
     const rows = within(await screen.findByRole('table', { name: 'Balance of each month' })).getAllByRole('row')
     expect(within(rows[3]).getByRole('link', { name: 'Open March' })).toBeInTheDocument()
-    expect(within(rows[3]).getByText('6,623.58')).toBeInTheDocument()
+    expect(rows[3]).toHaveTextContent('R$ 6,623.58')
   })
 })

@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { YearInfo } from '../api/yearsApi'
+import { compactSelect } from '../lib/ui'
 
 type Props = { years: YearInfo[]; value: number | null; onChange: (year: number) => void }
 
@@ -11,7 +12,7 @@ export function YearSelect({ years, value, onChange }: Props) {
       <select
         value={value ?? ''}
         onChange={(event) => onChange(Number(event.target.value))}
-        className="rounded-lg border border-line-strong bg-card px-2 py-1.5 text-sm text-ink"
+        className={compactSelect}
       >
         {years.map((y) => (
           <option key={y.year} value={y.year}>

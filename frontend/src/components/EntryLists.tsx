@@ -9,10 +9,13 @@ import { Money } from './Money'
 
 type ListProps = { title: string; empty: string; totalCents?: number; children: ReactNode[] }
 
-/** A titled list of the month (Fixos, Cartão, Entradas); the optional total comes from the API. */
+/**
+ * A titled list of the month (Fixos, Cartão, Entradas); the optional total comes from the API. The lists share one
+ * surface (`EntryLists`), like the pages of a ledger.
+ */
 function EntryList({ title, empty, totalCents, children }: ListProps) {
   return (
-    <section aria-label={title} className="flex min-w-0 flex-col rounded-2xl border border-line bg-card p-4 shadow-card">
+    <section aria-label={title} className="flex min-w-0 flex-col py-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-lg font-semibold text-ink">{title}</h2>
         {totalCents !== undefined && <Money cents={totalCents} className="text-sm font-semibold text-ink-soft" />}
@@ -28,6 +31,7 @@ function EntryList({ title, empty, totalCents, children }: ListProps) {
 
 type RowProps = {
   name: string
+  date: string
   details: (string | undefined)[]
   installmentLabel?: string
   cents: number
@@ -37,11 +41,16 @@ type RowProps = {
   onDelete: () => void
 }
 
-function Row({ name, details, installmentLabel, cents, tone = false, leading, onEdit, onDelete }: RowProps) {
-  const { t } = useTranslation()
+function Row({ name, date, details, installmentLabel, cents, tone = false, leading, onEdit, onDelete }: RowProps) {
+  const { t, i18n } = useTranslation()
   return (
     <li className="flex items-start gap-3 py-3">
       {leading}
+      {/* the day leads the row (ledger style); screen readers get the full date */}
+      <time dateTime={date} className="w-7 shrink-0 text-lg leading-6 font-semibold text-ink tabular-nums">
+        <span aria-hidden>{date.slice(8)}</span>
+        <span className="sr-only">{formatDay(date, i18n.language)}</span>
+      </time>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <div className="flex min-w-0 items-baseline justify-between gap-2">
           <p className="flex min-w-0 items-center gap-2">
@@ -102,7 +111,7 @@ type ExpenseListProps = {
 
 /** Fixos or Cartão of the month (REQ-015/016): paid mark on fixed ones, N/M indicator (REQ-021), edit and delete. */
 export function ExpenseList({ kind, expenses, catalogs, totalCents, onTogglePaid, onEdit, onDelete }: ExpenseListProps) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const fixed = kind === 'FIXED'
   return (
     <EntryList
@@ -119,8 +128,8 @@ export function ExpenseList({ kind, expenses, catalogs, totalCents, onTogglePaid
             name={e.name}
             installmentLabel={e.installmentLabel}
             cents={e.amountCents}
+            date={e.date}
             details={[
-              formatDay(e.date, i18n.language),
               catalogs.name('categories', e.categoryId),
               fixed ? t(`expense.payment.${e.paymentMethod}`) : undefined,
               card,
@@ -160,7 +169,7 @@ type IncomeListProps = {
 
 /** Entradas of the month (REQ-024..026), reimbursements show who paid back. */
 export function IncomeList({ incomes, catalogs, totalCents, onEdit, onDelete }: IncomeListProps) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   return (
     <EntryList title={t('month.lists.income')} empty={t('month.lists.incomeEmpty')} totalCents={totalCents}>
       {incomes.map((i) => {
@@ -172,8 +181,8 @@ export function IncomeList({ incomes, catalogs, totalCents, onEdit, onDelete }: 
             installmentLabel={i.installmentLabel}
             cents={i.amountCents}
             tone
+            date={i.date}
             details={[
-              formatDay(i.date, i18n.language),
               i.reimbursement ? t('month.reimbursementFrom', { name: person ?? '' }) : undefined,
             ]}
             onEdit={() => onEdit(i)}
@@ -182,5 +191,14 @@ export function IncomeList({ incomes, catalogs, totalCents, onEdit, onDelete }: 
         )
       })}
     </EntryList>
+  )
+}
+
+/** The one surface that holds the three lists of the month, separated by rules. */
+export function EntryLists({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex min-w-0 flex-col divide-y divide-line rounded-2xl border border-line bg-card px-4 shadow-card sm:px-5">
+      {children}
+    </div>
   )
 }

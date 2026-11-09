@@ -68,9 +68,11 @@ export function AppLayout() {
             </NavLink>
           ))}
         </nav>
-        <div className="flex flex-col gap-2">
-          <ThemeSwitcher />
-          <LanguageSwitcher />
+        <div className="flex flex-col gap-1 border-t border-line pt-4">
+          <ThemeSwitcher showLabel />
+          <div className="px-3">
+            <LanguageSwitcher />
+          </div>
         </div>
         <button
           type="button"
@@ -88,7 +90,7 @@ export function AppLayout() {
         </Link>
         <div className="flex min-w-0 items-center gap-1 sm:gap-1.5">
           <ThemeSwitcher />
-          <LanguageSwitcher />
+          <LanguageSwitcher compact />
           <button
             type="button"
             onClick={signOut}

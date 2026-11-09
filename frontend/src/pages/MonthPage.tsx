@@ -6,7 +6,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { deleteExpense, setExpensePaid, type Expense } from '../api/expensesApi'
 import { deleteIncome, type Income } from '../api/incomesApi'
 import { Dialog } from '../components/Dialog'
-import { ExpenseList, IncomeList } from '../components/EntryLists'
+import { EntryLists, ExpenseList, IncomeList } from '../components/EntryLists'
 import { ExpenseFormDialog } from '../components/ExpenseFormDialog'
 import { FormMessage } from '../components/FormMessage'
 import { IncomeFormDialog } from '../components/IncomeFormDialog'
@@ -17,17 +17,13 @@ import { apiErrorMessage } from '../lib/apiErrorMessage'
 import { formatMonth } from '../lib/format'
 import { isMonth } from '../lib/month'
 import { useMonth, useRefreshMonths, useYearCatalogs } from '../lib/useMonth'
+import { dangerButton, pageTitle, primaryButton, quietButton, secondaryButton } from '../lib/ui'
 
 type DialogState =
   | { kind: 'expense'; expense?: Expense }
   | { kind: 'income'; income?: Income }
   | { kind: 'delete'; target: { type: 'expense' | 'income'; id: number; name: string } }
   | null
-
-const primary =
-  'flex min-h-11 items-center gap-1.5 rounded-xl bg-brand px-4 text-sm font-semibold text-on-brand hover:bg-brand-hover'
-const secondary =
-  'flex min-h-11 items-center gap-1.5 rounded-xl border border-line-strong bg-card px-4 text-sm font-medium text-ink hover:bg-soft'
 
 /**
  * The month screen (REQ-041): header with totals and closing positions, month/year navigation (REQ-040), lists of
@@ -71,13 +67,13 @@ export function MonthPage() {
   return (
     <section className="flex min-w-0 flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold text-ink first-letter:uppercase">{formatMonth(yyyyMm, i18n.language)}</h1>
+        <h1 className={`${pageTitle} first-letter:uppercase`}>{formatMonth(yyyyMm, i18n.language)}</h1>
         <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={() => setDialog({ kind: 'expense' })} className={primary}>
+          <button type="button" onClick={() => setDialog({ kind: 'expense' })} className={primaryButton}>
             <Plus className="size-4" aria-hidden />
             {t('expense.new')}
           </button>
-          <button type="button" onClick={() => setDialog({ kind: 'income' })} className={secondary}>
+          <button type="button" onClick={() => setDialog({ kind: 'income' })} className={secondaryButton}>
             <Plus className="size-4" aria-hidden />
             {t('income.new')}
           </button>
@@ -93,8 +89,8 @@ export function MonthPage() {
       {view && (
         <>
           <MonthHeader view={view} />
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
-            <div className="flex min-w-0 flex-col gap-4">
+          <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
+            <EntryLists>
               <ExpenseList
                 kind="FIXED"
                 expenses={view.expenses.filter((e) => e.type === 'FIXED')}
@@ -119,7 +115,7 @@ export function MonthPage() {
                 onEdit={(i) => setDialog({ kind: 'income', income: i })}
                 onDelete={(i) => askDelete('income', i)}
               />
-            </div>
+            </EntryLists>
             <SummaryPanel view={view} />
           </div>
         </>
@@ -132,15 +128,15 @@ export function MonthPage() {
           <div className="flex flex-col gap-4">
             {remove.isError && <FormMessage kind="error">{apiErrorMessage(t, remove.error)}</FormMessage>}
             <p className="text-ink">{t('month.deleteQuestion', { name: dialog.target.name })}</p>
-            <div className="flex flex-wrap justify-end gap-2">
-              <button type="button" className="min-h-11 rounded-xl px-4 text-sm font-medium text-ink-soft hover:bg-soft hover:text-ink" onClick={close}>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
+              <button type="button" className={quietButton} onClick={close}>
                 {t('catalog.cancel')}
               </button>
               <button
                 type="button"
                 disabled={remove.isPending}
                 onClick={() => remove.mutate(dialog.target)}
-                className="min-h-11 rounded-xl bg-negative px-4 text-sm font-semibold text-on-negative disabled:opacity-60"
+                className={dangerButton}
               >
                 {t('catalog.delete')}
               </button>

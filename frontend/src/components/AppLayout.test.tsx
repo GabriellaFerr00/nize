@@ -27,10 +27,19 @@ describe('app shell', () => {
 
   it('switches the theme right away and remembers it (REQ-045)', async () => {
     renderAt('/categories')
-    await userEvent.selectOptions(screen.getAllByLabelText('Tema')[0], 'dark')
+    const toggle = screen.getAllByRole('button', { name: 'Tema escuro' })[0]
+    expect(toggle).toHaveAttribute('aria-pressed', 'false')
+    await userEvent.click(toggle)
 
+    expect(toggle).toHaveAttribute('aria-pressed', 'true')
+    // the phone header toggle follows the same choice
+    expect(screen.getAllByRole('button', { name: 'Tema escuro' })[1]).toHaveAttribute('aria-pressed', 'true')
     expect(document.documentElement.dataset.theme).toBe('dark')
     expect(localStorage.getItem('nize.theme')).toBe('dark')
+
+    await userEvent.click(toggle)
+    expect(document.documentElement.dataset.theme).toBe('light')
+    expect(localStorage.getItem('nize.theme')).toBe('light')
     delete document.documentElement.dataset.theme
   })
 

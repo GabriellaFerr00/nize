@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FormMessage } from './FormMessage'
+import { field, secondaryButton } from '../lib/ui'
 
 const LAST_DAY = 31
 
@@ -45,7 +46,7 @@ export function ClosingDaysField({ days, onChange }: { days: number[]; onChange:
         </ul>
       )}
       <div className="flex items-end gap-2">
-        <label className="flex flex-col gap-1 text-xs text-ink-soft">
+        <label className="flex w-36 flex-col gap-1 text-xs text-ink-soft">
           {t('settings.newClosingDay')}
           <input
             type="text"
@@ -58,13 +59,13 @@ export function ClosingDaysField({ days, onChange }: { days: number[]; onChange:
                 add()
               }
             }}
-            className="min-h-11 w-24 rounded-xl border border-line-strong bg-card px-3 text-base text-ink"
+            className={`${field} w-full`}
           />
         </label>
         <button
           type="button"
           onClick={add}
-          className="min-h-11 rounded-xl border border-line-strong px-4 text-sm font-medium text-ink hover:bg-soft"
+          className={secondaryButton}
         >
           {t('settings.addClosingDay')}
         </button>

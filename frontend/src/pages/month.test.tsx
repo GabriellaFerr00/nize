@@ -118,8 +118,8 @@ describe('month screen header and navigation (TASK-039: REQ-041, REQ-040)', () =
     expect(within(header).getByText('Saldo do mês').nextSibling).toHaveTextContent('R$ 680,70')
 
     const positions = section('Fechamentos')
-    expect(within(positions).getByText('Do dia 1 ao 15').parentElement).toHaveTextContent('Sobram R$ 1.800,00')
-    expect(within(positions).getByText('Do dia 16 ao 30').parentElement).toHaveTextContent('Faltam R$ 300,00')
+    expect(within(positions).getByText('Do dia 1 ao 15').closest('li')).toHaveTextContent('Sobram R$ 1.800,00')
+    expect(within(positions).getByText('Do dia 16 ao 30').closest('li')).toHaveTextContent('Faltam R$ 300,00')
   })
 
   it('shows no positions when the closings are turned off (REQ-048)', async () => {
@@ -201,13 +201,15 @@ describe('month lists (TASK-040: REQ-015, REQ-016, REQ-021, REQ-023, REQ-024)', 
     await openMonth()
     const fixed = section('Fixos')
     expect(within(fixed).getByText('Aluguel')).toBeInTheDocument()
-    expect(within(fixed).getByText(/05\/11 · Mercado · Pix/)).toBeInTheDocument()
+    expect(within(fixed).getByText(/^Mercado · Pix/)).toBeInTheDocument()
+    // the day leads the row; the full date is there for screen readers
+    expect(within(fixed).getByText('05/11').closest('time')).toHaveAttribute('dateTime', '2026-11-05')
     expect(within(fixed).getByText('R$ 993,99', { selector: 'h2 + span' })).toBeInTheDocument()
 
     const card = section('Cartão')
     expect(within(card).queryByText('Aluguel')).not.toBeInTheDocument()
     expect(within(card).getByText('7/12')).toBeInTheDocument()
-    expect(within(card).getByText(/10\/11 · Despesas eventuais · Nubank/)).toBeInTheDocument()
+    expect(within(card).getByText(/^Despesas eventuais · Nubank/)).toBeInTheDocument()
     expect(within(card).getByText(/Mercado · Sem cartão · gasto de Mainha/)).toBeInTheDocument()
 
     const incomes = section('Entradas')
@@ -522,7 +524,7 @@ describe('quick entry of income (TASK-042: REQ-042, REQ-024, REQ-026)', () => {
       await openMonth(baseReplies(), '/month/2026-11', 'Fixed')
       expect(screen.getByText('Total expenses').nextSibling).toHaveTextContent('R$ 5,942.88')
       expect(within(section('By category')).getByText('23.86%')).toBeInTheDocument()
-      expect(within(section('Closings')).getByText('Day 16 to 30').parentElement).toHaveTextContent('Missing R$ 300.00')
+      expect(within(section('Closings')).getByText('Day 16 to 30').closest('li')).toHaveTextContent('Missing R$ 300.00')
       await userEvent.click(screen.getByRole('button', { name: 'New income' }))
       expect(await screen.findByRole('dialog', { name: 'New income' })).toBeInTheDocument()
     } finally {

@@ -18,3 +18,7 @@ frontend/dist/
 
 # CI scratch (security.yml)
 deps/
+
+# Local AI tooling (not versioned)
+.claude/
+CICD_PROMPT.md

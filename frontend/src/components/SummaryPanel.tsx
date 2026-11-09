@@ -14,14 +14,24 @@ function Block({ title, empty, children }: { title: string; empty?: string; chil
   )
 }
 
-function Line({ label, cents, extra, sub = false }: { label: string; cents: number; extra?: string; sub?: boolean }) {
+type LineProps = { label: string; cents: number; extra?: string; sub?: boolean; percent?: number }
+
+function Line({ label, cents, extra, sub = false, percent }: LineProps) {
   return (
-    <li className={`flex items-baseline justify-between gap-2 text-sm ${sub ? 'pl-3 text-ink-soft' : 'text-ink'}`}>
-      <span className="min-w-0 break-words">{label}</span>
-      <span className="flex shrink-0 items-baseline gap-2">
-        {extra && <span className="text-xs text-ink-soft tabular-nums">{extra}</span>}
-        <Money cents={cents} className={sub ? '' : 'font-medium'} />
+    <li className={`flex flex-col gap-1 text-sm ${sub ? 'pl-3 text-ink-soft' : 'text-ink'}`}>
+      <span className="flex items-baseline justify-between gap-2">
+        <span className="min-w-0 break-words">{label}</span>
+        <span className="flex shrink-0 items-baseline gap-2">
+          {extra && <span className="text-xs text-ink-soft tabular-nums">{extra}</span>}
+          <Money cents={cents} className={sub ? '' : 'font-medium'} />
+        </span>
       </span>
+      {percent !== undefined && (
+        // as long as the percentage the API computed (display only)
+        <span className="h-1.5 rounded-full bg-line" aria-hidden>
+          <span className="block h-full rounded-full bg-brand-text" style={{ width: `${Math.min(percent, 100)}%` }} />
+        </span>
+      )}
     </li>
   )
 }
@@ -39,7 +49,7 @@ export function SummaryPanel({ view }: { view: MonthView }) {
   const noExpenses = summaries.byCategory.length === 0 ? t('month.summary.noExpenses') : undefined
 
   return (
-    <aside aria-label={t('month.summary.title')} className="flex min-w-0 flex-col gap-4 rounded-2xl border border-line bg-card p-4 shadow-card">
+    <aside aria-label={t('month.summary.title')} className="flex min-w-0 flex-col gap-4 rounded-2xl bg-soft p-4 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-lg font-semibold text-ink">{t('month.summary.title')}</h2>
         <button
@@ -47,14 +57,14 @@ export function SummaryPanel({ view }: { view: MonthView }) {
           aria-expanded={open}
           aria-controls="month-summaries"
           onClick={() => setOpen(!open)}
-          className="flex min-h-11 items-center gap-1 rounded-lg px-3 text-sm font-medium text-brand-text hover:bg-soft md:hidden"
+          className="flex min-h-11 items-center gap-1 rounded-lg px-3 text-sm font-semibold text-ink underline-offset-4 hover:underline md:hidden"
         >
           {open ? t('month.summary.hide') : t('month.summary.show')}
           <ChevronDown className={`size-4 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden />
         </button>
       </div>
 
-      <section aria-label={t('month.summary.ownBalance')} className="flex flex-col gap-2 rounded-xl bg-soft p-3">
+      <section aria-label={t('month.summary.ownBalance')} className="flex flex-col gap-2 rounded-xl bg-card p-3">
         <div className="flex items-baseline justify-between gap-2">
           <h3 className="text-sm font-semibold text-ink">{t('month.summary.ownBalance')}</h3>
           <Money cents={totals.ownBalanceCents} tone className="text-lg font-semibold" />
@@ -75,6 +85,7 @@ export function SummaryPanel({ view }: { view: MonthView }) {
               label={c.categoryName ?? '—'}
               cents={c.amountCents}
               extra={formatPercent(c.percent, i18n.language)}
+              percent={c.percent}
             />
           ))}
         </Block>
