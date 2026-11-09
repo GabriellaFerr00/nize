@@ -2,6 +2,7 @@ package br.com.nize.service;
 
 import br.com.nize.domain.Card;
 import br.com.nize.repository.CardRepository;
+import br.com.nize.repository.ExpenseRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,10 +14,12 @@ public class CardService {
 
     private final CardRepository cards;
     private final YearGuard yearGuard;
+    private final ExpenseRepository expenses;
 
-    public CardService(CardRepository cards, YearGuard yearGuard) {
+    public CardService(CardRepository cards, YearGuard yearGuard, ExpenseRepository expenses) {
         this.cards = cards;
         this.yearGuard = yearGuard;
+        this.expenses = expenses;
     }
 
     @Transactional(readOnly = true)
@@ -44,5 +47,16 @@ public class CardService {
         }
         card.update(name, dueDay, active);
         return card;
+    }
+
+    /** Deletes right away if no expense uses it; otherwise keeps it and reports how many do (REQ-013). */
+    @Transactional
+    public void delete(Long userId, Long id) {
+        Card card = cards.findByIdAndUserId(id, userId).orElseThrow(ResourceNotFoundException::new);
+        long used = expenses.countByUserIdAndCardId(userId, card.getId());
+        if (used > 0) {
+            throw new CardInUseException(used);
+        }
+        cards.delete(card);
     }
 }

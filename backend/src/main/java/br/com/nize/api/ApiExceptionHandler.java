@@ -2,6 +2,7 @@ package br.com.nize.api;
 
 import br.com.nize.security.TooManyAttemptsException;
 import br.com.nize.service.CardNameTakenException;
+import br.com.nize.service.CardInUseException;
 import br.com.nize.service.CategoryInUseException;
 import br.com.nize.service.CategoryNameTakenException;
 import br.com.nize.service.EmailAlreadyRegisteredException;
@@ -93,6 +94,12 @@ class ApiExceptionHandler {
     ResponseEntity<InUseResponse> categoryInUse(CategoryInUseException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new InUseResponse("CATEGORY_IN_USE", Map.of(), e.getExpenseCount()));
+    }
+
+    @ExceptionHandler(CardInUseException.class)
+    ResponseEntity<InUseResponse> cardInUse(CardInUseException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new InUseResponse("CARD_IN_USE", Map.of(), e.getExpenseCount()));
     }
 
     @ExceptionHandler(YearAlreadyExistsException.class)

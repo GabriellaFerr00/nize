@@ -23,4 +23,5 @@ export const createItem = (kind: CatalogKind, year: number, input: CatalogInput)
 export const updateItem = (kind: CatalogKind, id: number, input: CatalogInput & { active: boolean }) =>
   apiRequest<CatalogItem>(`/${kind}/${id}`, { method: 'PUT', body: input })
 
-export const deleteCategory = (id: number) => apiRequest(`/categories/${id}`, { method: 'DELETE' })
+/** 204, or 409 `CATEGORY_IN_USE` / `CARD_IN_USE` with the count of expenses that still use it (REQ-012, REQ-013). */
+export const deleteItem = (kind: CatalogKind, id: number) => apiRequest(`/${kind}/${id}`, { method: 'DELETE' })

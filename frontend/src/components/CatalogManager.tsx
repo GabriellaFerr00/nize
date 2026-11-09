@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import {
   createItem,
-  deleteCategory,
+  deleteItem,
   listItems,
   updateItem,
   type CatalogInput,
@@ -132,6 +132,7 @@ export function CatalogManager({ kind, fields, canDelete = false }: Props) {
       )}
       {dialog?.mode === 'delete' && (
         <DeleteDialog
+          kind={kind}
           item={dialog.item}
           onClose={() => setDialog(null)}
           onDeleted={() => {
@@ -142,9 +143,9 @@ export function CatalogManager({ kind, fields, canDelete = false }: Props) {
         />
       )}
       {dialog?.mode === 'inUse' && (
-        <Dialog title={t('catalog.inUseTitle')} onClose={() => setDialog(null)}>
-          <p className="text-sm text-ink">{t('catalog.inUse', { count: dialog.count, name: dialog.item.name })}</p>
-          <p className="mt-2 text-sm text-ink-soft">{t('catalog.inUseQuestion')}</p>
+        <Dialog title={t(`catalog.${kind}.inUseTitle`)} onClose={() => setDialog(null)}>
+          <p className="text-sm text-ink">{t(`catalog.${kind}.inUse`, { count: dialog.count, name: dialog.item.name })}</p>
+          <p className="mt-2 text-sm text-ink-soft">{t(`catalog.${kind}.inUseQuestion`)}</p>
           <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
             <button type="button" className={quietButton} onClick={() => setDialog(null)}>
               {t('catalog.cancel')}
@@ -301,26 +302,30 @@ function ItemFormDialog({ kind, year, fields, item, onClose, onSaved }: FormProp
 }
 
 type DeleteProps = {
+  kind: CatalogKind
   item: CatalogItem
   onClose: () => void
   onDeleted: () => void
   onInUse: (count: number) => void
 }
 
-function DeleteDialog({ item, onClose, onDeleted, onInUse }: DeleteProps) {
+const IN_USE_CODES = ['CATEGORY_IN_USE', 'CARD_IN_USE']
+const isInUse = (error: unknown): error is ApiError => error instanceof ApiError && IN_USE_CODES.includes(error.code)
+
+function DeleteDialog({ kind, item, onClose, onDeleted, onInUse }: DeleteProps) {
   const { t } = useTranslation()
   const remove = useMutation({
-    mutationFn: () => deleteCategory(item.id),
+    mutationFn: () => deleteItem(kind, item.id),
     onSuccess: onDeleted,
     onError: (error) => {
-      if (error instanceof ApiError && error.code === 'CATEGORY_IN_USE') onInUse(error.count ?? 0)
+      if (isInUse(error)) onInUse(error.count ?? 0)
     },
   })
-  const showError = remove.isError && !(remove.error instanceof ApiError && remove.error.code === 'CATEGORY_IN_USE')
+  const showError = remove.isError && !isInUse(remove.error)
 
   return (
-    <Dialog title={t('catalog.deleteTitle')} onClose={onClose}>
-      <p className="text-sm text-ink">{t('catalog.deleteQuestion', { name: item.name })}</p>
+    <Dialog title={t(`catalog.${kind}.deleteTitle`)} onClose={onClose}>
+      <p className="text-sm text-ink">{t(`catalog.${kind}.deleteQuestion`, { name: item.name })}</p>
       {showError && <FormMessage kind="error">{apiErrorMessage(t, remove.error)}</FormMessage>}
       <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
         <button type="button" className={quietButton} onClick={onClose}>

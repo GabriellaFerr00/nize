@@ -248,8 +248,9 @@ Nomes em inglês: ver "Nomenclatura em inglês" em `design.md` (os termos em por
 ## Phase 9: Melhorias pedidas pela usuária (2026-11-09)
 *Goal*: Itens 3, 4, 6, 8, 9, 11 e 14 da lista da usuária (os itens 5 e 10 foram descartados por ela; o 12, exportar planilha, fica para a fase 2). Branch `feat/improvements-nov`, um PR só.
 
-- [ ] **TASK-063** [REQ-013]: Excluir cartão: `DELETE /api/cards/{id}` (204; 409 `CARD_IN_USE` com `count`); botão na tela Cartões com aviso do motivo.
+- [x] **TASK-063** [REQ-013]: Excluir cartão: `DELETE /api/cards/{id}` (204; 409 `CARD_IN_USE` com `count`); botão na tela Cartões com aviso do motivo.
   - _Verify_: teste de API (sem uso → 204; com lançamentos → 409 com a contagem; outra usuária → 404) e teste de tela.
+  - _Feito_: `CardService.delete` + `CardInUseException`, `CardDeleteTest` (5 testes); `CatalogManager` genérico (`deleteItem(kind)`, textos por tipo em `catalog.categories|cards.*`), 2 testes de tela.
 - [ ] **TASK-064** [REQ-045]: Botão de tema com sol (no escuro) e lua (no claro).
   - _Verify_: teste do `ThemeSwitcher`.
 - [ ] **TASK-065** [REQ-049]: Ocultar valores (olho), lembrado no navegador, em todas as telas.

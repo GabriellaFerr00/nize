@@ -225,6 +225,40 @@ describe('cards screen (REQ-013)', () => {
     expect(await screen.findByText('Vence todo dia 10')).toBeInTheDocument()
     expect(calls.find((c) => c.key === 'POST /api/years/2026/cards')?.body).toEqual({ name: 'Nubank', dueDay: 10 })
   })
+
+  it('deletes an unused card after confirming (TASK-063)', async () => {
+    const replies: Replies = {
+      ...baseReplies(),
+      'GET /api/years/2026/cards': { body: [card(1, 'Nubank', 10)] },
+      'DELETE /api/cards/1': { status: 204 },
+    }
+    const calls = stubApi(replies)
+    renderApp('/cards', { signedIn: true })
+    await userEvent.click(await screen.findByRole('button', { name: 'Excluir Nubank' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Excluir cartão' })
+    expect(dialog).toHaveTextContent('Excluir o cartão "Nubank"?')
+    replies['GET /api/years/2026/cards'] = { body: [] }
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Excluir' }))
+
+    await waitFor(() => expect(screen.queryByText('Nubank')).not.toBeInTheDocument())
+    expect(calls.some((c) => c.key === 'DELETE /api/cards/1')).toBe(true)
+  })
+
+  it('keeps a card in use and says that is the reason (TASK-063)', async () => {
+    stubApi({
+      ...baseReplies(),
+      'GET /api/years/2026/cards': { body: [card(1, 'Nubank', 10)] },
+      'DELETE /api/cards/1': { status: 409, body: { code: 'CARD_IN_USE', fields: {}, count: 4 } },
+    })
+    renderApp('/cards', { signedIn: true })
+    await userEvent.click(await screen.findByRole('button', { name: 'Excluir Nubank' }))
+    await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Excluir' }))
+
+    const dialog = await screen.findByRole('dialog', { name: 'Cartão em uso' })
+    expect(dialog).toHaveTextContent('é usado em 4 lançamentos e por isso não pode ser excluído')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }))
+    expect(screen.getByText('Nubank')).toBeInTheDocument()
+  })
 })
 
 describe('people screen (REQ-014)', () => {

@@ -63,6 +63,7 @@
     "CARD_NAME_TAKEN": "A card with this name already exists this year.",
     "PERSON_NAME_TAKEN": "A person with this name already exists this year.",
     "CATEGORY_IN_USE": "This category still has expenses.",
+    "CARD_IN_USE": "This card is still used by expenses.",
     "YEAR_ALREADY_EXISTS": "That year already exists in your account.",
     "INVALID_YEAR": "Enter a year between 2000 and 2100.",
     "NOT_FOUND": "We could not find this item. Refresh the page.",
@@ -155,13 +156,25 @@
       "new": "New category",
       "edit": "Edit category",
       "empty": "No categories this year.",
-      "inactiveGroup": "Inactive"
+      "inactiveGroup": "Inactive",
+      "deleteTitle": "Delete category",
+      "deleteQuestion": "Delete the category \"{{name}}\"? This cannot be undone.",
+      "inUseTitle": "Category in use",
+      "inUse_one": "The category \"{{name}}\" has {{count}} expense and cannot be deleted.",
+      "inUse_other": "The category \"{{name}}\" has {{count}} expenses and cannot be deleted.",
+      "inUseQuestion": "Do you want to change those expenses first? The category stays as it is."
     },
     "cards": {
       "new": "New card",
       "edit": "Edit card",
       "empty": "No cards this year. Add yours to record credit expenses.",
-      "inactiveGroup": "Inactive"
+      "inactiveGroup": "Inactive",
+      "deleteTitle": "Delete card",
+      "deleteQuestion": "Delete the card \"{{name}}\"? This cannot be undone.",
+      "inUseTitle": "Card in use",
+      "inUse_one": "The card \"{{name}}\" is used by {{count}} expense, so it cannot be deleted.",
+      "inUse_other": "The card \"{{name}}\" is used by {{count}} expenses, so it cannot be deleted.",
+      "inUseQuestion": "Change the card of those expenses or deactivate the card. It stays as it is."
     },
     "people": {
       "new": "New person",
@@ -169,12 +182,6 @@
       "empty": "No people this year. Add whoever uses your card, like your mother.",
       "inactiveGroup": "Inactive"
     },
-    "deleteTitle": "Delete category",
-    "deleteQuestion": "Delete the category \"{{name}}\"? This cannot be undone.",
-    "inUseTitle": "Category in use",
-    "inUse_one": "The category \"{{name}}\" has {{count}} expense and cannot be deleted.",
-    "inUse_other": "The category \"{{name}}\" has {{count}} expenses and cannot be deleted.",
-    "inUseQuestion": "Do you want to change those expenses first? The category stays as it is.",
     "changeExpenses": "Change expenses",
     "due": "due",
     "editItem": "Edit {{name}}",

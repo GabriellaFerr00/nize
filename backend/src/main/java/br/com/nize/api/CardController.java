@@ -4,6 +4,7 @@ import br.com.nize.security.CurrentUser;
 import br.com.nize.service.CardService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -40,5 +41,12 @@ public class CardController {
     public CardResponse update(@PathVariable Long id, @Valid @RequestBody UpdateCardRequest request) {
         return CardResponse.from(service.update(
                 CurrentUser.id(), id, request.name(), request.dueDay(), request.active()));
+    }
+
+    /** 204 when deleted; 409 {@code CARD_IN_USE} with the expense count when expenses still use it (REQ-013). */
+    @DeleteMapping("/api/cards/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable Long id) {
+        service.delete(CurrentUser.id(), id);
     }
 }
