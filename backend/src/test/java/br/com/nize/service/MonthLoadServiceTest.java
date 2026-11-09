@@ -1,5 +1,6 @@
 package br.com.nize.service;
 
+import static br.com.nize.DbMoney.cents;
 import br.com.nize.IsolationTestBase;
 import com.jayway.jsonpath.JsonPath;
 import jakarta.persistence.EntityManager;
@@ -84,7 +85,7 @@ class MonthLoadServiceTest extends IsolationTestBase {
         assertThat(july).hasSize(1);
         Map<String, Object> copy = july.get(0);
         assertThat(copy.get("NAME")).isEqualTo("Aluguel");
-        assertThat(((Number) copy.get("AMOUNT_CENTS")).longValue()).isEqualTo(150_000L);
+        assertThat(cents(copy.get("AMOUNT"))).isEqualTo(150_000L);
         assertThat(copy.get("PAID")).isEqualTo(false);
         assertThat(copy.get("TYPE")).isEqualTo("FIXED");
         assertThat(copy.get("EXPENSE_DATE").toString()).isEqualTo(JULY + "-10");
@@ -105,7 +106,7 @@ class MonthLoadServiceTest extends IsolationTestBase {
         entityManager.flush();
         Map<String, Object> previous = jdbc.queryForMap("SELECT * FROM expense WHERE id = ?", original);
         assertThat(previous.get("NAME")).isEqualTo("Aluguel");
-        assertThat(((Number) previous.get("AMOUNT_CENTS")).longValue()).isEqualTo(150_000L);
+        assertThat(cents(previous.get("AMOUNT"))).isEqualTo(150_000L);
     }
 
     @Test
@@ -145,7 +146,7 @@ class MonthLoadServiceTest extends IsolationTestBase {
         assertThat(next.get("INSTALLMENT_NUMBER")).isEqualTo(8);
         assertThat(next.get("INSTALLMENT_COUNT")).isEqualTo(12);
         assertThat(next.get("INSTALLMENT_GROUP_ID")).isEqualTo(expensesOf(userA, JUNE).get(0).get("INSTALLMENT_GROUP_ID"));
-        assertThat(((Number) next.get("AMOUNT_CENTS")).longValue()).isEqualTo(2_500L);
+        assertThat(cents(next.get("AMOUNT"))).isEqualTo(2_500L);
         assertThat(next.get("PAID")).isEqualTo(false);
         assertThat(next.get("EXPENSE_DATE").toString()).isEqualTo(JULY + "-15");
     }
@@ -299,7 +300,7 @@ class MonthLoadServiceTest extends IsolationTestBase {
         assertThat(incomesOf(userA, JULY)).hasSize(1);
         assertThat(second.get("INSTALLMENT_NUMBER")).isEqualTo(2);
         assertThat(second.get("INSTALLMENT_GROUP_ID")).isEqualTo(incomesOf(userA, JUNE).get(0).get("INSTALLMENT_GROUP_ID"));
-        assertThat(((Number) second.get("AMOUNT_CENTS")).longValue()).isEqualTo(10_000L);
+        assertThat(cents(second.get("AMOUNT"))).isEqualTo(10_000L);
         assertThat(second.get("INCOME_DATE").toString()).isEqualTo(JULY + "-20");
         assertThat(incomesOf(userA, august)).extracting(r -> r.get("INSTALLMENT_NUMBER")).containsExactly(3);
         assertThat(incomesOf(userA, september)).isEmpty();

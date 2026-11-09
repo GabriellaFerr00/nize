@@ -1,6 +1,7 @@
 package br.com.nize.domain;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -33,7 +34,9 @@ public class Income {
     @Column(name = "income_date", nullable = false)
     private LocalDate date;
 
-    @Column(name = "amount_cents", nullable = false)
+    // DECIMAL(12,2) in reais in the database, cents here (D-2)
+    @Column(name = "amount", nullable = false, precision = 12, scale = 2)
+    @Convert(converter = MoneyColumnConverter.class)
     private long amountCents;
 
     @Column(name = "person_id")

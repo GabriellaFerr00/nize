@@ -41,7 +41,7 @@ class ExpenseSchemaTest {
     private void insert(long amount, String type, String payment, Long cardId, Long personId,
                         Integer number, Integer count, String group) {
         jdbc.update("""
-                INSERT INTO expense (user_id, month_ref, name, category_id, amount_cents, type, payment_method, card_id,
+                INSERT INTO expense (user_id, month_ref, name, category_id, amount, type, payment_method, card_id,
                                      person_id, expense_date, installment_number, installment_count, installment_group_id)
                 VALUES (?, '2026-11', 'x', ?, ?, ?, ?, ?, ?, DATE '2026-11-05', ?, ?, ?)
                 """, user, category, amount, type, payment, cardId, personId, number, count, group);
@@ -52,11 +52,14 @@ class ExpenseSchemaTest {
     }
 
     @Test
-    void tableExistsWithMoneyAsBigintAndNoDerivedColumns() {
-        String type = jdbc.queryForObject("""
-                SELECT data_type FROM information_schema.columns
-                WHERE LOWER(table_name) = 'expense' AND LOWER(column_name) = 'amount_cents'""", String.class);
-        assertThat(type).isEqualToIgnoringCase("BIGINT");
+    void tableExistsWithMoneyAsDecimalInReaisAndNoDerivedColumns() {
+        // D-2: DECIMAL(12,2) in reais (the back-end converts to cents)
+        java.util.Map<String, Object> column = jdbc.queryForMap("""
+                SELECT data_type, numeric_precision, numeric_scale FROM information_schema.columns
+                WHERE LOWER(table_name) = 'expense' AND LOWER(column_name) = 'amount'""");
+        assertThat(String.valueOf(column.get("data_type"))).isIn("DECIMAL", "NUMERIC", "decimal", "numeric");
+        assertThat(((Number) column.get("numeric_precision")).intValue()).isEqualTo(12);
+        assertThat(((Number) column.get("numeric_scale")).intValue()).isEqualTo(2);
         assertThat(jdbc.queryForList("""
                 SELECT LOWER(column_name) FROM information_schema.columns WHERE LOWER(table_name) = 'expense'""", String.class))
                 .noneMatch(c -> c.contains("total") || c.contains("balance") || c.contains("percent"));
@@ -122,7 +125,7 @@ class ExpenseSchemaTest {
         assertThatThrownBy(() -> insert(100, "CARD", "CREDIT", card, 999_999L, null, null, null)).isInstanceOf(DataIntegrityViolationException.class);
         insert(100, "CARD", "CREDIT", card, person, null, null, null);
         assertThatThrownBy(() -> jdbc.update("""
-                INSERT INTO expense (user_id, month_ref, name, category_id, amount_cents, type, payment_method, expense_date)
+                INSERT INTO expense (user_id, month_ref, name, category_id, amount, type, payment_method, expense_date)
                 VALUES (?, '2026-11', 'x', 999999, 100, 'FIXED', 'PIX', DATE '2026-11-05')""", user))
                 .isInstanceOf(DataIntegrityViolationException.class);
     }

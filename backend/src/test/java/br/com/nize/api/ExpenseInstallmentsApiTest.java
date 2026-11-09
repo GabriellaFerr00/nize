@@ -70,7 +70,7 @@ class ExpenseInstallmentsApiTest extends IsolationTestBase {
     }
 
     private static long cents(Map<String, Object> row) {
-        return ((Number) row.get("AMOUNT_CENTS")).longValue();
+        return br.com.nize.DbMoney.cents(row.get("AMOUNT"));
     }
 
     // ---- the PDF scenarios ----

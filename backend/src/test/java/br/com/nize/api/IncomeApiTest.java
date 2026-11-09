@@ -1,5 +1,6 @@
 package br.com.nize.api;
 
+import static br.com.nize.DbMoney.cents;
 import br.com.nize.IsolationTestBase;
 import com.jayway.jsonpath.JsonPath;
 import jakarta.persistence.EntityManager;
@@ -197,7 +198,7 @@ class IncomeApiTest extends IsolationTestBase {
         update(userA, id, """
                 {"name":"x","amountCents":100,"date":"%s"}""".formatted(MONTH.plusMonths(1).atDay(1)))
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("DATE_OUT_OF_MONTH"));
-        assertThat(((Number) row(id).get("AMOUNT_CENTS")).longValue()).isEqualTo(12_345);
+        assertThat(cents(row(id).get("AMOUNT"))).isEqualTo(12_345);
     }
 
     @Test
@@ -232,7 +233,7 @@ class IncomeApiTest extends IsolationTestBase {
 
         Map<String, Object> row = row(id);
         assertThat(row.get("PERSON_ID")).isNull();
-        assertThat(((Number) row.get("AMOUNT_CENTS")).longValue()).isEqualTo(500_000L);
+        assertThat(cents(row.get("AMOUNT"))).isEqualTo(500_000L);
     }
 
     @Test

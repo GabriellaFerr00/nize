@@ -1,10 +1,10 @@
 # CLAUDE.md
-> Nize — Spec version 0.2.10
+> Nize — Spec version 0.3.0
 
 ═══════════════════════════════════════════════════════════
 SPEC DRIVEN DEVELOPMENT — PROJECT CONSTITUTION
 Project: Nize
-Version: 0.2.10
+Version: 0.3.0
 ═══════════════════════════════════════════════════════════
 
 This project uses Spec Driven Development. All work is
@@ -53,7 +53,7 @@ DIVERGENCE PROTOCOL:
 - **Estrutura**: monorepo; `backend/` e `frontend/` independentes (ver "File Structure" em `design.md`). Pacote Java raiz `br.com.nize` (`rules`, `domain`, `repository`, `service`, `api`, `security`).
 
 ## Regras inegociáveis do domínio
-- Dinheiro é sempre inteiro em centavos (`long`/`BIGINT`). Nunca `double`, `float` ou `BigDecimal` em valores monetários.
+- Dinheiro é sempre inteiro em centavos (`long`) nas regras, serviços, API e front. Nunca `double`/`float`. No banco, `DECIMAL(12,2)` em reais (colunas `amount`), convertido por `MoneyColumnConverter`; `BigDecimal` só dentro desse conversor (D-2).
 - Mês é texto `AAAA-MM`.
 - Saldo, totais e porcentagens nunca são persistidos: são calculados.
 - **Toda regra de cálculo fica no back-end, no pacote puro `br.com.nize.rules`** (sem Spring/JPA). O front só exibe e nunca recalcula.

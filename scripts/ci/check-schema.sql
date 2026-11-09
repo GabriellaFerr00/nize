@@ -1,10 +1,10 @@
 -- NFR-001 / NFR-005 / NFR-009: every row returned here is a violation; the pipeline fails on any output.
--- Money columns must be BIGINT cents.
-SELECT CONCAT('money column not BIGINT: ', table_name, '.', column_name, ' ', data_type)
+-- Money columns must be exact DECIMAL(12,2) in reais (D-2); never FLOAT/DOUBLE.
+SELECT CONCAT('money column not DECIMAL(12,2): ', table_name, '.', column_name, ' ', column_type)
 FROM information_schema.columns
 WHERE table_schema = 'nize' AND table_name <> 'flyway_schema_history'
   AND column_name REGEXP 'amount|cents|valor|total|balance|saldo|price|preco'
-  AND data_type <> 'bigint'
+  AND NOT (data_type = 'decimal' AND numeric_precision = 12 AND numeric_scale = 2)
 UNION ALL
 -- Passwords exist only as a hash.
 SELECT CONCAT('password column without hash: ', table_name, '.', column_name)

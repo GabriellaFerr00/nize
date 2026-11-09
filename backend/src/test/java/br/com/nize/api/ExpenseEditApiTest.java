@@ -1,5 +1,6 @@
 package br.com.nize.api;
 
+import static br.com.nize.DbMoney.cents;
 import br.com.nize.IsolationTestBase;
 import com.jayway.jsonpath.JsonPath;
 import jakarta.persistence.EntityManager;
@@ -85,7 +86,7 @@ class ExpenseEditApiTest extends IsolationTestBase {
 
         Map<String, Object> row = row(id);
         assertThat(row.get("MONTH_REF")).isEqualTo(MONTH.toString());
-        assertThat(((Number) row.get("AMOUNT_CENTS")).longValue()).isEqualTo(99_999L);
+        assertThat(cents(row.get("AMOUNT"))).isEqualTo(99_999L);
     }
 
     @Test
@@ -148,13 +149,13 @@ class ExpenseEditApiTest extends IsolationTestBase {
     @Test
     void markingPaidChangesOnlyTheMarkAndCanBeUndone() throws Exception {
         long id = create(userA, "FIXED", "");
-        long before = ((Number) row(id).get("AMOUNT_CENTS")).longValue();
+        long before = cents(row(id).get("AMOUNT"));
 
         as(userA, patch("/api/expenses/" + id + "/paid").contentType(MediaType.APPLICATION_JSON).content("{\"paid\":true}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.paid").value(true)).andExpect(jsonPath("$.amountCents").value(150000));
         Map<String, Object> paid = row(id);
         assertThat(paid.get("PAID")).isEqualTo(true);
-        assertThat(((Number) paid.get("AMOUNT_CENTS")).longValue()).isEqualTo(before);
+        assertThat(cents(paid.get("AMOUNT"))).isEqualTo(before);
         assertThat(paid.get("EXPENSE_DATE").toString()).isEqualTo(MONTH.atDay(5).toString());
 
         as(userA, patch("/api/expenses/" + id + "/paid").contentType(MediaType.APPLICATION_JSON).content("{\"paid\":false}"))
@@ -208,7 +209,7 @@ class ExpenseEditApiTest extends IsolationTestBase {
         Map<String, Object> row = row(id);
         assertThat(row.get("NAME")).isEqualTo("Aluguel");
         assertThat(row.get("PAID")).isEqualTo(false);
-        assertThat(((Number) row.get("AMOUNT_CENTS")).longValue()).isEqualTo(150000L);
+        assertThat(cents(row.get("AMOUNT"))).isEqualTo(150000L);
     }
 
     @Test
@@ -236,7 +237,7 @@ class ExpenseEditApiTest extends IsolationTestBase {
         Map<String, Object> row = row(id);
         assertThat(row.get("CARD_ID")).isNull();
         assertThat(row.get("PERSON_ID")).isNull();
-        assertThat(((Number) row.get("AMOUNT_CENTS")).longValue()).isEqualTo(150000L);
+        assertThat(cents(row.get("AMOUNT"))).isEqualTo(150000L);
     }
 
     @Test

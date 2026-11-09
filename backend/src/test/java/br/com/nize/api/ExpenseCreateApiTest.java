@@ -1,5 +1,6 @@
 package br.com.nize.api;
 
+import static br.com.nize.DbMoney.cents;
 import br.com.nize.IsolationTestBase;
 import com.jayway.jsonpath.JsonPath;
 import jakarta.persistence.EntityManager;
@@ -97,7 +98,7 @@ class ExpenseCreateApiTest extends IsolationTestBase {
 
         Map<String, Object> row = rows(userA).get(0);
         assertThat(row.get("MONTH_REF")).isEqualTo(MONTH.toString());
-        assertThat(((Number) row.get("AMOUNT_CENTS")).longValue()).isEqualTo(150000L);
+        assertThat(cents(row.get("AMOUNT"))).isEqualTo(150000L);
         assertThat(row.get("CARD_ID")).isNull();
     }
 
@@ -284,9 +285,19 @@ class ExpenseCreateApiTest extends IsolationTestBase {
     @Test
     void largeAmountsKeepEveryCent() throws Exception {
         Map<String, String> fields = base(categoryId(userA, "Aluguel"));
-        fields.put("amountCents", "9000000000001");
-        create(userA, fields).andExpect(status().isCreated()).andExpect(jsonPath("$.amountCents").value(9000000000001L));
-        assertThat(((Number) rows(userA).get(0).get("AMOUNT_CENTS")).longValue()).isEqualTo(9000000000001L);
+        // the largest amount DECIMAL(12,2) holds: 9 999 999 999.99 reais (D-2)
+        fields.put("amountCents", "999999999999");
+        create(userA, fields).andExpect(status().isCreated()).andExpect(jsonPath("$.amountCents").value(999_999_999_999L));
+        assertThat(rows(userA).get(0).get("AMOUNT")).isEqualTo(new java.math.BigDecimal("9999999999.99"));
+        assertThat(cents(rows(userA).get(0).get("AMOUNT"))).isEqualTo(999_999_999_999L);
+    }
+
+    @Test
+    void anAmountThatDoesNotFitTheColumnIsRejected() throws Exception {
+        Map<String, String> fields = base(categoryId(userA, "Aluguel"));
+        fields.put("amountCents", "1000000000000");
+        create(userA, fields).andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+        assertThat(rows(userA)).isEmpty();
     }
 
     // ---- references: inactive and foreign ----

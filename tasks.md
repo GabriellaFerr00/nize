@@ -245,6 +245,24 @@ Nomes em inglês: ver "Nomenclatura em inglês" em `design.md` (os termos em por
   - _Output_: URLs de teste; Dockerfile e `docs/ci-cd.md` já vêm da Phase 3.5.
   - _Verify_: cadastro → lançamento → resumo funcionando na URL de teste.
 
+## Phase 9: Melhorias pedidas pela usuária (2026-11-09)
+*Goal*: Itens 3, 4, 6, 8, 9, 11 e 14 da lista da usuária (os itens 5 e 10 foram descartados por ela; o 12, exportar planilha, fica para a fase 2). Branch `feat/improvements-nov`, um PR só.
+
+- [ ] **TASK-063** [REQ-013]: Excluir cartão: `DELETE /api/cards/{id}` (204; 409 `CARD_IN_USE` com `count`); botão na tela Cartões com aviso do motivo.
+  - _Verify_: teste de API (sem uso → 204; com lançamentos → 409 com a contagem; outra usuária → 404) e teste de tela.
+- [ ] **TASK-064** [REQ-045]: Botão de tema com sol (no escuro) e lua (no claro).
+  - _Verify_: teste do `ThemeSwitcher`.
+- [ ] **TASK-065** [REQ-049]: Ocultar valores (olho), lembrado no navegador, em todas as telas.
+  - _Verify_: testes de `Money` e do botão; nenhum valor legível com os valores ocultos.
+- [ ] **TASK-066** [REQ-050]: Excluir parcela: "só esta" ou "esta e as próximas" (gastos e entradas); a carga não recria as excluídas.
+  - _Verify_: testes de regra/serviço e de API (4/10 → apaga 4..10 e a carga de meses seguintes não cria 5..10) e de tela.
+- [ ] **TASK-067** [REQ-015, REQ-016]: Cartão obrigatório no crédito (novo e editado) e criar cartão no formulário de lançamento.
+  - _Verify_: testes de API (crédito sem cartão → 400; antigo sem cartão continua listado e no "Sem cartão") e de tela.
+- [ ] **TASK-068** [REQ-051]: Limite mensal opcional por categoria, aviso a 80% e acima de 100% sem bloquear; "usado de limite" no resumo.
+  - _Verify_: teste de regra antes do código (80%, 100%, sem limite), API e tela.
+- [ ] **TASK-069** [REQ-052]: Cor de categoria e pessoa (paleta fixa) e imagem própria do cartão (PNG/JPG/WebP ≤ 200 KB), exibidas nas telas.
+  - _Verify_: testes de API (formatos, tamanho, isolamento da imagem), contraste da paleta nos dois temas e testes de tela.
+
 ---
 
 ## Completed Tasks Archive

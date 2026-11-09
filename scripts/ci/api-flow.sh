@@ -48,7 +48,7 @@ card=$(jq -r .id "$body")
 step 201 POST "/api/years/$year/people" '{"name":"Flow pessoa"}'
 person=$(jq -r .id "$body")
 
-# Expenses: fixed by Pix, card with a third party, generated installments (money in cents, BIGINT)
+# Expenses: fixed by Pix, card with a third party, generated installments (money in cents in the API; DECIMAL(12,2) reais in the database)
 step 201 POST "/api/months/$month/expenses" \
   "{\"name\":\"Aluguel\",\"amountCents\":9000000000001,\"type\":\"FIXED\",\"paymentMethod\":\"PIX\",\"categoryId\":$category,\"date\":\"$month-05\"}"
 fixed=$(jq -r .id "$body")

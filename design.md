@@ -1,5 +1,5 @@
 # design.md
-> Nize — Version 0.2.10 (MVP web) — 2026-11-09
+> Nize — Version 0.3.0 (MVP web) — 2026-11-09
 
 ## Architecture Overview
 Monorepo com dois módulos independentes: `backend` (API REST) e `frontend` (SPA). **Toda regra de cálculo vive só no back-end** (totais, saldo, posição nos fechamentos, parcelas, carga do mês, saldo próprio, porcentagens). O front apenas exibe o que a API devolve e nunca recalcula valores. Como back (Java) e front (TypeScript) não compartilham código, o "pacote de regras compartilhado" do PDF vira o pacote Java `br.com.nize.rules`, puro (sem Spring, sem JPA), testado antes do código.
@@ -38,7 +38,7 @@ Monorepo com dois módulos independentes: `backend` (API REST) e `frontend` (SPA
 | # | Decisão | Motivo |
 |---|---|---|
 | D-1 | Regras só no back; front só exibe | PDF + confirmação da usuária |
-| D-2 | Dinheiro em `BIGINT` centavos; sem `double`/`BigDecimal` | NFR-001 |
+| D-2 | Dinheiro em centavos (`long`) nas regras, serviços, API e front; sem `double`/`float`. No banco, `DECIMAL(12,2)` em reais (colunas `amount`), convertido por `MoneyColumnConverter` (JPA) na leitura e na gravação; `BigDecimal` só dentro desse conversor (2026-11-09, pedido da usuária) | NFR-001 |
 | D-3 | Mês como `CHAR(7)` `AAAA-MM` | PDF |
 | D-4 | Totais, saldos e % calculados na leitura, nunca persistidos | NFR-002 |
 | D-5 | Autenticação própria: e-mail+senha (BCrypt) e JWT de curta duração | "Autenticação gerenciada pelo backend" |
@@ -72,7 +72,7 @@ As seções de modelo de dados, regras e API abaixo foram escritas em português
 | lancamento (tipo `fixo`, `cartao`) | `expense` (type `FIXED`, `CARD`) |
 | entrada | `income` |
 | forma_pagamento (`pix`, `credito`) | `payment_method` (`PIX`, `CREDIT`) |
-| valor_centavos | `amount_cents` |
+| valor | `amount` (`DECIMAL(12,2)`, reais; até 0.2.10 era `amount_cents BIGINT`) |
 | dia_vencimento | `due_day` |
 | pago / ativa / ativo | `paid` / `active` |
 | parcela_atual / parcelas_total / grupo_parcela_id | `installment_number` / `installment_count` / `installment_group_id` |
@@ -169,7 +169,7 @@ Convenções: todas as tabelas têm `usuario_id BIGINT NOT NULL` (FK `usuario.id
 | mes | CHAR(7) | NOT NULL | `AAAA-MM` |
 | nome | VARCHAR(120) | NOT NULL | |
 | categoria_id | BIGINT | NOT NULL, FK categoria | |
-| valor_centavos | BIGINT | NOT NULL, CHECK > 0 | |
+| valor | DECIMAL(12,2) | NOT NULL, CHECK > 0 | |
 | tipo | VARCHAR(10) | NOT NULL, CHECK in ('fixo','cartao') | |
 | forma_pagamento | VARCHAR(10) | NOT NULL, CHECK in ('pix','credito') | independente do tipo: fixo pode ser pix ou crédito (ex.: assinatura no cartão); cartao é sempre crédito |
 | cartao_id | BIGINT | NULL, FK cartao | só crédito; NULL = "Sem cartão" |
@@ -196,7 +196,7 @@ Regras de consistência do lançamento (validadas no serviço; as CHECK do banco
 | mes | CHAR(7) | NOT NULL | |
 | nome | VARCHAR(120) | NOT NULL | |
 | data | DATE | NOT NULL | define dia 15/30 |
-| valor_centavos | BIGINT | NOT NULL, CHECK > 0 | |
+| valor | DECIMAL(12,2) | NOT NULL, CHECK > 0 | |
 | pessoa_id | BIGINT | NULL, FK pessoa | NOT NULL = reembolso de terceiro |
 | parcela_atual | SMALLINT | NULL | ex.: 1/3 |
 | parcelas_total | SMALLINT | NULL | |
@@ -273,6 +273,7 @@ REST JSON sob `/api`. Todos os endpoints exceto `/api/auth/**` exigem `Authoriza
 | DELETE | /api/categorias/{id} | sim | REQ-012 | exclui; 409 com contagem se houver lançamentos |
 | GET/POST | /api/anos/{ano}/cartoes | sim | REQ-013 | lista / cria |
 | PUT | /api/cartoes/{id} | sim | REQ-013 | edita |
+| DELETE | /api/cartoes/{id} | sim | REQ-013 | `DELETE /api/cards/{id}`: exclui; 409 `CARD_IN_USE` com `count` se houver lançamentos com o cartão (de qualquer mês do ano) |
 | GET/POST | /api/anos/{ano}/pessoas | sim | REQ-014 | lista / cria |
 | PUT | /api/pessoas/{id} | sim | REQ-014 | edita |
 | GET | /api/meses/{aaaa-mm} | sim | REQ-022, REQ-027..041 | abre o mês (dispara carga na 1ª vez) e devolve listas, totais, posições (`positions: [{fromDay, toDay, totalExpensesCents}]`, uma por intervalo), resumos e saldo próprio |
@@ -416,6 +417,7 @@ GitHub Actions (detalhes em `docs/ci-cd.md`; NFR-010). **Um workflow por tema**,
 | 0.1.7 | 2026-11-01 | Fixo pode ser no crédito (tipo e forma de pagamento independentes); regras de consistência do lançamento; Open Questions da Phase 3 resolvidas |
 | 0.1.8 | 2026-11-01 | `month` reservado no H2: coluna `month_ref`; data do lançamento `expense_date` |
 | 0.1.9 | 2026-11-01 | Carga do mês: continua parcelas à mão (grupo próprio) e respeita a permissão de parcelas automáticas |
+| 0.3.0 | 2026-11-09 | Dinheiro em `DECIMAL(12,2)` no banco (V7: `expense.amount`, `income.amount`), `MoneyColumnConverter`; centavos no resto (D-2, NFR-001). `DELETE /api/cards/{id}` (REQ-013). Pedidos da usuária |
 | 0.2.10 | 2026-11-09 | Posição = só a soma dos gastos do intervalo (sem entradas); JSON `{fromDay, toDay, totalExpensesCents}`; tela "Gastos R$ X" sem sobra/falta (REQ-030 0.1.9, decisão da usuária) |
 | 0.2.9 | 2026-11-05 | Layout das demais telas (menu, cadastros, configurações, panorama, janelas, entrar) no estilo da tela do mês; tema por botão que alterna; `lib/ui.ts` (aprovado pela usuária) |
 | 0.2.8 | 2026-11-05 | Layout da tela do mês: saldo em destaque com totais numa linha, lista simples com o total de cada fechamento (a régua proposta foi descartada pela usuária), listas em estilo livro-caixa, resumos com barra por categoria (aprovado pela usuária) |

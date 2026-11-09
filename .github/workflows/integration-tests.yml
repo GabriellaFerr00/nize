@@ -116,7 +116,7 @@ jobs:
           grep -qiE 'up to date|no migration necessary' "$RUNNER_TEMP/second.log" \
             || { echo "::error::the second migrate was not a no-op"; exit 1; }
           ./mvnw -B -ntp -q flyway:validate
-      - name: Schema rules (money BIGINT, only hashes, no forbidden personal data)
+      - name: Schema rules (money DECIMAL(12,2), only hashes, no forbidden personal data)
         run: |
           out=$(docker exec -i -e MYSQL_PWD="$MYSQL_ROOT_PASSWORD" "$MYSQL_CONTAINER" mysql -uroot -N < scripts/ci/check-schema.sql)
           if [ -n "$out" ]; then echo "::error::schema rule violations"; echo "$out"; exit 1; fi
