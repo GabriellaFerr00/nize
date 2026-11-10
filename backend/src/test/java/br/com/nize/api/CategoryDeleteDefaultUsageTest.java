@@ -21,7 +21,7 @@ class CategoryDeleteDefaultUsageTest extends IsolationTestBase {
 
     @Test
     void defaultUsageReportsNoExpensesAndDeletionSucceeds() throws Exception {
-        String body = as(userA, get("/api/years/" + Year.now().getValue() + "/categories"))
+        String body = as(userA, get("/api/categories"))
                 .andReturn().getResponse().getContentAsString();
         long id = ((Number) JsonPath.read(body, "$[0].id")).longValue();
 

@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query'
-import { Plus } from 'lucide-react'
+import { Plus, Gauge } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -11,19 +11,21 @@ import { ExpenseFormDialog } from '../components/ExpenseFormDialog'
 import { FormMessage } from '../components/FormMessage'
 import { IncomeFormDialog } from '../components/IncomeFormDialog'
 import { LimitToast } from '../components/LimitToast'
+import { MonthLimitsDialog } from '../components/MonthLimitsDialog'
 import { MonthHeader } from '../components/MonthHeader'
 import { MonthPicker } from '../components/MonthPicker'
 import { SummaryPanel } from '../components/SummaryPanel'
 import { apiErrorMessage } from '../lib/apiErrorMessage'
 import { formatMonth } from '../lib/format'
 import { isMonth } from '../lib/month'
-import { useMonth, useRefreshMonths, useYearCatalogs } from '../lib/useMonth'
+import { useMonth, useRefreshMonths, useCatalogs } from '../lib/useMonth'
 import { dangerButton, pageTitle, primaryButton, quietButton, secondaryButton } from '../lib/ui'
 
 type DialogState =
   | { kind: 'expense'; expense?: Expense }
   | { kind: 'income'; income?: Income }
   | { kind: 'delete'; target: DeleteTarget }
+  | { kind: 'limits' }
   | null
 
 type DeleteTarget = {
@@ -51,7 +53,7 @@ export function MonthPage() {
   const { yyyyMm = '' } = useParams()
   const valid = isMonth(yyyyMm)
   const month = useMonth(yyyyMm, valid)
-  const catalogs = useYearCatalogs(Number(yyyyMm.slice(0, 4)))
+  const catalogs = useCatalogs()
   const refreshMonths = useRefreshMonths()
   const [dialog, setDialog] = useState<DialogState>(null)
   const close = () => setDialog(null)
@@ -106,6 +108,10 @@ export function MonthPage() {
             <Plus className="size-4" aria-hidden />
             {t('income.new')}
           </button>
+          <button type="button" onClick={() => setDialog({ kind: 'limits' })} className={secondaryButton}>
+            <Gauge className="size-4" aria-hidden />
+            {t('month.limits.open')}
+          </button>
         </div>
       </div>
 
@@ -152,6 +158,7 @@ export function MonthPage() {
       )}
 
       {dialog?.kind === 'expense' && <ExpenseFormDialog month={yyyyMm} expense={dialog.expense} onClose={close} />}
+      {dialog?.kind === 'limits' && <MonthLimitsDialog month={yyyyMm} onClose={close} />}
       {dialog?.kind === 'income' && <IncomeFormDialog month={yyyyMm} income={dialog.income} onClose={close} />}
       {dialog?.kind === 'delete' && (
         <Dialog title={t('month.deleteTitle')} onClose={close}>

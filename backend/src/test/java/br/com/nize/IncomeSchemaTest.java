@@ -28,7 +28,7 @@ class IncomeSchemaTest {
     void fixtures() {
         jdbc.update("INSERT INTO app_user (name, email, password_hash, created_at) VALUES ('U', 'u@income.test', 'h', CURRENT_TIMESTAMP)");
         user = jdbc.queryForObject("SELECT id FROM app_user WHERE email = 'u@income.test'", Long.class);
-        jdbc.update("INSERT INTO person (user_id, year_number, name) VALUES (?, 2026, 'Mainha')", user);
+        jdbc.update("INSERT INTO person (user_id, name) VALUES (?, 'Mainha')", user);
         person = jdbc.queryForObject("SELECT id FROM person WHERE user_id = ?", Long.class, user);
     }
 

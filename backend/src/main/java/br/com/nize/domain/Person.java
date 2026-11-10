@@ -6,8 +6,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 /** A third party who uses the user's card (e.g. "Mainha"); not a login (REQ-014). */
 @Entity
@@ -21,9 +19,6 @@ public class Person {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @JdbcTypeCode(SqlTypes.SMALLINT)
-    @Column(name = "year_number", nullable = false)
-    private int yearNumber;
 
     @Column(nullable = false, length = 80)
     private String name;
@@ -38,9 +33,8 @@ public class Person {
     protected Person() {
     }
 
-    public Person(Long userId, int yearNumber, String name) {
+    public Person(Long userId, String name) {
         this.userId = userId;
-        this.yearNumber = yearNumber;
         this.name = name;
     }
 
@@ -56,7 +50,6 @@ public class Person {
     public String getColor() { return color; }
     public Long getId() { return id; }
     public Long getUserId() { return userId; }
-    public int getYearNumber() { return yearNumber; }
     public String getName() { return name; }
     public boolean isActive() { return active; }
 }

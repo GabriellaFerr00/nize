@@ -14,14 +14,14 @@ public class CategorySeeder {
         this.categories = categories;
     }
 
-    /** Creates the factory categories for a user and year; does nothing if the year already has any. */
+    /** Creates the factory categories of a user, once (D-22); does nothing if she already has any. */
     @Transactional
-    public void seedFactoryCategories(Long userId, int year) {
-        if (categories.existsByUserIdAndYearNumber(userId, year)) {
+    public void seedFactoryCategories(Long userId) {
+        if (categories.existsByUserId(userId)) {
             return;
         }
         categories.saveAll(DefaultCategories.ALL.stream()
-                .map(entry -> new Category(userId, year, entry.name(), entry.description()))
+                .map(entry -> new Category(userId, entry.name(), entry.description()))
                 .toList());
     }
 }

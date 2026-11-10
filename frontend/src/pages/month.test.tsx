@@ -80,15 +80,15 @@ const baseReplies = (view: MonthView = november()): Replies => ({
   'GET /api/me': { body: { id: 1, name: 'Ana', email: 'a@x.com', onboardingSeen: true } },
   'GET /api/settings': { body: { currentYear: 2026, autoInstallments: true, closingsEnabled: true, closingDays: [15, 31] } },
   'GET /api/years': { body: [{ year: 2025, current: false }, { year: 2026, current: true }] },
-  'GET /api/years/2026/categories': {
+  'GET /api/categories': {
     body: [
       { id: 1, year: 2026, name: 'Mercado', active: true },
       { id: 9, year: 2026, name: 'Despesas eventuais', active: true },
       { id: 4, year: 2026, name: 'Antiga', active: false },
     ],
   },
-  'GET /api/years/2026/cards': { body: [{ id: 5, year: 2026, name: 'Nubank', dueDay: 10, active: true }] },
-  'GET /api/years/2026/people': {
+  'GET /api/cards': { body: [{ id: 5, year: 2026, name: 'Nubank', dueDay: 10, active: true }] },
+  'GET /api/people': {
     body: [
       { id: 7, year: 2026, name: 'Mainha', active: true },
       { id: 8, year: 2026, name: 'Primo', active: false },
@@ -156,9 +156,9 @@ describe('month screen header and navigation (TASK-039: REQ-041, REQ-040)', () =
     const replies = baseReplies()
     replies['GET /api/months/2026-03'] = { body: empty('2026-03') }
     replies['GET /api/months/2025-03'] = { body: empty('2025-03') }
-    replies['GET /api/years/2025/categories'] = { body: [] }
-    replies['GET /api/years/2025/cards'] = { body: [] }
-    replies['GET /api/years/2025/people'] = { body: [] }
+    replies['GET /api/categories'] = { body: [] }
+    replies['GET /api/cards'] = { body: [] }
+    replies['GET /api/people'] = { body: [] }
     const { router } = await openMonth(replies)
 
     const year = screen.getByRole('combobox', { name: 'Escolher ano' })
@@ -253,6 +253,50 @@ describe('category limits (TASK-068: REQ-051)', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('Mercado passou do limite')
     await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument(), { timeout: LIMIT_NOTICE_MS + 2000 })
   }, LIMIT_NOTICE_MS + 5000)
+})
+
+describe('month limits (TASK-074: REQ-051, D-22)', () => {
+  const limits = [
+    { categoryId: 1, categoryName: 'Mercado', defaultCents: 100_000, monthCents: null },
+    { categoryId: 9, categoryName: 'Lazer', defaultCents: 50_000, monthCents: 120_000 },
+    { categoryId: 4, categoryName: 'Pets', defaultCents: null, monthCents: null },
+  ]
+
+  it('shows each default and changes, keeps or removes only this month', async () => {
+    const replies = baseReplies()
+    replies['GET /api/months/2026-11/category-limits'] = { body: limits }
+    replies['PUT /api/months/2026-11/category-limits/1'] = { status: 204 }
+    replies['DELETE /api/months/2026-11/category-limits/9'] = { status: 204 }
+    const { calls } = await openMonth(replies)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Limites do mês' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Limites de novembro de 2026' })
+    expect(within(dialog).getByText('Mercado').closest('li')).toHaveTextContent('Padrão: R$ 1.000,00')
+    expect(within(dialog).getByText('Pets').closest('li')).toHaveTextContent('Sem limite padrão')
+    expect(within(dialog).getByLabelText('Limite de Lazer neste mês (R$)')).toHaveValue('1200,00')
+
+    await userEvent.type(within(dialog).getByLabelText('Limite de Mercado neste mês (R$)'), '800')
+    await userEvent.clear(within(dialog).getByLabelText('Limite de Lazer neste mês (R$)'))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }))
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(calls.find((c) => c.key === 'PUT /api/months/2026-11/category-limits/1')?.body).toEqual({ limitCents: 80_000 })
+    expect(calls.some((c) => c.key === 'DELETE /api/months/2026-11/category-limits/9')).toBe(true)
+    // nothing changed for Pets: nothing sent
+    expect(calls.some((c) => c.key.includes('/category-limits/4'))).toBe(false)
+  })
+
+  it('refuses a limit that is not a positive amount', async () => {
+    const replies = baseReplies()
+    replies['GET /api/months/2026-11/category-limits'] = { body: limits }
+    const { calls } = await openMonth(replies)
+    await userEvent.click(screen.getByRole('button', { name: 'Limites do mês' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Limites de novembro de 2026' })
+    await userEvent.type(within(dialog).getByLabelText('Limite de Pets neste mês (R$)'), '0')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }))
+    expect(within(dialog).getByText('Informe um valor maior que zero ou deixe em branco.')).toBeInTheDocument()
+    expect(calls.some((c) => c.key.startsWith('PUT') || c.key.startsWith('DELETE'))).toBe(false)
+  })
 })
 
 describe('hide values (TASK-065: REQ-049)', () => {

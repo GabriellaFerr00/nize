@@ -48,7 +48,7 @@ class PdfScenariosTest extends IsolationTestBase {
     // ---- helpers ----
 
     private long categoryId(String name) throws Exception {
-        String body = as(userA, get("/api/years/" + YEAR + "/categories")).andReturn().getResponse().getContentAsString();
+        String body = as(userA, get("/api/categories")).andReturn().getResponse().getContentAsString();
         List<Integer> ids = JsonPath.read(body, "$[?(@.name == '" + name + "')].id");
         return ids.get(0);
     }
@@ -80,7 +80,7 @@ class PdfScenariosTest extends IsolationTestBase {
     }
 
     private long createCard(int dueDay) throws Exception {
-        return idOf(as(userA, post("/api/years/" + YEAR + "/cards").contentType(MediaType.APPLICATION_JSON)
+        return idOf(as(userA, post("/api/cards").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Nubank\",\"dueDay\":%d}".formatted(dueDay))));
     }
 
@@ -427,7 +427,7 @@ class PdfScenariosTest extends IsolationTestBase {
 
         as(userA, delete("/api/categories/" + presentes)).andExpect(status().isNoContent());
 
-        String list = as(userA, get("/api/years/" + YEAR + "/categories")).andReturn().getResponse().getContentAsString();
+        String list = as(userA, get("/api/categories")).andReturn().getResponse().getContentAsString();
         assertThat((List<?>) JsonPath.read(list, "$[?(@.name == 'Presentes')]")).isEmpty();
     }
 }

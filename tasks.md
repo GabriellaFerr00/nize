@@ -280,6 +280,13 @@ Nomes em inglês: ver "Nomenclatura em inglês" em `design.md` (os termos em por
 - [x] **TASK-072** [REQ-052]: Logotipos dos 9 bancos pedidos (Itaú, Bradesco, Santander, BB, Caixa, Inter, C6, PicPay, Mercado Pago) e fim do envio de imagem própria (pedido da usuária).
   - _Feito_: SVGs do Open Finance Brasil (`logos-bancos-br` 0.8.6) conferidos e salvos em `public/card-brands/` com origem no README; `fullColor` em `cardBrands.ts` (quadrado branco). Removidos `card_logo` (V11), `CardLogo`, `ImageFormat`, `/api/cards/{id}/logo`, `hasLogo`, o campo de imagem e os testes de envio.
 
+- [x] **TASK-073** [REQ-007, REQ-010..014, D-22]: Categorias, cartões e pessoas sem ano: V12 une as listas (fica o ano mais recente; lançamentos e entradas reapontados), rotas sem ano, ano novo não copia, telas sem seletor de ano.
+  - _Verify_: teste da migração com dados de dois anos (H2 e MySQL 8.4), testes de API e de tela atualizados.
+  - _Feito_: V12 une as listas por ano (fica o ano mais recente, lançamentos e entradas reapontados, tabelas de apoio com chave primária por causa do `sql_require_primary_key` da Aiven); entidades, repositórios, serviços e rotas sem ano (`/api/categories|cards|people`); ano novo só libera os meses; fábrica semeada uma vez; carga do mês e parcelas no ano seguinte usam os mesmos itens. Validado em MySQL 8.4 com `sql_require_primary_key=ON` e dados de dois anos (Docker). Front sem seletor de ano (`useCatalogs`). Scripts do CI (`api-flow.sh`, `dast-checks.sh`) nas rotas novas. Um teste da migração no H2 fora do Spring foi descartado: o H2 acusava "Check constraint invalid" até em migrações antigas, fora do app.
+- [x] **TASK-074** [REQ-051, D-22]: Limite padrão + ajuste por mês (`category_month_limit`, `/api/months/{m}/category-limits`), janela "Limites do mês" na tela do mês.
+  - _Verify_: testes de regra/API (ajuste vale no mês, sem ajuste vale o padrão, tirar volta ao padrão, isolamento) e de tela.
+  - _Feito_: `category_month_limit` (V12), `CategoryLimitService`/`CategoryLimitController` (`GET/PUT/DELETE /api/months/{m}/category-limits`), o resumo do mês usa o ajuste do mês ou o padrão; 6 testes de API novos em `CategoryLimitApiTest`. Tela: botão "Limites do mês" com a janela `MonthLimitsDialog` (padrão de cada categoria e campo só para o mês; vazio = padrão); 2 testes. 407 testes back (verify ok), 170 front.
+
 ---
 
 ## Completed Tasks Archive

@@ -51,7 +51,7 @@ public class RegistrationService {
         int currentYear = Year.now().getValue();
         settings.save(new Settings(user.getId(), currentYear, true));
         years.save(new UserYear(user.getId(), currentYear));
-        categorySeeder.seedFactoryCategories(user.getId(), currentYear);
+        categorySeeder.seedFactoryCategories(user.getId());
         return user;
     }
 

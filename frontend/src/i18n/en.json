@@ -150,7 +150,7 @@
       "name": "Name",
       "description": "Description (optional)",
       "dueDay": "Due day (1 to 31)",
-      "monthlyLimit": "Monthly limit (R$, optional)",
+      "monthlyLimit": "Default monthly limit (R$, optional)",
       "color": "Color"
     },
     "errors": {
@@ -196,7 +196,7 @@
     "deactivateItem": "Deactivate {{name}}",
     "activateItem": "Reactivate {{name}}",
     "deleteItem": "Delete {{name}}",
-    "limitPerMonth": "Monthly limit:",
+    "limitPerMonth": "Default monthly limit:",
     "colors": {
       "none": "No color",
       "green": "Green",
@@ -229,7 +229,7 @@
     "autoInstallments": "Automatic installments",
     "autoInstallmentsHelp": "When you record an installment purchase, Nize creates one installment per month.",
     "newYear": "New year",
-    "newYearHelp": "Creates the year copying categories, cards and people from the previous year. Older years stay editable.",
+    "newYearHelp": "Creates the year so you can enter its months. Categories, cards and people are the same in every year.",
     "yearNumber": "Year",
     "createYear": "Create year",
     "yearCreated": "Year {{year}} created.",
@@ -392,7 +392,13 @@
       "near": "is close to its limit",
       "over": "is over its limit",
       "of": "of",
-      "close": "Close notice"
+      "close": "Close notice",
+      "open": "Month limits",
+      "dialogTitle": "Limits of {{month}}",
+      "dialogHelp": "Each category uses its default limit (set in Categories). Type a value only to change this month's limit; leave it empty to use the default.",
+      "default": "Default:",
+      "noDefault": "No default limit",
+      "thisMonth": "{{name}} limit this month (R$)"
     },
     "entryDate": "Entered on {{date}}",
     "entryDateCaption": "entered"

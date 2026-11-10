@@ -31,7 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 class CategoryDeleteTest extends IsolationTestBase {
 
-    private static final String LIST = "/api/years/" + Year.now().getValue() + "/categories";
+    private static final String LIST = "/api/categories";
 
     @MockitoBean
     private CategoryUsage usage;

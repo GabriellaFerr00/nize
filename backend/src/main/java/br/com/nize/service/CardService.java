@@ -13,30 +13,26 @@ import java.util.List;
 public class CardService {
 
     private final CardRepository cards;
-    private final YearGuard yearGuard;
     private final ExpenseRepository expenses;
 
-    public CardService(CardRepository cards, YearGuard yearGuard, ExpenseRepository expenses) {
+    public CardService(CardRepository cards, ExpenseRepository expenses) {
         this.cards = cards;
-        this.yearGuard = yearGuard;
         this.expenses = expenses;
     }
 
     @Transactional(readOnly = true)
-    public List<Card> list(Long userId, int year, boolean activeOnly) {
-        yearGuard.requireYear(userId, year);
+    public List<Card> list(Long userId, boolean activeOnly) {
         return activeOnly
-                ? cards.findByUserIdAndYearNumberAndActiveOrderByIdAsc(userId, year, true)
-                : cards.findByUserIdAndYearNumberOrderByIdAsc(userId, year);
+                ? cards.findByUserIdAndActiveOrderByIdAsc(userId, true)
+                : cards.findByUserIdOrderByIdAsc(userId);
     }
 
     @Transactional
-    public Card create(Long userId, int year, String name, int dueDay, String brand) {
-        yearGuard.requireYear(userId, year);
-        if (cards.existsByUserIdAndYearNumberAndNameIgnoreCase(userId, year, name)) {
+    public Card create(Long userId, String name, int dueDay, String brand) {
+        if (cards.existsByUserIdAndNameIgnoreCase(userId, name)) {
             throw new CardNameTakenException();
         }
-        Card card = new Card(userId, year, name, dueDay);
+        Card card = new Card(userId, name, dueDay);
         card.setBrand(brand);
         return cards.save(card);
     }
@@ -45,7 +41,7 @@ public class CardService {
     /** Full replacement: a missing {@code brand} removes it (REQ-052). */
     public Card update(Long userId, Long id, String name, int dueDay, boolean active, String brand) {
         Card card = cards.findByIdAndUserId(id, userId).orElseThrow(ResourceNotFoundException::new);
-        if (cards.existsByUserIdAndYearNumberAndNameIgnoreCaseAndIdNot(userId, card.getYearNumber(), name, card.getId())) {
+        if (cards.existsByUserIdAndNameIgnoreCaseAndIdNot(userId, name, card.getId())) {
             throw new CardNameTakenException();
         }
         card.update(name, dueDay, active);

@@ -9,6 +9,7 @@ import br.com.nize.domain.PaymentMethod;
 import br.com.nize.domain.Person;
 import br.com.nize.domain.Settings;
 import br.com.nize.repository.CardRepository;
+import br.com.nize.repository.CategoryMonthLimitRepository;
 import br.com.nize.repository.CategoryRepository;
 import br.com.nize.repository.ExpenseRepository;
 import br.com.nize.repository.IncomeRepository;
@@ -34,7 +35,7 @@ import java.util.stream.Collectors;
 /**
  * The month screen (REQ-041): opens the month (load on first open, REQ-022) and computes totals, positions, own
  * balance and summaries from the rules on every read. Nothing derived is stored (NFR-002).
- * Names in the summaries are those of the month's year; a null card is "Sem cartão" (the front translates it).
+ * Catalogs have no year (D-22).
  */
 @Service
 public class MonthService {
@@ -75,10 +76,11 @@ public class MonthService {
     private final CategoryRepository categories;
     private final PersonRepository people;
     private final SettingsRepository settings;
+    private final CategoryMonthLimitRepository monthLimits;
 
     public MonthService(MonthLoadService loader, ExpenseRepository expenses, IncomeRepository incomes,
                         CardRepository cards, CategoryRepository categories, PersonRepository people,
-                        SettingsRepository settings) {
+                        SettingsRepository settings, CategoryMonthLimitRepository monthLimits) {
         this.loader = loader;
         this.expenses = expenses;
         this.incomes = incomes;
@@ -86,6 +88,7 @@ public class MonthService {
         this.categories = categories;
         this.people = people;
         this.settings = settings;
+        this.monthLimits = monthLimits;
     }
 
     @Transactional
@@ -103,14 +106,14 @@ public class MonthService {
                 base.balanceCents(), sum(thirdParty), sum(reimbursements),
                 OwnBalance.of(base.balanceCents(), thirdParty, reimbursements));
 
-        List<Card> yearCards = cards.findByUserIdAndYearNumberOrderByIdAsc(userId, month.getYear());
+        List<Card> yearCards = cards.findByUserIdOrderByIdAsc(userId);
         Settings userSettings = settings.findById(userId).orElseThrow();
         List<Position> positions = userSettings.isClosingsEnabled()
                 ? positions(month, monthExpenses, userSettings.getClosingDays(), yearCards)
                 : List.of();
 
         return new MonthView(month.toString(), monthExpenses, monthIncomes, totals, userSettings.isClosingsEnabled(),
-                positions, summaries(userId, month.getYear(), monthExpenses, yearCards));
+                positions, summaries(userId, month.toString(), monthExpenses, yearCards));
     }
 
     /** Totals and balance of one month from the rules; the overview uses it too, so both screens always agree. */
@@ -122,14 +125,16 @@ public class MonthService {
                 monthIncomes.stream().map(Income::getAmountCents).toList());
     }
 
-    private Summaries summaries(Long userId, int year, List<Expense> monthExpenses, List<Card> yearCards) {
-        List<Category> yearCategories = categories.findByUserIdAndYearNumberOrderByIdAsc(userId, year);
+    private Summaries summaries(Long userId, String month, List<Expense> monthExpenses, List<Card> yearCards) {
+        List<Category> yearCategories = categories.findByUserIdOrderByIdAsc(userId);
         Map<Long, String> categoryNames = yearCategories.stream().collect(Collectors.toMap(Category::getId, Category::getName));
         Map<Long, Long> limits = new java.util.HashMap<>();
+        // the month's own limit wins over the category's default (REQ-051, D-22)
         yearCategories.stream().filter(c -> c.getMonthlyLimitCents() != null)
                 .forEach(c -> limits.put(c.getId(), c.getMonthlyLimitCents()));
+        monthLimits.findByUserIdAndMonth(userId, month).forEach(l -> limits.put(l.getCategoryId(), l.getLimitCents()));
         Map<Long, String> cardNames = yearCards.stream().collect(Collectors.toMap(Card::getId, Card::getName));
-        Map<Long, String> personNames = people.findByUserIdAndYearNumberOrderByIdAsc(userId, year).stream()
+        Map<Long, String> personNames = people.findByUserIdOrderByIdAsc(userId).stream()
                 .collect(Collectors.toMap(Person::getId, Person::getName));
 
         List<CategoryEntry> byCategory = CategorySummary.of(monthExpenses.stream()

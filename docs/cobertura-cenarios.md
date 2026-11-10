@@ -65,16 +65,17 @@ linha de A (e vice-versa), listas e o mês só mostram linhas da própria usuár
 | PUT /api/settings | SettingsController | os mesmos (B manda `userId` de A no corpo e só a linha de B muda) |
 | GET /api/years | YearController | `YearApiTest#eachUserOnlySeesAndCopiesTheirOwnData` |
 | POST /api/years/{year} | YearController | `YearApiTest#eachUserOnlySeesAndCopiesTheirOwnData` (copia só os dados da própria usuária) |
-| GET /api/years/{year}/categories | CategoryController | `CategoryApiTest#createAddsACategoryToTheList` (B não vê a categoria de A) |
-| POST /api/years/{year}/categories | CategoryController | `CategoryApiTest#theSameNameIsFineForAnotherUser`, `#createAddsACategoryToTheList` |
+| GET /api/categories | CategoryController | `CategoryApiTest#createAddsACategoryToTheList` (B não vê a categoria de A) |
+| POST /api/categories | CategoryController | `CategoryApiTest#theSameNameIsFineForAnotherUser`, `#createAddsACategoryToTheList` |
 | PUT /api/categories/{id} | CategoryController | `CategoryApiTest#onlyTheOwnerCanUpdateACategoryAndOthersGet404`, `#anotherUsersChangeNeverTouchesMyCategory` |
 | DELETE /api/categories/{id} | CategoryController | `CategoryDeleteTest#anotherUserGets404AndNothingIsDeleted` |
-| GET /api/years/{year}/cards | CardController | `CardApiTest` (teste de criação: B lista 0 cartões) |
-| POST /api/years/{year}/cards | CardController | `CardApiTest#theSameNameIsFineForAnotherUserAndAnotherYear` |
+| GET/PUT/DELETE /api/months/{month}/category-limits[/{categoryId}] | CategoryLimitController | `CategoryLimitApiTest#onlyTheOwnerSeesAndChangesTheMonthLimits` (`assertOnlyOwnerCanAccess`) (2026-11-09) |
+| GET /api/cards | CardController | `CardApiTest` (teste de criação: B lista 0 cartões) |
+| POST /api/cards | CardController | `CardApiTest#theSameNameIsFineForAnotherUserAndAnotherYear` |
 | PUT /api/cards/{id} | CardController | `CardApiTest#onlyTheOwnerCanUpdateACardAndOthersGet404`, `#anotherUsersChangeNeverTouchesMyCard` |
 | DELETE /api/cards/{id} | CardController | `CardDeleteTest#onlyTheOwnerCanDeleteACardAndOthersGet404`, `#anotherUserCannotDeleteMyCard`, `#anotherUsersExpensesDoNotCount` (2026-11-09) |
-| GET /api/years/{year}/people | PersonController | `PersonApiTest` (teste de criação: B lista 0 pessoas) |
-| POST /api/years/{year}/people | PersonController | `PersonApiTest#theSameNameIsFineForAnotherUserAndAnotherYear` |
+| GET /api/people | PersonController | `PersonApiTest` (teste de criação: B lista 0 pessoas) |
+| POST /api/people | PersonController | `PersonApiTest#theSameNameIsFineForAnotherUserAndAnotherYear` |
 | PUT /api/people/{id} | PersonController | `PersonApiTest#onlyTheOwnerCanUpdateAPersonAndOthersGet404`, `#anotherUsersChangeNeverTouchesMyPerson` |
 | GET /api/months/{month} | MonthController | `MonthApiTest#eachUserSeesOnlyTheirOwnMonth`; carga: `service.MonthLoadServiceTest#eachUserLoadsOnlyTheirOwnMonth` |
 | POST /api/months/{month}/expenses | ExpenseController | `ExpenseCreateApiTest#anotherUsersCategoryCardAndPersonAre404AndNothingIsCreated`, `#theExpenseBelongsToTheCallerNoMatterWhatTheBodySays`; parcelas: `ExpenseInstallmentsApiTest#generatedInstallmentsBelongToTheCallerOnly` |
@@ -86,7 +87,7 @@ linha de A (e vice-versa), listas e o mês só mostram linhas da própria usuár
 | DELETE /api/incomes/{id} | IncomeController | `IncomeApiTest#onlyTheOwnerCanDeleteAnIncome`; `?scope=following`: `ExpenseInstallmentDeleteTest#anotherUserCannotDeleteMyIncomeInstallments` (2026-11-09) |
 | GET /api/years/{year}/overview | `OverviewApiTest#onlyTheOwnerCanReadTheOverviewOfHerYear`, `#anotherUsersMovementsNeverShowUp` | ok (TASK-044) |
 
-**Resultado**: 25 de 25 endpoints de dados cobertos (100%), incluindo o panorama (TASK-044). Em 2026-11-09 entrou mais 1 (excluir cartão), coberto: 26 de 26 (o logotipo enviado pela usuária existiu por algumas horas e foi retirado). Cores (`color`) e limite (`monthlyLimitCents`) usam os endpoints de categoria/pessoa já cobertos; `CategoryLimitApiTest#anotherUserCannotSetMyLimit` e `CategoryAndPersonColorTest#anotherUserCannotColorMyCategory` conferem. Faltavam dois casos de referência de outra
+**Resultado**: 25 de 25 endpoints de dados cobertos (100%), incluindo o panorama (TASK-044). Em 2026-11-09 entrou mais 1 (excluir cartão), coberto: 28 de 28 com os limites do mês, e as rotas de categorias, cartões e pessoas passaram a ser sem ano (D-22) (o logotipo enviado pela usuária existiu por algumas horas e foi retirado). Cores (`color`) e limite (`monthlyLimitCents`) usam os endpoints de categoria/pessoa já cobertos; `CategoryLimitApiTest#anotherUserCannotSetMyLimit` e `CategoryAndPersonColorTest#anotherUserCannotColorMyCategory` conferem. Faltavam dois casos de referência de outra
 usuária na edição (cartão/pessoa no `PUT /api/expenses/{id}` e pessoa no `PUT /api/incomes/{id}`); os testes foram
 acrescentados e passam (o código já devolvia 404). TASK-047 fica aberta só pelo endpoint do panorama.
 

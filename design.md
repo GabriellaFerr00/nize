@@ -1,5 +1,5 @@
 # design.md
-> Nize — Version 0.3.2 (MVP web) — 2026-11-09
+> Nize — Version 0.4.0 (MVP web) — 2026-11-09
 
 ## Architecture Overview
 Monorepo com dois módulos independentes: `backend` (API REST) e `frontend` (SPA). **Toda regra de cálculo vive só no back-end** (totais, saldo, posição nos fechamentos, parcelas, carga do mês, saldo próprio, porcentagens). O front apenas exibe o que a API devolve e nunca recalcula valores. Como back (Java) e front (TypeScript) não compartilham código, o "pacote de regras compartilhado" do PDF vira o pacote Java `br.com.nize.rules`, puro (sem Spring, sem JPA), testado antes do código.
@@ -57,6 +57,7 @@ Monorepo com dois módulos independentes: `backend` (API REST) e `frontend` (SPA
 | D-19 | `GET /api/years/{year}/overview` faz a carga do mês (`MonthLoadService.open`, idempotente) de cada mês do ano até o mês vigente, em ordem (janeiro primeiro, para cada mês copiar do anterior); ano passado → os 12 meses; ano futuro → nenhum. Meses depois do vigente só mostram o que já existe. Cada mês devolvido bate com `GET /api/months/{m}` (mesmos totais e saldo) | Decisão da usuária, 2026-11-04 |
 | D-20 | Identidade visual "Verde Nize" (substitui a verde-azulada): paleta, tokens e regras da skill `design-nize` (`.claude/skills/design-nize`). Cores só como tokens semânticos em `src/styles/index.css` (`page`, `sidebar`, `card`, `soft`, `line`, `line-strong`, `ink`, `ink-soft`, `brand`, `on-brand`, `brand-text`, `positive`, `negative`, `on-negative`, `warning`, `focus`, `backdrop`, `chart-*`), com valores para claro e escuro; as cores padrão do Tailwind ficam desligadas. O Verde Nize `#B8F45A` só é preenchimento no modo claro (texto verde usa `brand-text`). Tema: só Claro e Escuro; o seletor grava `nize.theme` (`light`/`dark`) no `localStorage` e o `<html>` sempre recebe `data-theme` (`lib/theme.ts`); sem escolha gravada, o tema inicial vem de `prefers-color-scheme` (decisão da usuária 2026-11-05: sem opção "Sistema"). Logotipo: o padrão de `public/logoPadrao/` (`nize-logo-n-bloco-verde-*`: bloco verde arredondado com o "N" + "ize"), mostrado por `components/Logo.tsx`; no modo escuro usa a variante `nize-logo-n-bloco-verde-fundo-escuro-*` (só a palavra "ize" em off-white `#F2F5EC`, gerada a partir do original) por meio da variante `dark:` do Tailwind, que acompanha o mesmo tema dos tokens. Ícones quadrados em `public/logotipo/` (favicon, `apple-touch-icon`, `site.webmanifest`). Fonte do sistema (a CSP não permite fonte externa). Menu lateral continua a partir de 768px (REQ-043), não 1024px como na skill | REQ-045, decisão da usuária 2026-11-05 |
 | D-21 | Cores e marcas (REQ-052, 2026-11-09): **cor** de categoria/pessoa = uma das 8 chaves rápidas (`green`, `teal`, `blue`, `purple`, `pink`, `red`, `orange`, `brown`, com tokens `--nz-tag-*` claro/escuro ≥ 4:1) ou `#rrggbb` minúsculo escolhido na paleta de matizes e tons (12 matizes × 6 tons, gerada no front) ou no seletor do aparelho; NULL = neutra. A cor é só uma bolinha ao lado do nome, sempre com contorno `line-strong`, nunca cor de texto; o valor vai por CSSOM (`style` do React), compatível com a CSP. **Marca** do cartão = chave de `CardBrand` (lista igual no back e em `frontend/src/lib/cardBrands.ts`, conferida por teste). Logotipos salvos em `frontend/public/card-brands/` (servidos pelo próprio site, `img-src 'self'`, nada buscado fora): logotipos coloridos que as instituições publicam no Open Finance Brasil (via `logos-bancos-br` 0.8.6; marcas das instituições, uso nominativo) num quadrado branco; ícones de uma cor do Simple Icons 16.36.0 (CC0) sobre a cor da marca; sem logotipo, selo com iniciais (≥ 4:1). Cada SVG é conferido (sem script, evento, `foreignObject` ou link externo). Origem e aviso de marcas em `frontend/public/card-brands/README.md`. **Não há envio de imagem pela usuária** (retirado em 2026-11-09; V11 apaga `card_logo`) | REQ-052 |
+| D-22 | Categorias, cartões e pessoas **sem ano** (2026-11-09, decisão da usuária): uma lista por conta, válida em todos os meses. A V12 une as listas por ano: para cada usuária e nome (sem diferença de maiúsculas) fica a linha do ano mais recente (com seus campos), lançamentos e entradas passam a apontar para ela, as demais são apagadas e `year_number` sai das três tabelas. Rotas sem ano (`/api/categories`, `/api/cards`, `/api/people`); criar um ano só libera os meses (`user_year`), sem copiar nada; as categorias de fábrica são semeadas uma vez no cadastro. Limite: padrão na categoria + ajuste por mês em `category_month_limit` (vale o ajuste quando existe) | REQ-007, REQ-010..014, REQ-051 |
 | D-9 | Posição por quinzena usa "data efetiva" (pela forma de pagamento, não pelo tipo): Pix = `data`; crédito com cartão = dia de vencimento do cartão dentro do mês do lançamento; crédito sem cartão = `data` (confirmado 2026-11-01) | REQ-032 |
 
 ## Nomenclatura em inglês
@@ -138,20 +139,27 @@ Convenções: todas as tabelas têm `usuario_id BIGINT NOT NULL` (FK `usuario.id
 |---|---|---|---|
 | id | BIGINT | PK | REQ-010/011/012 |
 | usuario_id | BIGINT | NOT NULL, FK | |
-| ano | SMALLINT | NOT NULL | lista por ano, copiada do ano anterior |
-| nome | VARCHAR(80) | NOT NULL | UNIQUE (usuario_id, ano, nome) |
+| nome | VARCHAR(80) | NOT NULL | único por usuária ignorando maiúsculas (no serviço, 409 `*_NAME_TAKEN`); índice `user_id`; sem ano desde a V12 (D-22) |
 | descricao | VARCHAR(255) | NULL | |
 | ativa | BOOLEAN | NOT NULL, default true | |
 | cor | VARCHAR(16) | NULL | REQ-052; coluna `color` (V9; o CHECK da paleta saiu na V10): chave rápida ou `#rrggbb` (validada na API, D-21) |
-| limite_mensal | DECIMAL(12,2) | NULL, CHECK > 0 | REQ-051; coluna `limit_amount` (V8), `monthlyLimitCents` na API; NULL = sem limite; copiado com a categoria para o ano novo |
+| limite_mensal | DECIMAL(12,2) | NULL, CHECK > 0 | REQ-051; **limite padrão** de todos os meses; coluna `limit_amount` (V8), `monthlyLimitCents` na API; NULL = sem padrão |
+
+### limite_categoria_mes
+Tabela `category_month_limit` (V12): ajuste do limite de uma categoria só num mês (REQ-051, D-22).
+| Field | Type | Constraints | Notes |
+|---|---|---|---|
+| categoria_id | BIGINT | PK parte 1, FK categoria | `category_id`; apagado junto com a categoria |
+| mes | CHAR(7) | PK parte 2 | `month_ref`, `AAAA-MM` |
+| usuario_id | BIGINT | NOT NULL, FK | `user_id`; toda consulta filtra por ele |
+| limite | DECIMAL(12,2) | NOT NULL, CHECK > 0 | `limit_amount`; vale no lugar do padrão naquele mês |
 
 ### cartao
 | Field | Type | Constraints | Notes |
 |---|---|---|---|
 | id | BIGINT | PK | REQ-013 |
 | usuario_id | BIGINT | NOT NULL, FK | |
-| ano | SMALLINT | NOT NULL | |
-| nome | VARCHAR(80) | NOT NULL | UNIQUE (usuario_id, ano, nome) |
+| nome | VARCHAR(80) | NOT NULL | único por usuária ignorando maiúsculas (no serviço, 409 `*_NAME_TAKEN`); índice `user_id`; sem ano desde a V12 (D-22) |
 | dia_vencimento | TINYINT | NOT NULL, CHECK 1..31 | define a quinzena do crédito |
 | ativo | BOOLEAN | NOT NULL, default true | |
 | marca | VARCHAR(32) | NULL | REQ-052; coluna `brand` (V10), chave de `CardBrand` (validada na API); copiada para o ano novo |
@@ -161,8 +169,7 @@ Convenções: todas as tabelas têm `usuario_id BIGINT NOT NULL` (FK `usuario.id
 |---|---|---|---|
 | id | BIGINT | PK | REQ-014 |
 | usuario_id | BIGINT | NOT NULL, FK | |
-| ano | SMALLINT | NOT NULL | |
-| nome | VARCHAR(80) | NOT NULL | UNIQUE (usuario_id, ano, nome) |
+| nome | VARCHAR(80) | NOT NULL | único por usuária ignorando maiúsculas (no serviço, 409 `*_NAME_TAKEN`); índice `user_id`; sem ano desde a V12 (D-22) |
 | ativa | BOOLEAN | NOT NULL, default true | |
 | cor | VARCHAR(16) | NULL | REQ-052; coluna `color` (V9; o CHECK da paleta saiu na V10): chave rápida ou `#rrggbb` (validada na API, D-21) |
 
@@ -272,15 +279,17 @@ REST JSON sob `/api`. Todos os endpoints exceto `/api/auth/**` exigem `Authoriza
 | GET | /api/configuracao | sim | REQ-006, REQ-009, REQ-048 | ano vigente, parcelas automáticas, `closingsEnabled` e `closingDays` (crescente) |
 | PUT | /api/configuracao | sim | REQ-006, REQ-009, REQ-048 | altera configuração; `closingDays` de 1 a 31, sem repetir (senão 400 `VALIDATION_ERROR`) |
 | GET | /api/anos | sim | REQ-008 | anos existentes |
-| POST | /api/anos/{ano} | sim | REQ-007 | cria ano copiando estrutura do anterior |
-| GET | /api/anos/{ano}/categorias | sim | REQ-010 | lista |
-| POST | /api/anos/{ano}/categorias | sim | REQ-011, REQ-051 | cria; `monthlyLimitCents` opcional (> 0, ≤ 999999999999) também no PUT (ausente/null = sem limite) |
+| POST | /api/anos/{ano} | sim | REQ-007 | cria o ano (libera os meses); não copia nada (D-22) |
+| GET | /api/categorias | sim | REQ-010 | `GET /api/categories` (`?active=true`): lista única, sem ano (D-22) |
+| POST | /api/categorias | sim | REQ-011, REQ-051 | `POST /api/categories`: cria; `monthlyLimitCents` opcional (> 0, ≤ 999999999999) também no PUT (ausente/null = sem limite) |
 | PUT | /api/categorias/{id} | sim | REQ-011 | renomeia, descreve, ativa/desativa |
 | DELETE | /api/categorias/{id} | sim | REQ-012 | exclui; 409 com contagem se houver lançamentos |
-| GET/POST | /api/anos/{ano}/cartoes | sim | REQ-013 | lista / cria |
+| GET | /api/meses/{aaaa-mm}/limites | sim | REQ-051 | `GET /api/months/{month}/category-limits` → `[{categoryId, defaultCents, monthCents}]` das categorias ativas (e das que têm ajuste no mês) |
+| PUT/DELETE | /api/meses/{aaaa-mm}/limites/{categoriaId} | sim | REQ-051 | `PUT .../category-limits/{categoryId}` `{limitCents}` (> 0, ≤ 999999999999) ajusta o mês; `DELETE` volta ao padrão; 204; categoria de outra usuária → 404 |
+| GET/POST | /api/cartoes | sim | REQ-013 | `/api/cards`: lista / cria (sem ano, D-22) |
 | PUT | /api/cartoes/{id} | sim | REQ-013 | edita |
 | DELETE | /api/cartoes/{id} | sim | REQ-013 | `DELETE /api/cards/{id}`: exclui; 409 `CARD_IN_USE` com `count` se houver lançamentos com o cartão (de qualquer mês do ano) |
-| GET/POST | /api/anos/{ano}/pessoas | sim | REQ-014 | lista / cria |
+| GET/POST | /api/pessoas | sim | REQ-014 | `/api/people`: lista / cria (sem ano, D-22) |
 | PUT | /api/pessoas/{id} | sim | REQ-014 | edita |
 | GET | /api/meses/{aaaa-mm} | sim | REQ-022, REQ-027..041 | abre o mês (dispara carga na 1ª vez) e devolve listas, totais, posições (`positions: [{fromDay, toDay, totalExpensesCents}]`, uma por intervalo), resumos e saldo próprio |
 | POST | /api/meses/{aaaa-mm}/lancamentos | sim | REQ-015..020 | cria gasto; gera parcelas se `gerarParcelas` e permissão ligada |
@@ -423,6 +432,7 @@ GitHub Actions (detalhes em `docs/ci-cd.md`; NFR-010). **Um workflow por tema**,
 | 0.1.7 | 2026-11-01 | Fixo pode ser no crédito (tipo e forma de pagamento independentes); regras de consistência do lançamento; Open Questions da Phase 3 resolvidas |
 | 0.1.8 | 2026-11-01 | `month` reservado no H2: coluna `month_ref`; data do lançamento `expense_date` |
 | 0.1.9 | 2026-11-01 | Carga do mês: continua parcelas à mão (grupo próprio) e respeita a permissão de parcelas automáticas |
+| 0.4.0 | 2026-11-09 | D-22: categorias, cartões e pessoas sem ano (V12 une as listas), rotas sem ano, ano novo não copia; limite padrão + ajuste por mês (`category_month_limit`, `/api/months/{m}/category-limits`). Decisões da usuária |
 | 0.3.2 | 2026-11-09 | Logotipos do Open Finance Brasil para 9 bancos (quadrado branco); fim do envio de imagem própria: V11 apaga `card_logo`, saem `/api/cards/{id}/logo`, `ImageFormat` e `hasLogo` (pedido da usuária) |
 | 0.3.1 | 2026-11-09 | D-21 ampliada: marcas de cartão brasileiras (`CardBrand`, V10 `card.brand`, SVGs CC0 em `public/card-brands/`) e cores `#rrggbb` por paleta de matizes e tons (V10 tira o CHECK da paleta). Pedido da usuária |
 | 0.3.0 | 2026-11-09 | D-21: cores de categoria/pessoa (paleta fixa) e logotipo do cartão (V9 `color`, `card_logo`, `/api/cards/{id}/logo`; REQ-052). Limite mensal opcional por categoria (V8 `category.limit_amount`, regra `CategoryLimit`, `limitCents`/`limitStatus` no resumo; REQ-051). Cartão obrigatório no crédito (`CARD_REQUIRED`) e fim do "Sem cartão" nos resumos (REQ-015/016/037). Front: `lib/privacy.ts` + `ValuesToggle` (REQ-049, olho ao lado do tema), ícone sol/lua no `ThemeSwitcher` (REQ-045). Dinheiro em `DECIMAL(12,2)` no banco (V7: `expense.amount`, `income.amount`), `MoneyColumnConverter`; centavos no resto (D-2, NFR-001). `DELETE /api/cards/{id}` (REQ-013). Pedidos da usuária |

@@ -1,10 +1,10 @@
 # CLAUDE.md
-> Nize — Spec version 0.3.2
+> Nize — Spec version 0.4.0
 
 ═══════════════════════════════════════════════════════════
 SPEC DRIVEN DEVELOPMENT — PROJECT CONSTITUTION
 Project: Nize
-Version: 0.3.2
+Version: 0.4.0
 ═══════════════════════════════════════════════════════════
 
 This project uses Spec Driven Development. All work is
@@ -90,7 +90,7 @@ Front-end (a partir da raiz):
 - Senha: 8–72 caracteres, BCrypt; nunca logada nem devolvida. Login e recuperação não revelam se o e-mail existe.
 - `/api/auth/**` tem limite de tentativas (`AttemptLimiter`, REQ-047). Nos testes, o Surefire sobe os limites; teste de limite usa `@SpringBootTest(properties=...)` com limites baixos e IPs/e-mails próprios.
 - Perfil `prod` (Render): Flyway desligado (migração é passo do CI com outro usuário), TLS obrigatório na URL (`DatabaseTlsGuard`), `DisabledEmailSender`. Só `/actuator/health` é público.
-- Cadastros por ano seguem o molde `Category*`/`Card*`/`Person*`: repositório com `userId` em toda consulta, `YearGuard` para o ano, `ResourceNotFoundException` → 404, nome único ignorando maiúsculas por ano (409 `*_NAME_TAKEN`), `PUT` com `active` obrigatório, `?active=true` na listagem.
+- Cadastros (`Category*`/`Card*`/`Person*`) são **sem ano** (D-22): repositório com `userId` em toda consulta, `ResourceNotFoundException` → 404, nome único por usuária ignorando maiúsculas (409 `*_NAME_TAKEN`), `PUT` com `active` obrigatório, `?active=true` na listagem, rotas `/api/categories`, `/api/cards`, `/api/people`.
 - Lançamentos: `ExpenseService` valida as "Regras de consistência do lançamento" (design.md); referências inativas só são aceitas se o lançamento já as usava; `month` é reservada no H2 (coluna `month_ref`). `ddl-auto: validate` exige `@JdbcTypeCode(CHAR/VARCHAR/SMALLINT)` nas colunas que não são o padrão do Hibernate (e enum como `VARCHAR`).
 - Dinheiro em JSON: `spring.jackson.deserialization.accept-float-as-int=false` (10.5 é recusado, não vira 10). No front: `parseCents`/`formatCents` em `src/lib/money.ts`, sem float.
 - Em testes, um método auxiliar chamado `post`/`put` esconde o import estático de `MockMvcRequestBuilders`: dê outro nome (`create`, `update`, `generate`).
@@ -107,7 +107,7 @@ Front-end (a partir da raiz):
 - Rotas do front em inglês (`/month/:yyyyMm`, `/overview/:year`, `/sign-in`...). Rotas protegidas ficam sob `RequireAuth`.
 - Tema e cores só como tokens semânticos em `src/styles/index.css` (`bg-card`, `text-ink`, `bg-brand text-on-brand`...; D-20), com valores claro/escuro; as cores padrão do Tailwind estão desligadas (`bg-white` não existe). Verde Nize no modo claro só como preenchimento; texto verde é `text-brand-text`. Cor nova: validar com `python3 .claude/skills/design-nize/scripts/contraste.py`. Layout: menu lateral ≥ 768px, barra inferior abaixo; sem rolagem horizontal.
 - Testes: `renderApp(path, {signedIn})` e `stubApi({...})` em `src/test/renderApp.tsx` (o objeto de respostas é lido a cada chamada: altere-o para simular o refetch).
-- Cadastros por ano (categorias, cartões, pessoas): reutilizar `CatalogManager` + `catalogApi`; ano da tela via `useSelectedYear` (`?year=`, padrão = ano vigente).
+- Cadastros (categorias, cartões, pessoas): reutilizar `CatalogManager` + `catalogApi`; sem seletor de ano (D-22).
 
 **CI/CD** (`docs/ci-cd.md`)
 - Workflows em `.github/workflows/`; actions fixadas por SHA e scanners por digest. Validar com `docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12` antes de subir.

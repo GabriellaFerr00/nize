@@ -36,16 +36,16 @@ step 200 GET /api/settings
 step 200 GET /api/years
 
 # Catalog: categories (15 defaults), cards, people
-step 200 GET "/api/years/$year/categories"
+step 200 GET "/api/categories"
 [[ $(jq length "$body") -ge 15 ]] || { echo "::error::default categories missing"; exit 1; }
 category=$(jq -r '.[0].id' "$body")
-step 201 POST "/api/years/$year/categories" '{"name":"Flow categoria","description":"teste"}'
+step 201 POST "/api/categories" '{"name":"Flow categoria","description":"teste"}'
 own_category=$(jq -r .id "$body")
 step 200 PUT "/api/categories/$own_category" '{"name":"Flow categoria 2","description":null,"active":false}'
-step 200 GET "/api/years/$year/categories?active=true"
-step 201 POST "/api/years/$year/cards" '{"name":"Flow cartão","dueDay":10}'
+step 200 GET "/api/categories?active=true"
+step 201 POST "/api/cards" '{"name":"Flow cartão","dueDay":10}'
 card=$(jq -r .id "$body")
-step 201 POST "/api/years/$year/people" '{"name":"Flow pessoa"}'
+step 201 POST "/api/people" '{"name":"Flow pessoa"}'
 person=$(jq -r .id "$body")
 
 # Expenses: fixed by Pix, card with a third party, generated installments (money in cents in the API; DECIMAL(12,2) reais in the database)
@@ -66,10 +66,15 @@ step 204 DELETE "/api/expenses/$fixed"
 step 409 DELETE "/api/categories/$category"
 step 204 DELETE "/api/categories/$own_category"
 
-# New year copies the catalog
+# A new year opens its months; categories, cards and people are the same (D-22)
 step 201 POST "/api/years/$next"
-step 200 GET "/api/years/$next/cards"
-[[ $(jq length "$body") -ge 1 ]] || { echo "::error::new year did not copy the cards"; exit 1; }
+step 200 GET "/api/cards"
+[[ $(jq length "$body") -ge 1 ]] || { echo "::error::cards are gone after a new year"; exit 1; }
+
+# The limit of one month (REQ-051): set it, see it, back to the default
+step 204 PUT "/api/months/$month/category-limits/$category" '{"limitCents":50000}'
+step 200 GET "/api/months/$month/category-limits"
+step 204 DELETE "/api/months/$month/category-limits/$category"
 
 rm -f "$body"
 echo "API flow passed against $base"

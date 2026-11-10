@@ -36,7 +36,7 @@ class MonthLoadServiceTest extends IsolationTestBase {
     private EntityManager entityManager;
 
     private long id(TestUser user, int year, String kind, String name) throws Exception {
-        String body = as(user, get("/api/years/" + year + "/" + kind)).andReturn().getResponse().getContentAsString();
+        String body = as(user, get("/api/" + kind)).andReturn().getResponse().getContentAsString();
         List<Integer> ids = JsonPath.read(body, "$[?(@.name == '" + name + "')].id");
         return ids.get(0);
     }
@@ -185,9 +185,9 @@ class MonthLoadServiceTest extends IsolationTestBase {
 
     @Test
     void aThirdPartyInstallmentKeepsThePersonAndTheCard() throws Exception {
-        long card = ((Number) JsonPath.read(as(userA, post("/api/years/" + YEAR + "/cards").contentType(MediaType.APPLICATION_JSON)
+        long card = ((Number) JsonPath.read(as(userA, post("/api/cards").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Nubank\",\"dueDay\":10}")).andReturn().getResponse().getContentAsString(), "$.id")).longValue();
-        long person = ((Number) JsonPath.read(as(userA, post("/api/years/" + YEAR + "/people").contentType(MediaType.APPLICATION_JSON)
+        long person = ((Number) JsonPath.read(as(userA, post("/api/people").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Mainha\"}")).andReturn().getResponse().getContentAsString(), "$.id")).longValue();
         add(userA, JUNE, "{\"name\":\"Roupa\",\"categoryId\":%d,\"amountCents\":3000,\"type\":\"CARD\",\"cardId\":%d,\"personId\":%d,\"date\":\"%s-03\",\"installmentNumber\":1,\"installmentCount\":3}"
                 .formatted(id(userA, YEAR, "categories", "Roupa"), card, person, JUNE));
@@ -202,10 +202,10 @@ class MonthLoadServiceTest extends IsolationTestBase {
     // ---- year change and edge cases ----
 
     @Test
-    void fromDecemberToJanuaryTheNewYearIsOpenedAndItsStructureCopied() throws Exception {
+    void fromDecemberToJanuaryTheNewYearIsOpenedWithTheSameCategories() throws Exception {
+        long aluguel = id(userA, YEAR, "categories", "Aluguel");
         fixed(userA, YEAR + "-12", "Aluguel", 150_000, true);
         manualInstallment(userA, YEAR + "-12", "Sofá", 3, 12);
-        as(userA, get("/api/years")).andExpect(status().isOk());
 
         open(userA, (YEAR + 1) + "-01");
 
@@ -213,22 +213,9 @@ class MonthLoadServiceTest extends IsolationTestBase {
         List<Map<String, Object>> january = expensesOf(userA, (YEAR + 1) + "-01");
         assertThat(january).extracting(r -> r.get("NAME")).containsExactly("Aluguel", "Sofá");
         assertThat(january.get(1).get("INSTALLMENT_NUMBER")).isEqualTo(4);
-        // the copies point to the NEW year's categories, found by name
-        Long newAluguel = jdbc.queryForObject("SELECT id FROM category WHERE user_id = ? AND year_number = ? AND name = 'Aluguel'", Long.class, userA.id(), YEAR + 1);
-        assertThat(((Number) january.get(0).get("CATEGORY_ID")).longValue()).isEqualTo(newAluguel);
+        // categories have no year (D-22): the copy points to the same category
+        assertThat(((Number) january.get(0).get("CATEGORY_ID")).longValue()).isEqualTo(aluguel);
         assertThat(january.get(0).get("EXPENSE_DATE").toString()).isEqualTo((YEAR + 1) + "-01-10");
-    }
-
-    @Test
-    void anItemWhoseCategoryNoLongerExistsInTheNewYearIsSkipped() throws Exception {
-        fixed(userA, YEAR + "-12", "Aluguel", 150_000, false);
-        manualInstallment(userA, YEAR + "-12", "Sofá", 3, 12);
-        as(userA, post("/api/years/" + (YEAR + 1))).andExpect(status().isCreated());
-        as(userA, delete("/api/categories/" + id(userA, YEAR + 1, "categories", "Aluguel"))).andExpect(status().isNoContent());
-
-        open(userA, (YEAR + 1) + "-01");
-
-        assertThat(expensesOf(userA, (YEAR + 1) + "-01")).extracting(r -> r.get("NAME")).containsExactly("Sofá");
     }
 
     @Test
@@ -281,7 +268,7 @@ class MonthLoadServiceTest extends IsolationTestBase {
     }
 
     private long personOf(TestUser user, int year, String name) throws Exception {
-        return ((Number) JsonPath.read(as(user, post("/api/years/" + year + "/people").contentType(MediaType.APPLICATION_JSON)
+        return ((Number) JsonPath.read(as(user, post("/api/people").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"" + name + "\"}")).andReturn().getResponse().getContentAsString(), "$.id")).longValue();
     }
 
@@ -333,24 +320,8 @@ class MonthLoadServiceTest extends IsolationTestBase {
 
         open(userA, (YEAR + 1) + "-01");
 
-        Long newMainha = jdbc.queryForObject("SELECT id FROM person WHERE user_id = ? AND year_number = ? AND name = 'Mainha'",
-                Long.class, userA.id(), YEAR + 1);
         List<Map<String, Object>> january = incomesOf(userA, (YEAR + 1) + "-01");
         assertThat(january).hasSize(1);
-        assertThat(((Number) january.get(0).get("PERSON_ID")).longValue()).isEqualTo(newMainha);
-    }
-
-    @Test
-    void anIncomeWhosePersonNoLongerExistsInTheNewYearIsSkipped() throws Exception {
-        long mainha = personOf(userA, YEAR, "Mainha");
-        incomeInstallment(userA, YEAR + "-12", "Mainha devolve", 1, 2, ",\"personId\":" + mainha);
-        as(userA, post("/api/years/" + (YEAR + 1))).andExpect(status().isCreated());
-        long newMainha = id(userA, YEAR + 1, "people", "Mainha");
-        as(userA, put("/api/people/" + newMainha).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"name\":\"Mãe\",\"active\":true}")).andExpect(status().isOk());
-
-        open(userA, (YEAR + 1) + "-01");
-
-        assertThat(incomesOf(userA, (YEAR + 1) + "-01")).isEmpty();
+        assertThat(((Number) january.get(0).get("PERSON_ID")).longValue()).isEqualTo(mainha);
     }
 }

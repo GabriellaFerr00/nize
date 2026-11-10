@@ -25,15 +25,15 @@ public class PersonController {
     }
 
     /** {@code ?active=true} returns only the people offered in the entry form. */
-    @GetMapping("/api/years/{year}/people")
-    public List<PersonResponse> list(@PathVariable int year, @RequestParam(defaultValue = "false") boolean active) {
-        return service.list(CurrentUser.id(), year, active).stream().map(PersonResponse::from).toList();
+    @GetMapping("/api/people")
+    public List<PersonResponse> list(@RequestParam(defaultValue = "false") boolean active) {
+        return service.list(CurrentUser.id(), active).stream().map(PersonResponse::from).toList();
     }
 
-    @PostMapping("/api/years/{year}/people")
+    @PostMapping("/api/people")
     @ResponseStatus(HttpStatus.CREATED)
-    public PersonResponse create(@PathVariable int year, @Valid @RequestBody CreatePersonRequest request) {
-        return PersonResponse.from(service.create(CurrentUser.id(), year, request.name(), request.color()));
+    public PersonResponse create(@Valid @RequestBody CreatePersonRequest request) {
+        return PersonResponse.from(service.create(CurrentUser.id(), request.name(), request.color()));
     }
 
     @PutMapping("/api/people/{id}")

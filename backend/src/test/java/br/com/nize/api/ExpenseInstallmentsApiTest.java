@@ -39,7 +39,7 @@ class ExpenseInstallmentsApiTest extends IsolationTestBase {
     }
 
     private long cardId(TestUser user) throws Exception {
-        String body = as(user, post("/api/years/" + YEAR + "/cards").contentType(MediaType.APPLICATION_JSON)
+        String body = as(user, post("/api/cards").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Nubank\",\"dueDay\":10}")).andReturn().getResponse().getContentAsString();
         return ((Number) JsonPath.read(body, "$.id")).longValue();
     }
@@ -47,7 +47,7 @@ class ExpenseInstallmentsApiTest extends IsolationTestBase {
     private Map<String, String> purchase(TestUser user, long amount, Integer count, boolean amountIsTotal) throws Exception {
         Map<String, String> f = new LinkedHashMap<>();
         f.put("name", "\"Notebook\"");
-        f.put("categoryId", String.valueOf(id(user, "/api/years/" + YEAR + "/categories", "Eletrônicos")));
+        f.put("categoryId", String.valueOf(id(user, "/api/categories", "Eletrônicos")));
         f.put("amountCents", String.valueOf(amount));
         f.put("type", "\"CARD\"");
         f.put("generateInstallments", "true");
@@ -147,7 +147,7 @@ class ExpenseInstallmentsApiTest extends IsolationTestBase {
     }
 
     @Test
-    void installmentsCrossingIntoTheNextYearUseThatYearsCatalogAndCreateTheYearIfNeeded() throws Exception {
+    void installmentsCrossingIntoTheNextYearKeepTheSameCatalogAndCreateTheYearIfNeeded() throws Exception {
         long card = cardId(userA);
         Map<String, String> f = purchase(userA, 10_000, 3, true);
         f.put("cardId", String.valueOf(card));
@@ -156,24 +156,9 @@ class ExpenseInstallmentsApiTest extends IsolationTestBase {
         List<Map<String, Object>> rows = rows(userA);
         assertThat(rows).extracting(r -> r.get("MONTH_REF")).containsExactly(YEAR + "-11", YEAR + "-12", (YEAR + 1) + "-01");
         as(userA, get("/api/years")).andExpect(jsonPath("$.length()").value(2));
-
-        Long nextYearCategory = jdbc.queryForObject("SELECT id FROM category WHERE user_id = ? AND year_number = ? AND name = 'Eletrônicos'", Long.class, userA.id(), YEAR + 1);
-        Long nextYearCard = jdbc.queryForObject("SELECT id FROM card WHERE user_id = ? AND year_number = ? AND name = 'Nubank'", Long.class, userA.id(), YEAR + 1);
-        assertThat(((Number) rows.get(2).get("CATEGORY_ID")).longValue()).isEqualTo(nextYearCategory);
-        assertThat(((Number) rows.get(2).get("CARD_ID")).longValue()).isEqualTo(nextYearCard);
-        assertThat(((Number) rows.get(0).get("CATEGORY_ID")).longValue()).isNotEqualTo(nextYearCategory);
-    }
-
-    @Test
-    void ifANextYearReferenceIsMissingNothingIsCreated() throws Exception {
-        as(userA, post("/api/years/" + (YEAR + 1))).andExpect(status().isCreated());
-        long missing = id(userA, "/api/years/" + (YEAR + 1) + "/categories", "Eletrônicos");
-        as(userA, delete("/api/categories/" + missing)).andExpect(status().isNoContent());
-
-        generate(userA, YEAR + "-11", 5, purchase(userA, 10_000, 3, true))
-                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("REFERENCE_UNAVAILABLE"));
-
-        assertThat(rows(userA)).isEmpty();
+        // categories and cards have no year (D-22): every installment points to the same ones
+        assertThat(rows).extracting(r -> ((Number) r.get("CATEGORY_ID")).longValue()).containsOnly(rows.get(0).get("CATEGORY_ID") instanceof Number n ? n.longValue() : -1L);
+        assertThat(rows).extracting(r -> ((Number) r.get("CARD_ID")).longValue()).containsOnly(card);
     }
 
     // ---- validation ----
@@ -199,7 +184,7 @@ class ExpenseInstallmentsApiTest extends IsolationTestBase {
     @Test
     void generatedInstallmentsBelongToTheCallerOnly() throws Exception {
         Map<String, String> withForeignCategory = purchase(userA, 10_000, 3, true);
-        withForeignCategory.put("categoryId", String.valueOf(id(userA, "/api/years/" + YEAR + "/categories", "Eletrônicos")));
+        withForeignCategory.put("categoryId", String.valueOf(id(userA, "/api/categories", "Eletrônicos")));
         generate(userB, YEAR + "-02", 10, withForeignCategory).andExpect(status().isNotFound());
 
         generate(userA, YEAR + "-02", 10, purchase(userA, 10_000, 3, true)).andExpect(status().isCreated());

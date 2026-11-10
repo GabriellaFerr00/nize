@@ -95,15 +95,15 @@ class MonthResponseTimeTest {
 
     /** 500 expenses through the API, mixing every shape the month screen shows (fixed, card, Pix, credit, third party, installments). */
     private void fillTheMonth() throws Exception {
-        String categoriesJson = send(get("/api/years/" + YEAR + "/categories")).andReturn().getResponse().getContentAsString();
+        String categoriesJson = send(get("/api/categories")).andReturn().getResponse().getContentAsString();
         List<Integer> categories = JsonPath.read(categoriesJson, "$[*].id");
         long[] cards = {
-                created("/api/years/" + YEAR + "/cards", "{\"name\":\"Nubank\",\"dueDay\":10}"),
-                created("/api/years/" + YEAR + "/cards", "{\"name\":\"Inter\",\"dueDay\":25}"),
-                created("/api/years/" + YEAR + "/cards", "{\"name\":\"Bradesco\",\"dueDay\":31}")};
+                created("/api/cards", "{\"name\":\"Nubank\",\"dueDay\":10}"),
+                created("/api/cards", "{\"name\":\"Inter\",\"dueDay\":25}"),
+                created("/api/cards", "{\"name\":\"Bradesco\",\"dueDay\":31}")};
         long[] people = {
-                created("/api/years/" + YEAR + "/people", "{\"name\":\"Mainha\"}"),
-                created("/api/years/" + YEAR + "/people", "{\"name\":\"Irmã\"}")};
+                created("/api/people", "{\"name\":\"Mainha\"}"),
+                created("/api/people", "{\"name\":\"Irmã\"}")};
 
         Random random = new Random(7);
         String url = "/api/months/" + MONTH + "/expenses";

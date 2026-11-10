@@ -30,11 +30,11 @@ class ExpenseSchemaTest {
     void fixtures() {
         jdbc.update("INSERT INTO app_user (name, email, password_hash, created_at) VALUES ('U', 'u@expense.test', 'h', CURRENT_TIMESTAMP)");
         user = jdbc.queryForObject("SELECT id FROM app_user WHERE email = 'u@expense.test'", Long.class);
-        jdbc.update("INSERT INTO category (user_id, year_number, name) VALUES (?, 2026, 'Mercado')", user);
+        jdbc.update("INSERT INTO category (user_id, name) VALUES (?, 'Mercado')", user);
         category = jdbc.queryForObject("SELECT id FROM category WHERE user_id = ?", Long.class, user);
-        jdbc.update("INSERT INTO card (user_id, year_number, name, due_day) VALUES (?, 2026, 'Nubank', 10)", user);
+        jdbc.update("INSERT INTO card (user_id, name, due_day) VALUES (?, 'Nubank', 10)", user);
         card = jdbc.queryForObject("SELECT id FROM card WHERE user_id = ?", Long.class, user);
-        jdbc.update("INSERT INTO person (user_id, year_number, name) VALUES (?, 2026, 'Mainha')", user);
+        jdbc.update("INSERT INTO person (user_id, name) VALUES (?, 'Mainha')", user);
         person = jdbc.queryForObject("SELECT id FROM person WHERE user_id = ?", Long.class, user);
     }
 

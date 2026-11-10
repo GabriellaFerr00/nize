@@ -1,6 +1,7 @@
 package br.com.nize.service;
 
 import br.com.nize.domain.Category;
+import br.com.nize.repository.CategoryMonthLimitRepository;
 import br.com.nize.repository.CategoryRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,31 +13,29 @@ import java.util.List;
 public class CategoryService {
 
     private final CategoryRepository categories;
-    private final YearGuard yearGuard;
     private final CategoryUsage usage;
+    private final CategoryMonthLimitRepository monthLimits;
 
-    public CategoryService(CategoryRepository categories, YearGuard yearGuard, CategoryUsage usage) {
+    public CategoryService(CategoryRepository categories, CategoryUsage usage, CategoryMonthLimitRepository monthLimits) {
         this.categories = categories;
-        this.yearGuard = yearGuard;
         this.usage = usage;
+        this.monthLimits = monthLimits;
     }
 
     @Transactional(readOnly = true)
-    public List<Category> list(Long userId, int year, boolean activeOnly) {
-        yearGuard.requireYear(userId, year);
+    public List<Category> list(Long userId, boolean activeOnly) {
         return activeOnly
-                ? categories.findByUserIdAndYearNumberAndActiveOrderByIdAsc(userId, year, true)
-                : categories.findByUserIdAndYearNumberOrderByIdAsc(userId, year);
+                ? categories.findByUserIdAndActiveOrderByIdAsc(userId, true)
+                : categories.findByUserIdOrderByIdAsc(userId);
     }
 
     @Transactional
-    public Category create(Long userId, int year, String name, String description, Long monthlyLimitCents,
+    public Category create(Long userId, String name, String description, Long monthlyLimitCents,
                            String color) {
-        yearGuard.requireYear(userId, year);
-        if (categories.existsByUserIdAndYearNumberAndNameIgnoreCase(userId, year, name)) {
+        if (categories.existsByUserIdAndNameIgnoreCase(userId, name)) {
             throw new CategoryNameTakenException();
         }
-        Category category = new Category(userId, year, name, description);
+        Category category = new Category(userId, name, description);
         category.setMonthlyLimitCents(monthlyLimitCents);
         category.setColor(color);
         return categories.save(category);
@@ -47,8 +46,7 @@ public class CategoryService {
     public Category update(Long userId, Long id, String name, String description, boolean active,
                            Long monthlyLimitCents, String color) {
         Category category = categories.findByIdAndUserId(id, userId).orElseThrow(ResourceNotFoundException::new);
-        if (categories.existsByUserIdAndYearNumberAndNameIgnoreCaseAndIdNot(
-                userId, category.getYearNumber(), name, category.getId())) {
+        if (categories.existsByUserIdAndNameIgnoreCaseAndIdNot(userId, name, category.getId())) {
             throw new CategoryNameTakenException();
         }
         category.update(name, description, active);
@@ -65,6 +63,7 @@ public class CategoryService {
         if (expenses > 0) {
             throw new CategoryInUseException(expenses);
         }
+        monthLimits.deleteAll(monthLimits.findByUserIdAndCategoryId(userId, category.getId()));
         categories.delete(category);
     }
 }

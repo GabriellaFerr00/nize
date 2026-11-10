@@ -16,7 +16,6 @@ import { ApiError } from '../api/client'
 import { apiErrorMessage } from '../lib/apiErrorMessage'
 import { centsToInput, parseCents } from '../lib/money'
 import { useDefaultMonth } from '../lib/useMonth'
-import { useSelectedYear } from '../lib/useSelectedYear'
 import { BrandPicker } from './BrandPicker'
 import { CardBadge } from './CardBadge'
 import { ColorPicker } from './ColorPicker'
@@ -25,7 +24,6 @@ import { Money } from './Money'
 import { FormMessage } from './FormMessage'
 import { TagDot } from './TagDot'
 import { TextField } from './TextField'
-import { YearSelect } from './YearSelect'
 import { dangerButton, iconButton, pageTitle, primaryButton, quietButton } from '../lib/ui'
 
 type Props = {
@@ -57,14 +55,9 @@ export function CatalogManager({ kind, fields, canDelete = false }: Props) {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const { month: defaultMonth } = useDefaultMonth()
-  const { year, years, setYear, isLoading } = useSelectedYear()
   const [dialog, setDialog] = useState<DialogState>(null)
 
-  const items = useQuery({
-    queryKey: ['catalog', kind, year],
-    queryFn: () => listItems(kind, year as number),
-    enabled: year !== null,
-  })
+  const items = useQuery({ queryKey: ['catalog', kind], queryFn: () => listItems(kind) })
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['catalog', kind] })
 
   const toggle = useMutation({
@@ -87,10 +80,8 @@ export function CatalogManager({ kind, fields, canDelete = false }: Props) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className={pageTitle}>{t(`pages.${kind}`)}</h1>
         <div className="flex items-center gap-3">
-          <YearSelect years={years} value={year} onChange={setYear} />
           <button
             type="button"
-            disabled={year === null}
             onClick={() => setDialog({ mode: 'form' })}
             className={primaryButton}
           >
@@ -102,7 +93,7 @@ export function CatalogManager({ kind, fields, canDelete = false }: Props) {
       {toggle.isError && <FormMessage kind="error">{apiErrorMessage(t, toggle.error)}</FormMessage>}
       {items.isError && <FormMessage kind="error">{apiErrorMessage(t, items.error)}</FormMessage>}
 
-      {!isLoading && items.data?.length === 0 && (
+      {items.data?.length === 0 && (
         <p className="rounded-2xl border border-dashed border-line-strong bg-card p-6 text-ink-soft">
           {t(`catalog.${kind}.empty`)}
         </p>
@@ -127,10 +118,9 @@ export function CatalogManager({ kind, fields, canDelete = false }: Props) {
         </section>
       )}
 
-      {dialog?.mode === 'form' && year !== null && (
+      {dialog?.mode === 'form' && (
         <ItemFormDialog
           kind={kind}
-          year={year}
           fields={fields}
           item={dialog.item}
           onClose={() => setDialog(null)}
@@ -241,14 +231,13 @@ function CatalogRow({ item, canDelete, busy, onEdit, onToggle, onDelete }: RowPr
 
 type FormProps = {
   kind: CatalogKind
-  year: number
   fields: Props['fields']
   item?: CatalogItem
   onClose: () => void
   onSaved: () => void
 }
 
-function ItemFormDialog({ kind, year, fields, item, onClose, onSaved }: FormProps) {
+function ItemFormDialog({ kind, fields, item, onClose, onSaved }: FormProps) {
   const { t } = useTranslation()
   const [name, setName] = useState(item?.name ?? '')
   const [description, setDescription] = useState(item?.description ?? '')
@@ -260,7 +249,7 @@ function ItemFormDialog({ kind, year, fields, item, onClose, onSaved }: FormProp
 
   const save = useMutation({
     mutationFn: (input: CatalogInput) =>
-      item ? updateItem(kind, item.id, { ...input, active: item.active }) : createItem(kind, year, input),
+      item ? updateItem(kind, item.id, { ...input, active: item.active }) : createItem(kind, input),
     onSuccess: onSaved,
   })
 

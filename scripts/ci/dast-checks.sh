@@ -32,7 +32,7 @@ token_for() {
 token_a=$(token_for "dast-a-$RANDOM@example.test"); mask "$token_a"
 token_b=$(token_for "dast-b-$RANDOM@example.test"); mask "$token_b"
 [[ "$token_a" == ey* && "$token_b" == ey* ]] || { echo "::error::could not create the synthetic users"; exit 1; }
-year=$(date +%Y); month=$(date +%Y-%m)
+month=$(date +%Y-%m)
 
 # 1. Security headers on API responses
 headers=$(curl -sS -D - -o /dev/null -H "Authorization: Bearer $token_a" "$base/api/me")
@@ -53,7 +53,7 @@ for origin in https://evil.example null; do
 done
 
 # 3. Data endpoints need a token
-for path in /api/me /api/settings "/api/years/$year/categories" "/api/years/$year/cards" "/api/years/$year/people"; do
+for path in /api/me /api/settings "/api/categories" "/api/cards" "/api/people"; do
   call GET "$base$path"
   [[ "$status" == 401 ]] || fail "$path answers HTTP $status without a token"
 done
@@ -62,8 +62,8 @@ done
 payloads=("' OR '1'='1" "1 OR 1=1" "1; DROP TABLE app_user" "1 UNION SELECT password_hash FROM app_user" '"' '\' "' AND SLEEP(5)-- -")
 for p in "${payloads[@]}"; do
   enc=$(jq -rn --arg v "$p" '$v|@uri')
-  for target in "GET $base/api/years/$year/categories?active=$enc" "GET $base/api/years/$year/cards?active=$enc" \
-                "GET $base/api/years/$year/people?active=$enc" "GET $base/api/years/$enc/categories" \
+  for target in "GET $base/api/categories?active=$enc" "GET $base/api/cards?active=$enc" \
+                "GET $base/api/people?active=$enc" "GET $base/api/months/$enc/category-limits" \
                 "POST $base/api/months/$enc/expenses" "PUT $base/api/categories/$enc" "DELETE $base/api/expenses/$enc"; do
     call "${target%% *}" "${target#* }" "$token_a" '{}'
     if [[ "$status" =~ ^(400|401)$ ]] && ! jq -e . "$body" >/dev/null 2>&1; then
@@ -89,7 +89,7 @@ for target in "POST $base/api/auth/login|{\"email\":" "GET $base/api/does-not-ex
 done
 
 # 6. Money is whole cents: 10.5 is refused, never truncated (NFR-001)
-call GET "$base/api/years/$year/categories" "$token_a"
+call GET "$base/api/categories" "$token_a"
 category=$(jq -r '.[0].id' "$body")
 call POST "$base/api/months/$month/expenses" "$token_a" \
   "{\"name\":\"Dast\",\"amountCents\":10.5,\"type\":\"FIXED\",\"paymentMethod\":\"PIX\",\"categoryId\":$category,\"date\":\"$month-05\"}"
@@ -98,13 +98,13 @@ if [[ "$status" != 400 ]] || ! jq -e '.code == "VALIDATION_ERROR"' "$body" >/dev
 fi
 
 # 7. IDOR: user B never touches user A's rows (404, not 403)
-call POST "$base/api/years/$year/categories" "$token_a" '{"name":"Dast privada"}'
+call POST "$base/api/categories" "$token_a" '{"name":"Dast privada"}'
 own=$(jq -r '.id' "$body")
 call PUT "$base/api/categories/$own" "$token_b" '{"name":"hijack","active":true}'
 [[ "$status" == 404 ]] || fail "user B updating user A's category got HTTP $status"
 call DELETE "$base/api/categories/$own" "$token_b"
 [[ "$status" == 404 ]] || fail "user B deleting user A's category got HTTP $status"
-call GET "$base/api/years/$year/categories" "$token_b"
+call GET "$base/api/categories" "$token_b"
 jq -e --argjson id "$own" 'map(.id) | index($id) == null' "$body" >/dev/null || fail "user B can list user A's category"
 
 # 8. Login does not reveal which e-mails exist

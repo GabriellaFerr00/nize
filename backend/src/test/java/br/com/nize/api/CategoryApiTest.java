@@ -23,7 +23,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class CategoryApiTest extends IsolationTestBase {
 
     private static final int YEAR = Year.now().getValue();
-    private static final String LIST = "/api/years/" + YEAR + "/categories";
+    private static final String LIST = "/api/categories";
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -62,26 +62,9 @@ class CategoryApiTest extends IsolationTestBase {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(15))
                 .andExpect(jsonPath("$[0].name").value("Mercado"))
-                .andExpect(jsonPath("$[0].year").value(YEAR))
                 .andExpect(jsonPath("$[0].active").value(true))
                 .andExpect(jsonPath("$[0].description").isNotEmpty())
                 .andExpect(jsonPath("$[14].name").value("Contas"));
-    }
-
-    @Test
-    void aYearTheUserDoesNotHaveIs404ForListAndCreate() throws Exception {
-        as(userA, get("/api/years/2099/categories")).andExpect(status().isNotFound());
-        as(userA, json(post("/api/years/2099/categories"), body("Nova", null, null))).andExpect(status().isNotFound());
-    }
-
-    @Test
-    void anotherYearOfTheUserStartsEmptyAndIsEditable() throws Exception {
-        entityManager.flush();
-        jdbc.update("INSERT INTO user_year (user_id, year_number) VALUES (?, 2030)", userA.id());
-
-        as(userA, get("/api/years/2030/categories")).andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(0));
-        as(userA, json(post("/api/years/2030/categories"), body("Mercado", null, null)))
-                .andExpect(status().isCreated()).andExpect(jsonPath("$.year").value(2030));
     }
 
     // ---- create ----
@@ -116,7 +99,7 @@ class CategoryApiTest extends IsolationTestBase {
     }
 
     @Test
-    void aRepeatedNameInTheSameYearIsRejectedIgnoringCase() throws Exception {
+    void aRepeatedNameIsRejectedIgnoringCase() throws Exception {
         as(userA, json(post(LIST), body("mercado", null, null)))
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("CATEGORY_NAME_TAKEN"));
         as(userA, get(LIST)).andExpect(jsonPath("$.length()").value(15));

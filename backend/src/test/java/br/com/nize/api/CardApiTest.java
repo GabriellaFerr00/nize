@@ -23,7 +23,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class CardApiTest extends IsolationTestBase {
 
     private static final int YEAR = Year.now().getValue();
-    private static final String LIST = "/api/years/" + YEAR + "/cards";
+    private static final String LIST = "/api/cards";
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -65,7 +65,6 @@ class CardApiTest extends IsolationTestBase {
         as(userA, json(post(LIST), create("  Nubank  ", 10)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").isNumber())
-                .andExpect(jsonPath("$.year").value(YEAR))
                 .andExpect(jsonPath("$.name").value("Nubank"))
                 .andExpect(jsonPath("$.dueDay").value(10))
                 .andExpect(jsonPath("$.active").value(true));
@@ -95,7 +94,7 @@ class CardApiTest extends IsolationTestBase {
     }
 
     @Test
-    void aRepeatedNameInTheSameYearIsRejectedIgnoringCase() throws Exception {
+    void aRepeatedNameIsRejectedIgnoringCase() throws Exception {
         createCard(userA, "Nubank", 10);
         as(userA, json(post(LIST), create("NUBANK", 12)))
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("CARD_NAME_TAKEN"));
@@ -103,19 +102,9 @@ class CardApiTest extends IsolationTestBase {
     }
 
     @Test
-    void theSameNameIsFineForAnotherUserAndAnotherYear() throws Exception {
+    void theSameNameIsFineForAnotherUser() throws Exception {
         createCard(userA, "Nubank", 10);
         createCard(userB, "Nubank", 10);
-
-        entityManager.flush();
-        jdbc.update("INSERT INTO user_year (user_id, year_number) VALUES (?, 2030)", userA.id());
-        as(userA, json(post("/api/years/2030/cards"), create("Nubank", 10))).andExpect(status().isCreated());
-    }
-
-    @Test
-    void aYearTheUserDoesNotHaveIs404() throws Exception {
-        as(userA, get("/api/years/2099/cards")).andExpect(status().isNotFound());
-        as(userA, json(post("/api/years/2099/cards"), create("Nubank", 10))).andExpect(status().isNotFound());
     }
 
     // ---- update ----

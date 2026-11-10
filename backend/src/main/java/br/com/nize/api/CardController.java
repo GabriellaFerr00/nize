@@ -26,15 +26,15 @@ public class CardController {
     }
 
     /** {@code ?active=true} returns only the cards offered in the entry form. */
-    @GetMapping("/api/years/{year}/cards")
-    public List<CardResponse> list(@PathVariable int year, @RequestParam(defaultValue = "false") boolean active) {
-        return service.list(CurrentUser.id(), year, active).stream().map(CardResponse::from).toList();
+    @GetMapping("/api/cards")
+    public List<CardResponse> list(@RequestParam(defaultValue = "false") boolean active) {
+        return service.list(CurrentUser.id(), active).stream().map(CardResponse::from).toList();
     }
 
-    @PostMapping("/api/years/{year}/cards")
+    @PostMapping("/api/cards")
     @ResponseStatus(HttpStatus.CREATED)
-    public CardResponse create(@PathVariable int year, @Valid @RequestBody CreateCardRequest request) {
-        return CardResponse.from(service.create(CurrentUser.id(), year, request.name(), request.dueDay(), request.brand()));
+    public CardResponse create(@Valid @RequestBody CreateCardRequest request) {
+        return CardResponse.from(service.create(CurrentUser.id(), request.name(), request.dueDay(), request.brand()));
     }
 
     @PutMapping("/api/cards/{id}")

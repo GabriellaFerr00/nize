@@ -1,11 +1,10 @@
 import { apiRequest } from './client'
 
-/** The three per-year catalogs share one shape on the wire. */
+/** The three catalogs (no year, D-22) share one shape on the wire. */
 export type CatalogKind = 'categories' | 'cards' | 'people'
 
 export type CatalogItem = {
   id: number
-  year: number
   name: string
   active: boolean
   description?: string
@@ -27,11 +26,11 @@ export type CatalogInput = {
   brand?: string
 }
 
-export const listItems = (kind: CatalogKind, year: number) =>
-  apiRequest<CatalogItem[]>(`/years/${year}/${kind}`)
+/** One list per user, the same in every month and year (D-22). */
+export const listItems = (kind: CatalogKind) => apiRequest<CatalogItem[]>(`/${kind}`)
 
-export const createItem = (kind: CatalogKind, year: number, input: CatalogInput) =>
-  apiRequest<CatalogItem>(`/years/${year}/${kind}`, { method: 'POST', body: input })
+export const createItem = (kind: CatalogKind, input: CatalogInput) =>
+  apiRequest<CatalogItem>(`/${kind}`, { method: 'POST', body: input })
 
 export const updateItem = (kind: CatalogKind, id: number, input: CatalogInput & { active: boolean }) =>
   apiRequest<CatalogItem>(`/${kind}/${id}`, { method: 'PUT', body: input })

@@ -23,7 +23,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class CardDeleteTest extends IsolationTestBase {
 
     private static final int YEAR = Year.now().getValue();
-    private static final String LIST = "/api/years/" + YEAR + "/cards";
+    private static final String LIST = "/api/cards";
     private static final YearMonth APRIL = YearMonth.of(YEAR, 4);
     private static final YearMonth MAY = YearMonth.of(YEAR, 5);
 
@@ -43,7 +43,7 @@ class CardDeleteTest extends IsolationTestBase {
     }
 
     private long categoryId(TestUser user) throws Exception {
-        String body = as(user, get("/api/years/" + YEAR + "/categories")).andReturn().getResponse().getContentAsString();
+        String body = as(user, get("/api/categories")).andReturn().getResponse().getContentAsString();
         List<Integer> ids = JsonPath.read(body, "$[*].id");
         return ids.get(0);
     }

@@ -29,8 +29,8 @@ class ErrorContractTest extends IsolationTestBase {
 
     @Test
     void sqlLookingParametersAreValidationErrors() throws Exception {
-        assertContract(get("/api/years/2026/categories").param("active", "x' OR '1'='1"), 400, "VALIDATION_ERROR");
-        assertContract(get("/api/years/2026' OR 1=1/categories"), 400, "VALIDATION_ERROR");
+        assertContract(get("/api/categories").param("active", "x' OR '1'='1"), 400, "VALIDATION_ERROR");
+        assertContract(get("/api/categories?active=1' OR '1'='1"), 400, "VALIDATION_ERROR");
         assertContract(put("/api/categories/1 UNION SELECT 1").contentType(MediaType.APPLICATION_JSON).content("{}"),
                 400, "VALIDATION_ERROR");
     }

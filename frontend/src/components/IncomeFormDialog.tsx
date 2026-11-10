@@ -5,7 +5,7 @@ import { createIncome, updateIncome, type Income, type NewIncome } from '../api/
 import { apiErrorMessage } from '../lib/apiErrorMessage'
 import { centsToInput, parseCents } from '../lib/money'
 import { defaultDate } from '../lib/month'
-import { selectable, useRefreshMonths, useYearCatalogs } from '../lib/useMonth'
+import { selectable, useRefreshMonths, useCatalogs } from '../lib/useMonth'
 import { Dialog } from './Dialog'
 import { FormMessage } from './FormMessage'
 import { TextField } from './TextField'
@@ -21,7 +21,7 @@ type Props = { month: string; income?: Income; onClose: () => void }
 export function IncomeFormDialog({ month, income, onClose }: Props) {
   const { t } = useTranslation()
   const refreshMonths = useRefreshMonths()
-  const catalogs = useYearCatalogs(Number(month.slice(0, 4)))
+  const catalogs = useCatalogs()
   const nameInput = useRef<HTMLInputElement>(null)
   const editing = income !== undefined
 

@@ -18,7 +18,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class CardBrandApiTest extends IsolationTestBase {
 
     private static final int YEAR = Year.now().getValue();
-    private static final String LIST = "/api/years/" + YEAR + "/cards";
+    private static final String LIST = "/api/cards";
 
     private long create(TestUser user, String json) throws Exception {
         String body = as(user, post(LIST).contentType(MediaType.APPLICATION_JSON).content(json))
@@ -63,7 +63,7 @@ class CardBrandApiTest extends IsolationTestBase {
 
         as(userA, post("/api/years/" + (YEAR + 1))).andExpect(status().isCreated());
 
-        as(userA, get("/api/years/" + (YEAR + 1) + "/cards")).andExpect(jsonPath("$[0].brand").value("nubank"));
+        as(userA, get("/api/cards")).andExpect(jsonPath("$[0].brand").value("nubank"));
     }
 
     @Test

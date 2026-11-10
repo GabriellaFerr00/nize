@@ -9,7 +9,7 @@ import jakarta.persistence.Table;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-/** A credit card of one user in one year; the due day decides which fortnight its expenses weigh in (REQ-013). */
+/** A credit card of one user, the same in every month (D-22); the due day decides which fortnight its expenses weigh in (REQ-013). */
 @Entity
 @Table(name = "card")
 public class Card {
@@ -21,9 +21,6 @@ public class Card {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @JdbcTypeCode(SqlTypes.SMALLINT)
-    @Column(name = "year_number", nullable = false)
-    private int yearNumber;
 
     @Column(nullable = false, length = 80)
     private String name;
@@ -42,9 +39,8 @@ public class Card {
     protected Card() {
     }
 
-    public Card(Long userId, int yearNumber, String name, int dueDay) {
+    public Card(Long userId, String name, int dueDay) {
         this.userId = userId;
-        this.yearNumber = yearNumber;
         this.name = name;
         this.dueDay = dueDay;
     }
@@ -62,7 +58,6 @@ public class Card {
     public String getBrand() { return brand; }
     public Long getId() { return id; }
     public Long getUserId() { return userId; }
-    public int getYearNumber() { return yearNumber; }
     public String getName() { return name; }
     public int getDueDay() { return dueDay; }
     public boolean isActive() { return active; }
