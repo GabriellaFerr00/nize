@@ -50,9 +50,9 @@ person=$(jq -r .id "$body")
 
 # Expenses: fixed by Pix, card with a third party, generated installments (money in cents in the API; DECIMAL(12,2) reais in the database)
 step 201 POST "/api/months/$month/expenses" \
-  "{\"name\":\"Aluguel\",\"amountCents\":9000000000001,\"type\":\"FIXED\",\"paymentMethod\":\"PIX\",\"categoryId\":$category,\"date\":\"$month-05\"}"
+  "{\"name\":\"Aluguel\",\"amountCents\":999999999999,\"type\":\"FIXED\",\"paymentMethod\":\"PIX\",\"categoryId\":$category,\"date\":\"$month-05\"}"
 fixed=$(jq -r .id "$body")
-[[ $(jq -r .amountCents "$body") == 9000000000001 ]] || { echo "::error::cents were not kept"; exit 1; }
+[[ $(jq -r .amountCents "$body") == 999999999999 ]] || { echo "::error::cents were not kept"; exit 1; }
 step 201 POST "/api/months/$month/expenses" \
   "{\"name\":\"Mercado\",\"amountCents\":12345,\"type\":\"CARD\",\"paymentMethod\":\"CREDIT\",\"categoryId\":$category,\"cardId\":$card,\"personId\":$person,\"date\":\"$month-12\"}"
 step 201 POST "/api/months/$month/expenses" \
