@@ -149,13 +149,15 @@
     "fields": {
       "name": "Nome",
       "description": "Descrição (opcional)",
-      "dueDay": "Dia de vencimento (1 a 31)"
+      "dueDay": "Dia de vencimento (1 a 31)",
+      "monthlyLimit": "Limite por mês (R$, opcional)"
     },
     "errors": {
       "nameRequired": "Informe um nome.",
       "nameTooLong": "O nome pode ter no máximo 80 caracteres.",
       "descriptionTooLong": "A descrição pode ter no máximo 255 caracteres.",
-      "dueDay": "Informe um dia de 1 a 31."
+      "dueDay": "Informe um dia de 1 a 31.",
+      "limit": "Informe um valor maior que zero ou deixe em branco."
     },
     "categories": {
       "new": "Nova categoria",
@@ -192,7 +194,8 @@
     "editItem": "Editar {{name}}",
     "deactivateItem": "Desativar {{name}}",
     "activateItem": "Reativar {{name}}",
-    "deleteItem": "Excluir {{name}}"
+    "deleteItem": "Excluir {{name}}",
+    "limitPerMonth": "Limite por mês:"
   },
   "settings": {
     "general": "Preferências",
@@ -360,6 +363,12 @@
       "noExpenses": "Nenhum gasto neste mês.",
       "noCredit": "Nenhum gasto no crédito neste mês.",
       "noThirdParty": "Nenhum gasto de terceiros neste mês."
+    },
+    "limits": {
+      "title": "Limites de gasto",
+      "near": "está perto do limite",
+      "over": "passou do limite",
+      "of": "de"
     }
   }
 }

@@ -149,13 +149,15 @@
     "fields": {
       "name": "Name",
       "description": "Description (optional)",
-      "dueDay": "Due day (1 to 31)"
+      "dueDay": "Due day (1 to 31)",
+      "monthlyLimit": "Monthly limit (R$, optional)"
     },
     "errors": {
       "nameRequired": "Enter a name.",
       "nameTooLong": "The name can have at most 80 characters.",
       "descriptionTooLong": "The description can have at most 255 characters.",
-      "dueDay": "Enter a day from 1 to 31."
+      "dueDay": "Enter a day from 1 to 31.",
+      "limit": "Enter an amount above zero or leave it empty."
     },
     "categories": {
       "new": "New category",
@@ -192,7 +194,8 @@
     "editItem": "Edit {{name}}",
     "deactivateItem": "Deactivate {{name}}",
     "activateItem": "Reactivate {{name}}",
-    "deleteItem": "Delete {{name}}"
+    "deleteItem": "Delete {{name}}",
+    "limitPerMonth": "Monthly limit:"
   },
   "settings": {
     "general": "Preferences",
@@ -360,6 +363,12 @@
       "noExpenses": "No expenses this month.",
       "noCredit": "No credit expenses this month.",
       "noThirdParty": "No third-party expenses this month."
+    },
+    "limits": {
+      "title": "Spending limits",
+      "near": "is close to its limit",
+      "over": "is over its limit",
+      "of": "of"
     }
   }
 }

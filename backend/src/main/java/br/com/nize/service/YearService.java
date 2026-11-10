@@ -70,6 +70,7 @@ public class YearService {
         categories.saveAll(categories.findByUserIdAndYearNumberOrderByIdAsc(userId, source).stream().map(c -> {
             Category copy = new Category(userId, year, c.getName(), c.getDescription());
             copy.update(c.getName(), c.getDescription(), c.isActive());
+            copy.setMonthlyLimitCents(c.getMonthlyLimitCents());
             return copy;
         }).toList());
         cards.saveAll(cards.findByUserIdAndYearNumberOrderByIdAsc(userId, source).stream().map(c -> {

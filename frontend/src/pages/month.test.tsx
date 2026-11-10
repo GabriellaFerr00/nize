@@ -196,6 +196,34 @@ describe('month screen header and navigation (TASK-039: REQ-041, REQ-040)', () =
   })
 })
 
+describe('category limits (TASK-068: REQ-051)', () => {
+  it('warns about categories near or over the limit, as the API marked them', async () => {
+    const view = november()
+    view.summaries.byCategory = [
+      { categoryId: 9, categoryName: 'Despesas eventuais', amountCents: 141_814, percent: 23.86, limitCents: 140_000, limitStatus: 'OVER' },
+      { categoryId: 1, categoryName: 'Mercado', amountCents: 452_474, percent: 76.14, limitCents: 500_000, limitStatus: 'NEAR' },
+    ]
+    await openMonth(baseReplies(view))
+
+    const alerts = screen.getByRole('status', { name: 'Limites de gasto' })
+    expect(alerts).toHaveTextContent('Despesas eventuais passou do limite (R$ 1.418,14 de R$ 1.400,00)')
+    expect(alerts).toHaveTextContent('Mercado está perto do limite (R$ 4.524,74 de R$ 5.000,00)')
+    const byCategory = section('Por categoria')
+    expect(within(byCategory).getByText('Mercado').closest('li')).toHaveTextContent('R$ 4.524,74 de R$ 5.000,00 · está perto do limite')
+  })
+
+  it('shows no warning under the limit or without one', async () => {
+    const view = november()
+    view.summaries.byCategory = [
+      { categoryId: 9, categoryName: 'Despesas eventuais', amountCents: 141_814, percent: 23.86, limitCents: 900_000, limitStatus: 'UNDER' },
+      { categoryId: 1, categoryName: 'Mercado', amountCents: 452_474, percent: 76.14 },
+    ]
+    await openMonth(baseReplies(view))
+    expect(screen.queryByRole('status', { name: 'Limites de gasto' })).not.toBeInTheDocument()
+    expect(within(section('Por categoria')).getByText('Despesas eventuais').closest('li')).toHaveTextContent('R$ 1.418,14 de R$ 9.000,00')
+  })
+})
+
 describe('hide values (TASK-065: REQ-049)', () => {
   it('the eye hides every amount, is remembered, and shows them again', async () => {
     await openMonth()

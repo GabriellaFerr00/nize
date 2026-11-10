@@ -178,6 +178,55 @@ describe('categories screen (REQ-011, REQ-012)', () => {
   })
 })
 
+describe('category limit (TASK-068: REQ-051)', () => {
+  it('sets an optional monthly limit, shows it, and keeps it when deactivating', async () => {
+    const replies: Replies = {
+      ...baseReplies(),
+      'GET /api/years/2026/categories': { body: [category(1, 'Mercado')] },
+      'PUT /api/categories/1': { body: { ...category(1, 'Mercado'), monthlyLimitCents: 100_000 } },
+    }
+    const calls = stubApi(replies)
+    renderApp('/categories', { signedIn: true })
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar Mercado' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Editar categoria' })
+
+    const limit = within(dialog).getByLabelText('Limite por mês (R$, opcional)')
+    await userEvent.type(limit, '0')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }))
+    expect(within(dialog).getByText('Informe um valor maior que zero ou deixe em branco.')).toBeInTheDocument()
+
+    await userEvent.clear(limit)
+    await userEvent.type(limit, '1.000,00')
+    replies['GET /api/years/2026/categories'] = { body: [{ ...category(1, 'Mercado'), monthlyLimitCents: 100_000 }] }
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }))
+
+    await waitFor(() => expect(calls.filter((c) => c.key === 'PUT /api/categories/1')).toHaveLength(1))
+    expect(calls.find((c) => c.key === 'PUT /api/categories/1')?.body).toMatchObject({ monthlyLimitCents: 100_000 })
+    expect(await screen.findByText(/Limite por mês:/)).toHaveTextContent('R$ 1.000,00')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Desativar Mercado' }))
+    await waitFor(() => expect(calls.filter((c) => c.key === 'PUT /api/categories/1')).toHaveLength(2))
+    expect(calls.filter((c) => c.key === 'PUT /api/categories/1')[1].body).toMatchObject({ active: false, monthlyLimitCents: 100_000 })
+  })
+
+  it('an empty limit sends no limit', async () => {
+    const replies: Replies = {
+      ...baseReplies(),
+      'GET /api/years/2026/categories': { body: [{ ...category(1, 'Mercado'), monthlyLimitCents: 100_000 }] },
+      'PUT /api/categories/1': { body: category(1, 'Mercado') },
+    }
+    const calls = stubApi(replies)
+    renderApp('/categories', { signedIn: true })
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar Mercado' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Editar categoria' })
+    await userEvent.clear(within(dialog).getByLabelText('Limite por mês (R$, opcional)'))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }))
+
+    await waitFor(() => expect(calls.filter((c) => c.key === 'PUT /api/categories/1')).toHaveLength(1))
+    expect(calls.find((c) => c.key === 'PUT /api/categories/1')?.body).not.toHaveProperty('monthlyLimitCents')
+  })
+})
+
 describe('cards screen (REQ-013)', () => {
   const card = (id: number, name: string, dueDay: number, active = true) => ({ id, year: 2026, name, dueDay, active })
 

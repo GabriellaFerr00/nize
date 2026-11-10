@@ -14,9 +14,9 @@ function Block({ title, empty, children }: { title: string; empty?: string; chil
   )
 }
 
-type LineProps = { label: string; cents: number; extra?: string; sub?: boolean; percent?: number }
+type LineProps = { label: string; cents: number; extra?: string; sub?: boolean; percent?: number; limit?: ReactNode }
 
-function Line({ label, cents, extra, sub = false, percent }: LineProps) {
+function Line({ label, cents, extra, sub = false, percent, limit }: LineProps) {
   return (
     <li className={`flex flex-col gap-1 text-sm ${sub ? 'pl-3 text-ink-soft' : 'text-ink'}`}>
       <span className="flex items-baseline justify-between gap-2">
@@ -26,6 +26,7 @@ function Line({ label, cents, extra, sub = false, percent }: LineProps) {
           <Money cents={cents} className={sub ? '' : 'font-medium'} />
         </span>
       </span>
+      {limit}
       {percent !== undefined && (
         // as long as the percentage the API computed (display only)
         <span className="h-1.5 rounded-full bg-line" aria-hidden>
@@ -38,7 +39,7 @@ function Line({ label, cents, extra, sub = false, percent }: LineProps) {
 
 /**
  * Summaries of the month (REQ-035..038) and the own balance (REQ-034), exactly as the API computed them:
- * category with percentage, payment method, card (with "no card") and third parties by person and card.
+ * category with percentage (and "used of limit", REQ-051), payment method, card and third parties by person and card.
  * Collapsible on phones; always open from 768px up (NFR-006).
  */
 export function SummaryPanel({ view }: { view: MonthView }) {
@@ -86,6 +87,16 @@ export function SummaryPanel({ view }: { view: MonthView }) {
               cents={c.amountCents}
               extra={formatPercent(c.percent, i18n.language)}
               percent={c.percent}
+              limit={
+                c.limitCents !== undefined && (
+                  // "used of limit" (REQ-051); the warning word comes from the API status, never recomputed here
+                  <span className={`text-xs ${c.limitStatus === 'OVER' || c.limitStatus === 'NEAR' ? 'font-medium text-warning' : 'text-ink-soft'}`}>
+                    <Money cents={c.amountCents} /> {t('month.limits.of')} <Money cents={c.limitCents} />
+                    {c.limitStatus === 'OVER' && ` · ${t('month.limits.over')}`}
+                    {c.limitStatus === 'NEAR' && ` · ${t('month.limits.near')}`}
+                  </span>
+                )
+              }
             />
           ))}
         </Block>

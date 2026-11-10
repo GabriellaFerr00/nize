@@ -14,9 +14,11 @@ import {
 } from '../api/catalogApi'
 import { ApiError } from '../api/client'
 import { apiErrorMessage } from '../lib/apiErrorMessage'
+import { centsToInput, parseCents } from '../lib/money'
 import { useDefaultMonth } from '../lib/useMonth'
 import { useSelectedYear } from '../lib/useSelectedYear'
 import { Dialog } from './Dialog'
+import { Money } from './Money'
 import { FormMessage } from './FormMessage'
 import { TextField } from './TextField'
 import { YearSelect } from './YearSelect'
@@ -25,7 +27,7 @@ import { dangerButton, iconButton, pageTitle, primaryButton, quietButton } from 
 type Props = {
   kind: CatalogKind
   /** Which extra fields the form shows besides the name. */
-  fields: { description?: boolean; dueDay?: boolean }
+  fields: { description?: boolean; dueDay?: boolean; monthlyLimit?: boolean }
   canDelete?: boolean
 }
 
@@ -39,6 +41,8 @@ const asInput = (item: CatalogItem): CatalogInput => ({
   name: item.name,
   ...(item.description !== undefined && { description: item.description }),
   ...(item.dueDay !== undefined && { dueDay: item.dueDay }),
+  // PUT replaces every field: keep the limit when only (de)activating (REQ-051)
+  ...(item.monthlyLimitCents !== undefined && { monthlyLimitCents: item.monthlyLimitCents }),
 })
 
 /** List + create/edit/activate/delete for categories, cards and people (REQ-011..014). */
@@ -189,6 +193,11 @@ function CatalogRow({ item, canDelete, busy, onEdit, onToggle, onDelete }: RowPr
       <div className="flex min-w-0 flex-1 flex-col pt-px">
         <span className={`leading-6 font-medium break-words ${item.active ? 'text-ink' : 'text-ink-soft'}`}>{name}</span>
         {item.description && <span className="text-sm text-ink-soft">{item.description}</span>}
+        {item.monthlyLimitCents !== undefined && (
+          <span className="text-sm text-ink-soft">
+            {t('catalog.limitPerMonth')} <Money cents={item.monthlyLimitCents} />
+          </span>
+        )}
       </div>
       <div className="-my-1.5 -mr-2 flex shrink-0">
         <button type="button" className={iconButton} aria-label={t('catalog.editItem', { name })} title={t('catalog.edit')} onClick={() => onEdit(item)}>
@@ -234,7 +243,8 @@ function ItemFormDialog({ kind, year, fields, item, onClose, onSaved }: FormProp
   const [name, setName] = useState(item?.name ?? '')
   const [description, setDescription] = useState(item?.description ?? '')
   const [dueDay, setDueDay] = useState(item?.dueDay !== undefined ? String(item.dueDay) : '')
-  const [errors, setErrors] = useState<{ name?: string; description?: string; dueDay?: string }>({})
+  const [limit, setLimit] = useState(item?.monthlyLimitCents !== undefined ? centsToInput(item.monthlyLimitCents) : '')
+  const [errors, setErrors] = useState<{ name?: string; description?: string; dueDay?: string; limit?: string }>({})
 
   const save = useMutation({
     mutationFn: (input: CatalogInput) =>
@@ -245,17 +255,23 @@ function ItemFormDialog({ kind, year, fields, item, onClose, onSaved }: FormProp
   function onSubmit(event: FormEvent) {
     event.preventDefault()
     const day = Number(dueDay)
+    // null = left empty (no limit); undefined = typed something that is not a positive amount
+    const typedLimit = limit.trim() === '' ? null : parseCents(limit)
+    const limitCents = typedLimit === null ? (limit.trim() === '' ? null : undefined) : typedLimit > 0 ? typedLimit : undefined
     const next = {
       name: !name.trim() ? t('catalog.errors.nameRequired') : name.trim().length > 80 ? t('catalog.errors.nameTooLong') : undefined,
       description: fields.description && description.length > 255 ? t('catalog.errors.descriptionTooLong') : undefined,
       dueDay: fields.dueDay && !(Number.isInteger(day) && day >= 1 && day <= 31) ? t('catalog.errors.dueDay') : undefined,
+      // empty = no limit; otherwise a positive amount (REQ-051)
+      limit: fields.monthlyLimit && limitCents === undefined ? t('catalog.errors.limit') : undefined,
     }
     setErrors(next)
-    if (next.name || next.description || next.dueDay) return
+    if (next.name || next.description || next.dueDay || next.limit) return
     save.mutate({
       name: name.trim(),
       ...(fields.description && { description: description.trim() }),
       ...(fields.dueDay && { dueDay: day }),
+      ...(fields.monthlyLimit && limitCents !== null && limitCents !== undefined && { monthlyLimitCents: limitCents }),
     })
   }
 
@@ -270,6 +286,15 @@ function ItemFormDialog({ kind, year, fields, item, onClose, onSaved }: FormProp
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             error={errors.description}
+          />
+        )}
+        {fields.monthlyLimit && (
+          <TextField
+            label={t('catalog.fields.monthlyLimit')}
+            inputMode="decimal"
+            value={limit}
+            onChange={(e) => setLimit(e.target.value)}
+            error={errors.limit}
           />
         )}
         {fields.dueDay && (

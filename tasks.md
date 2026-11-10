@@ -263,8 +263,9 @@ Nomes em inglês: ver "Nomenclatura em inglês" em `design.md` (os termos em por
 - [x] **TASK-067** [REQ-015, REQ-016, REQ-037]: Cartão obrigatório no crédito (novo e editado), criar cartão no formulário de lançamento e fim do "Sem cartão" (pedido da usuária durante a tarefa).
   - _Verify_: testes de API (crédito sem cartão → 400 `CARD_REQUIRED`; linha antiga sem cartão conta no total de crédito e não aparece por cartão) e de tela.
   - _Feito_: `ExpenseService` (`CARD_REQUIRED`), `PaymentSummary`/`ThirdPartySummary` sem grupo nulo (testes de regra antes); `withCard` em `IsolationTestBase` para os testes que não são sobre cartão; formulário com "Escolha um cartão…" e "+ Novo cartão" (nome e vencimento, já selecionado ao criar); linha antiga mostra "Cartão a definir". 386 testes back, 152 front.
-- [ ] **TASK-068** [REQ-051]: Limite mensal opcional por categoria, aviso a 80% e acima de 100% sem bloquear; "usado de limite" no resumo.
+- [x] **TASK-068** [REQ-051]: Limite mensal opcional por categoria, aviso a 80% e acima de 100% sem bloquear; "usado de limite" no resumo.
   - _Verify_: teste de regra antes do código (80%, 100%, sem limite), API e tela.
+  - _Feito_: V8 `category.limit_amount DECIMAL(12,2)`; regra `CategoryLimit` (`CategoryLimitTest`, 7 testes, escrito antes); `monthlyLimitCents` na categoria (criar/editar/copiar para o ano novo); `limitCents`/`limitStatus` em `byCategory` (`CategoryLimitApiTest`, 7 testes). Tela: campo "Limite por mês (R$, opcional)" em Categorias, faixa "Limites de gasto" no topo do mês (`LimitAlerts`) e "usado de limite" no resumo; 4 testes de tela.
 - [ ] **TASK-069** [REQ-052]: Cor de categoria e pessoa (paleta fixa) e imagem própria do cartão (PNG/JPG/WebP ≤ 200 KB), exibidas nas telas.
   - _Verify_: testes de API (formatos, tamanho, isolamento da imagem), contraste da paleta nos dois temas e testes de tela.
 

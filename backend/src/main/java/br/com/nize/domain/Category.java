@@ -1,6 +1,7 @@
 package br.com.nize.domain;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -34,6 +35,11 @@ public class Category {
     @Column(nullable = false)
     private boolean active = true;
 
+    // optional monthly limit (REQ-051): DECIMAL(12,2) in reais in the database, cents here (D-2); null = no limit
+    @Column(name = "limit_amount", precision = 12, scale = 2)
+    @Convert(converter = MoneyColumnConverter.class)
+    private Long monthlyLimitCents;
+
     protected Category() {
     }
 
@@ -50,6 +56,11 @@ public class Category {
         this.active = active;
     }
 
+    public void setMonthlyLimitCents(Long monthlyLimitCents) {
+        this.monthlyLimitCents = monthlyLimitCents;
+    }
+
+    public Long getMonthlyLimitCents() { return monthlyLimitCents; }
     public Long getId() { return id; }
     public Long getUserId() { return userId; }
     public int getYearNumber() { return yearNumber; }

@@ -10,9 +10,11 @@ export type CatalogItem = {
   active: boolean
   description?: string
   dueDay?: number
+  /** Optional monthly limit of a category (REQ-051). */
+  monthlyLimitCents?: number
 }
 
-export type CatalogInput = { name: string; description?: string; dueDay?: number }
+export type CatalogInput = { name: string; description?: string; dueDay?: number; monthlyLimitCents?: number }
 
 export const listItems = (kind: CatalogKind, year: number) =>
   apiRequest<CatalogItem[]>(`/years/${year}/${kind}`)

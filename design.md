@@ -141,6 +141,7 @@ Convenções: todas as tabelas têm `usuario_id BIGINT NOT NULL` (FK `usuario.id
 | nome | VARCHAR(80) | NOT NULL | UNIQUE (usuario_id, ano, nome) |
 | descricao | VARCHAR(255) | NULL | |
 | ativa | BOOLEAN | NOT NULL, default true | |
+| limite_mensal | DECIMAL(12,2) | NULL, CHECK > 0 | REQ-051; coluna `limit_amount` (V8), `monthlyLimitCents` na API; NULL = sem limite; copiado com a categoria para o ano novo |
 
 ### cartao
 | Field | Type | Constraints | Notes |
@@ -246,6 +247,7 @@ Semeadas em `category` para cada ano novo (REQ-010). A usuária pode renomear, d
 | dividirParcelas(total, n) | base = total ÷ n (inteira); n−1 parcelas = base; última = total − base×(n−1) | REQ-020 |
 | parcelasPorValor(valor, n) | n parcelas iguais | REQ-018 |
 | resumoPorCategoria | Σ por categoria; % = valor ÷ totalGastos (2 casas, HALF_UP só na exibição; aritmética decimal exata, nunca float; na API é um número com 2 casas, ex.: `23.86`) | REQ-035 |
+| limiteDaCategoria | `CategoryLimit.of(gasto, limite)`: sem limite → `NONE`; gasto > limite → `OVER`; gasto ≥ 80% do limite (`gasto × 100 ≥ limite × 80`, inteiros) → `NEAR`; senão `UNDER`. Na API, cada item de `byCategory` traz `limitCents` e `limitStatus` (só com limite). A tela do mês mostra uma faixa com as categorias `NEAR`/`OVER` e "usado de limite" no resumo; nada bloqueia o lançamento | REQ-051 |
 | resumoPorForma / PorCartão | Σ por forma de pagamento; Σ por cartão, só cartões (sem grupo "Sem cartão"; linha antiga sem cartão fica só no total de crédito) | REQ-036/037 |
 | resumoPorPessoa | Σ gastos com pessoa_id, por pessoa e por cartão | REQ-038 |
 | cargaDoMês(mesAnterior, mês) | copia os fixos (pago=false; gastos avulsos não são copiados); para cada parcela N/M do mês anterior com N < M cria a parcela N+1, **se a permissão de parcelas automáticas está ligada**, e se `(grupo, N+1)` ainda não existe (vale também para parcelas lançadas à mão, que recebem grupo próprio ao serem criadas); idem entradas parceladas; só se o mês não está em `loaded_month`. Referências (categoria, cartão, pessoa) trocam de ano pelo nome; item cuja categoria não existe no ano novo é ignorado | REQ-022 |
@@ -268,7 +270,7 @@ REST JSON sob `/api`. Todos os endpoints exceto `/api/auth/**` exigem `Authoriza
 | GET | /api/anos | sim | REQ-008 | anos existentes |
 | POST | /api/anos/{ano} | sim | REQ-007 | cria ano copiando estrutura do anterior |
 | GET | /api/anos/{ano}/categorias | sim | REQ-010 | lista |
-| POST | /api/anos/{ano}/categorias | sim | REQ-011 | cria |
+| POST | /api/anos/{ano}/categorias | sim | REQ-011, REQ-051 | cria; `monthlyLimitCents` opcional (> 0, ≤ 999999999999) também no PUT (ausente/null = sem limite) |
 | PUT | /api/categorias/{id} | sim | REQ-011 | renomeia, descreve, ativa/desativa |
 | DELETE | /api/categorias/{id} | sim | REQ-012 | exclui; 409 com contagem se houver lançamentos |
 | GET/POST | /api/anos/{ano}/cartoes | sim | REQ-013 | lista / cria |
@@ -417,7 +419,7 @@ GitHub Actions (detalhes em `docs/ci-cd.md`; NFR-010). **Um workflow por tema**,
 | 0.1.7 | 2026-11-01 | Fixo pode ser no crédito (tipo e forma de pagamento independentes); regras de consistência do lançamento; Open Questions da Phase 3 resolvidas |
 | 0.1.8 | 2026-11-01 | `month` reservado no H2: coluna `month_ref`; data do lançamento `expense_date` |
 | 0.1.9 | 2026-11-01 | Carga do mês: continua parcelas à mão (grupo próprio) e respeita a permissão de parcelas automáticas |
-| 0.3.0 | 2026-11-09 | Cartão obrigatório no crédito (`CARD_REQUIRED`) e fim do "Sem cartão" nos resumos (REQ-015/016/037). Front: `lib/privacy.ts` + `ValuesToggle` (REQ-049, olho ao lado do tema), ícone sol/lua no `ThemeSwitcher` (REQ-045). Dinheiro em `DECIMAL(12,2)` no banco (V7: `expense.amount`, `income.amount`), `MoneyColumnConverter`; centavos no resto (D-2, NFR-001). `DELETE /api/cards/{id}` (REQ-013). Pedidos da usuária |
+| 0.3.0 | 2026-11-09 | Limite mensal opcional por categoria (V8 `category.limit_amount`, regra `CategoryLimit`, `limitCents`/`limitStatus` no resumo; REQ-051). Cartão obrigatório no crédito (`CARD_REQUIRED`) e fim do "Sem cartão" nos resumos (REQ-015/016/037). Front: `lib/privacy.ts` + `ValuesToggle` (REQ-049, olho ao lado do tema), ícone sol/lua no `ThemeSwitcher` (REQ-045). Dinheiro em `DECIMAL(12,2)` no banco (V7: `expense.amount`, `income.amount`), `MoneyColumnConverter`; centavos no resto (D-2, NFR-001). `DELETE /api/cards/{id}` (REQ-013). Pedidos da usuária |
 | 0.2.10 | 2026-11-09 | Posição = só a soma dos gastos do intervalo (sem entradas); JSON `{fromDay, toDay, totalExpensesCents}`; tela "Gastos R$ X" sem sobra/falta (REQ-030 0.1.9, decisão da usuária) |
 | 0.2.9 | 2026-11-05 | Layout das demais telas (menu, cadastros, configurações, panorama, janelas, entrar) no estilo da tela do mês; tema por botão que alterna; `lib/ui.ts` (aprovado pela usuária) |
 | 0.2.8 | 2026-11-05 | Layout da tela do mês: saldo em destaque com totais numa linha, lista simples com o total de cada fechamento (a régua proposta foi descartada pela usuária), listas em estilo livro-caixa, resumos com barra por categoria (aprovado pela usuária) |
