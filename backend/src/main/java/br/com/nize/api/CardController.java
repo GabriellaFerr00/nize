@@ -45,12 +45,13 @@ public class CardController {
     @PostMapping("/api/years/{year}/cards")
     @ResponseStatus(HttpStatus.CREATED)
     public CardResponse create(@PathVariable int year, @Valid @RequestBody CreateCardRequest request) {
-        return CardResponse.from(service.create(CurrentUser.id(), year, request.name(), request.dueDay()), false);
+        return CardResponse.from(service.create(CurrentUser.id(), year, request.name(), request.dueDay(), request.brand()), false);
     }
 
     @PutMapping("/api/cards/{id}")
     public CardResponse update(@PathVariable Long id, @Valid @RequestBody UpdateCardRequest request) {
-        Card card = service.update(CurrentUser.id(), id, request.name(), request.dueDay(), request.active());
+        Card card = service.update(CurrentUser.id(), id, request.name(), request.dueDay(), request.active(),
+                request.brand());
         return CardResponse.from(card, !service.cardsWithLogo(CurrentUser.id(), List.of(card.getId())).isEmpty());
     }
 

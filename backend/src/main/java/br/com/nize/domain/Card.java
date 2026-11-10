@@ -35,6 +35,10 @@ public class Card {
     @Column(nullable = false)
     private boolean active = true;
 
+    // a key of CardBrand (REQ-052, D-21); null = no brand
+    @Column(length = 32)
+    private String brand;
+
     protected Card() {
     }
 
@@ -51,6 +55,11 @@ public class Card {
         this.active = active;
     }
 
+    public void setBrand(String brand) {
+        this.brand = brand;
+    }
+
+    public String getBrand() { return brand; }
     public Long getId() { return id; }
     public Long getUserId() { return userId; }
     public int getYearNumber() { return yearNumber; }

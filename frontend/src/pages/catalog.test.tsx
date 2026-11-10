@@ -320,6 +320,82 @@ describe('colors and card logos (TASK-069: REQ-052)', () => {
   })
 })
 
+describe('card brands and free colors (TASK-070/071: REQ-052)', () => {
+  it('lists Brazilian cards; picking one fills the name and stores the brand', async () => {
+    const replies: Replies = {
+      ...baseReplies(),
+      'GET /api/years/2026/cards': { body: [] },
+      'POST /api/years/2026/cards': { status: 201, body: { id: 3, year: 2026, name: 'Itaú', dueDay: 8, active: true, hasLogo: false, brand: 'itau' } },
+    }
+    const calls = stubApi(replies)
+    renderApp('/cards', { signedIn: true })
+    await userEvent.click(await screen.findByRole('button', { name: 'Novo cartão' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Novo cartão' })
+    const brands = within(dialog).getByRole('radiogroup', { name: 'Banco ou cartão' })
+    expect(within(brands).getByRole('radio', { name: 'Nubank' })).toBeInTheDocument()
+    expect(within(brands).getByRole('radio', { name: 'Nenhuma' })).toBeChecked()
+
+    await userEvent.type(within(dialog).getByRole('searchbox', { name: 'Buscar banco ou cartão' }), 'itau')
+    expect(within(brands).queryByRole('radio', { name: 'Nubank' })).not.toBeInTheDocument()
+    await userEvent.click(within(brands).getByRole('radio', { name: 'Itaú' }))
+    expect(within(dialog).getByLabelText('Nome')).toHaveValue('Itaú')
+
+    await userEvent.type(within(dialog).getByLabelText('Dia de vencimento (1 a 31)'), '8')
+    replies['GET /api/years/2026/cards'] = { body: [{ id: 3, year: 2026, name: 'Itaú', dueDay: 8, active: true, hasLogo: false, brand: 'itau' }] }
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }))
+    await waitFor(() => expect(calls.find((c) => c.key === 'POST /api/years/2026/cards')?.body).toEqual({ name: 'Itaú', dueDay: 8, brand: 'itau' }))
+    // no free logo for Itaú: its initials on the brand color
+    const row = (await screen.findByText('Itaú')).closest('li') as HTMLElement
+    expect(row.querySelector('[data-brand="itau"]')).toHaveTextContent('It')
+  })
+
+  it('a brand with a free logo shows it; the user\'s own image wins over the brand', async () => {
+    stubApi({
+      ...baseReplies(),
+      'GET /api/years/2026/cards': {
+        body: [
+          { id: 1, year: 2026, name: 'Roxinho', dueDay: 10, active: true, hasLogo: false, brand: 'nubank' },
+          { id: 2, year: 2026, name: 'Meu', dueDay: 10, active: true, hasLogo: true, brand: 'nubank' },
+        ],
+      },
+      'GET /api/cards/2/logo': { raw: new Blob([new Uint8Array([0x89, 0x50])], { type: 'image/png' }) },
+    })
+    renderApp('/cards', { signedIn: true })
+    const roxinho = (await screen.findByText('Roxinho')).closest('li') as HTMLElement
+    expect(roxinho.querySelector('[data-brand="nubank"] img')).toHaveAttribute('src', '/card-brands/nubank.svg')
+    const meu = screen.getByText('Meu').closest('li') as HTMLElement
+    await waitFor(() => expect(meu.querySelector('img')?.getAttribute('src')).toMatch(/^data:image\/png/))
+    expect(meu.querySelector('[data-brand]')).toBeNull()
+  })
+
+  it('a category takes any color from the palette of tones or the device picker', async () => {
+    const replies: Replies = {
+      ...baseReplies(),
+      'GET /api/years/2026/categories': { body: [category(1, 'Mercado')] },
+      'PUT /api/categories/1': { body: category(1, 'Mercado') },
+    }
+    const calls = stubApi(replies)
+    renderApp('/categories', { signedIn: true })
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar Mercado' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Editar categoria' })
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Mais cores e tons' }))
+    const tones = within(dialog).getByRole('radiogroup', { name: 'Paleta de cores e tons' })
+    expect(within(tones).getAllByRole('radio')).toHaveLength(72)
+    await userEvent.click(within(tones).getByRole('radio', { name: 'Cor #6c1313' }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }))
+    await waitFor(() => expect(calls.find((c) => c.key === 'PUT /api/categories/1')?.body).toMatchObject({ color: '#6c1313' }))
+  })
+
+  it('shows a free color as a dot with an outline', async () => {
+    stubApi({ ...baseReplies(), 'GET /api/years/2026/categories': { body: [{ ...category(1, 'Mercado'), color: '#3a7bd5' }] } })
+    renderApp('/categories', { signedIn: true })
+    await screen.findByText('Mercado')
+    const dot = document.querySelector('[data-color="#3a7bd5"]') as HTMLElement
+    expect(dot.style.backgroundColor).toBe('rgb(58, 123, 213)')
+    expect(dot.className).toContain('border-line-strong')
+  })
+})
+
 describe('cards screen (REQ-013)', () => {
   const card = (id: number, name: string, dueDay: number, active = true) => ({ id, year: 2026, name, dueDay, active })
 

@@ -164,7 +164,8 @@ describe('new expense window (REQ-016..019, REQ-042)', () => {
     expect(within(fields).getByText('Informe um nome.')).toBeInTheDocument()
     expect(within(fields).getByText('Informe um dia de 1 a 31.')).toBeInTheDocument()
 
-    await userEvent.type(within(fields).getByLabelText('Nome'), 'Inter')
+    await userEvent.click(within(fields).getByRole('radio', { name: 'Inter' }))
+    expect(within(fields).getByLabelText('Nome')).toHaveValue('Inter')
     await userEvent.type(within(fields).getByLabelText('Dia de vencimento (1 a 31)'), '20')
     map['GET /api/years/2026/cards'] = {
       body: [
@@ -176,7 +177,7 @@ describe('new expense window (REQ-016..019, REQ-042)', () => {
 
     await waitFor(() => expect(within(dialog).getByLabelText('Cartão')).toHaveValue('9'))
     expect(within(dialog).queryByRole('group', { name: 'Novo cartão' })).not.toBeInTheDocument()
-    expect(calls.find((c) => c.key === 'POST /api/years/2026/cards')?.body).toEqual({ name: 'Inter', dueDay: 20 })
+    expect(calls.find((c) => c.key === 'POST /api/years/2026/cards')?.body).toEqual({ name: 'Inter', dueDay: 20, brand: 'inter' })
     await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }))
     await waitFor(() => expect(posted(calls)).toHaveLength(1))
     expect(posted(calls)[0]).toMatchObject({ type: 'CARD', paymentMethod: 'CREDIT', cardId: 9 })

@@ -9,6 +9,9 @@ on:
       - backend/**
       - scripts/ci/**
       - .github/workflows/backend.yml
+      # CardBrandSyncTest reads the brand list and icons of the front (REQ-052)
+      - frontend/src/lib/cardBrands.ts
+      - frontend/public/card-brands/**
   pull_request:
     branches: [main]
     paths: *backend-paths

@@ -16,6 +16,8 @@ export type CatalogItem = {
   color?: string
   /** A card has the user's own image (REQ-052). */
   hasLogo?: boolean
+  /** Key of a Brazilian card brand (lib/cardBrands), null when none (REQ-052). */
+  brand?: string | null
 }
 
 export type CatalogInput = {
@@ -24,6 +26,7 @@ export type CatalogInput = {
   dueDay?: number
   monthlyLimitCents?: number
   color?: string
+  brand?: string
 }
 
 export const listItems = (kind: CatalogKind, year: number) =>

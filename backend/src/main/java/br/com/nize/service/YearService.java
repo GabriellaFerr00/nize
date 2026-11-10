@@ -82,6 +82,7 @@ public class YearService {
         List<Card> copiedCards = cards.saveAll(sourceCards.stream().map(c -> {
             Card copy = new Card(userId, year, c.getName(), c.getDueDay());
             copy.update(c.getName(), c.getDueDay(), c.isActive());
+            copy.setBrand(c.getBrand());
             return copy;
         }).toList());
         // the card's own image goes with it (REQ-052)

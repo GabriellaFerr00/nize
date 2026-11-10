@@ -213,7 +213,19 @@
       "pink": "Pink",
       "red": "Red",
       "orange": "Orange",
-      "brown": "Brown"
+      "brown": "Brown",
+      "more": "More colors and tones",
+      "less": "Fewer colors",
+      "tones": "Palette of colors and tones",
+      "tone": "Color {{hex}}",
+      "custom": "Another color (device picker)"
+    },
+    "brand": {
+      "title": "Bank or card",
+      "search": "Search bank or card",
+      "none": "None",
+      "noMatch": "No bank found. Type the card name below.",
+      "notice": "Names and logos belong to their owners and only help you recognise your cards."
     }
   },
   "settings": {

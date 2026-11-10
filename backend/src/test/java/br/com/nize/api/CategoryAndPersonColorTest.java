@@ -14,7 +14,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/** Colors of categories and people from the Nize palette (TASK-069, REQ-052, D-21). */
+/** Colors of categories and people: quick keys or any #rrggbb (TASK-069, TASK-071, REQ-052, D-21). */
 class CategoryAndPersonColorTest extends IsolationTestBase {
 
     private static final int YEAR = Year.now().getValue();
@@ -55,7 +55,7 @@ class CategoryAndPersonColorTest extends IsolationTestBase {
     @Test
     void aColorOutsideThePaletteIsRefused() throws Exception {
         long mercado = categoryId(userA, "Mercado");
-        for (String bad : List.of("\"#ff0000\"", "\"GREEN\"", "\"black\"", "\"\"")) {
+        for (String bad : List.of("\"#FF0000\"", "\"#ff00\"", "\"ff0000\"", "\"GREEN\"", "\"black\"", "\"\"", "\"rgb(1,2,3)\"")) {
             as(userA, put("/api/categories/" + mercado).contentType(MediaType.APPLICATION_JSON)
                     .content("{\"name\":\"Mercado\",\"active\":true,\"color\":%s}".formatted(bad)))
                     .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
@@ -63,6 +63,17 @@ class CategoryAndPersonColorTest extends IsolationTestBase {
         as(userA, post("/api/years/" + YEAR + "/people").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"X\",\"color\":\"url(javascript:1)\"}"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void anyColorFromThePaletteOfHuesAndTonesIsAccepted() throws Exception {
+        long mercado = categoryId(userA, "Mercado");
+        as(userA, put("/api/categories/" + mercado).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Mercado\",\"active\":true,\"color\":\"#3a7bd5\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.color").value("#3a7bd5"));
+        as(userA, post("/api/years/" + YEAR + "/people").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Mainha\",\"color\":\"#c2185b\"}"))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.color").value("#c2185b"));
     }
 
     @Test

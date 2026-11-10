@@ -16,6 +16,7 @@ import { apiErrorMessage } from '../lib/apiErrorMessage'
 import { centsToInput, parseCents } from '../lib/money'
 import { defaultDate } from '../lib/month'
 import { selectable, useRefreshMonths, useYearCatalogs } from '../lib/useMonth'
+import { BrandPicker } from './BrandPicker'
 import { Dialog } from './Dialog'
 import { FormMessage } from './FormMessage'
 import { TextField } from './TextField'
@@ -354,9 +355,10 @@ function NewCardFields({ year, onCreated }: { year: number; onCreated: (id: numb
   const queryClient = useQueryClient()
   const [name, setName] = useState('')
   const [dueDay, setDueDay] = useState('')
+  const [brand, setBrand] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const create = useMutation({
-    mutationFn: () => createItem('cards', year, { name: name.trim(), dueDay: Number(dueDay) }),
+    mutationFn: () => createItem('cards', year, { name: name.trim(), dueDay: Number(dueDay), ...(brand && { brand }) }),
     onSuccess: async (card) => {
       await queryClient.invalidateQueries({ queryKey: ['catalog', 'cards'] })
       onCreated(card.id)
@@ -376,6 +378,13 @@ function NewCardFields({ year, onCreated }: { year: number; onCreated: (id: numb
     <fieldset className="mt-2 flex flex-col gap-3 rounded-xl border border-line p-3">
       <legend className="px-1 text-sm font-medium text-ink">{t('expense.newCard.title')}</legend>
       {create.isError && <FormMessage kind="error">{apiErrorMessage(t, create.error)}</FormMessage>}
+      <BrandPicker
+        value={brand}
+        onChange={(picked) => {
+          setBrand(picked?.key ?? '')
+          if (picked && !name.trim()) setName(picked.name)
+        }}
+      />
       <TextField label={t('catalog.fields.name')} value={name} onChange={(e) => setName(e.target.value)} error={errors.name} />
       <TextField
         label={t('catalog.fields.dueDay')}

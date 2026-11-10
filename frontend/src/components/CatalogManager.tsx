@@ -19,10 +19,11 @@ import {
 import { ApiError } from '../api/client'
 import { apiErrorMessage } from '../lib/apiErrorMessage'
 import { centsToInput, parseCents } from '../lib/money'
-import { TAG_COLORS, TAG_DOT_CLASS } from '../lib/tagColors'
 import { useDefaultMonth } from '../lib/useMonth'
 import { useSelectedYear } from '../lib/useSelectedYear'
+import { BrandPicker } from './BrandPicker'
 import { CardBadge } from './CardBadge'
+import { ColorPicker } from './ColorPicker'
 import { Dialog } from './Dialog'
 import { Money } from './Money'
 import { FormMessage } from './FormMessage'
@@ -51,6 +52,7 @@ const asInput = (item: CatalogItem): CatalogInput => ({
   // PUT replaces every field: keep the limit when only (de)activating (REQ-051)
   ...(item.monthlyLimitCents !== undefined && { monthlyLimitCents: item.monthlyLimitCents }),
   ...(item.color !== undefined && { color: item.color }),
+  ...(item.brand && { brand: item.brand }),
 })
 
 /** List + create/edit/activate/delete for categories, cards and people (REQ-011..014). */
@@ -198,7 +200,7 @@ function CatalogRow({ item, canDelete, busy, onEdit, onToggle, onDelete }: RowPr
           <span className="sr-only">{t('catalog.dueOn', { day: item.dueDay })}</span>
         </span>
       )}
-      {item.hasLogo !== undefined && <CardBadge id={item.id} name={name} hasLogo={item.hasLogo} />}
+      {item.hasLogo !== undefined && <CardBadge id={item.id} name={name} hasLogo={item.hasLogo} brand={item.brand} />}
       <div className="flex min-w-0 flex-1 flex-col pt-px">
         <span className={`flex items-center gap-2 leading-6 font-medium break-words ${item.active ? 'text-ink' : 'text-ink-soft'}`}>
           <TagDot color={item.color} />
@@ -257,6 +259,7 @@ function ItemFormDialog({ kind, year, fields, item, onClose, onSaved }: FormProp
   const [dueDay, setDueDay] = useState(item?.dueDay !== undefined ? String(item.dueDay) : '')
   const [limit, setLimit] = useState(item?.monthlyLimitCents !== undefined ? centsToInput(item.monthlyLimitCents) : '')
   const [color, setColor] = useState(item?.color ?? '')
+  const [brand, setBrand] = useState(item?.brand ?? '')
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [removeLogo, setRemoveLogo] = useState(false)
   const [errors, setErrors] = useState<{ name?: string; description?: string; dueDay?: string; limit?: string; logo?: string }>({})
@@ -311,6 +314,7 @@ function ItemFormDialog({ kind, year, fields, item, onClose, onSaved }: FormProp
       ...(fields.dueDay && { dueDay: day }),
       ...(fields.monthlyLimit && limitCents !== null && limitCents !== undefined && { monthlyLimitCents: limitCents }),
       ...(fields.color && color && { color }),
+      ...(fields.logo && brand && { brand }),
     })
   }
 
@@ -336,34 +340,16 @@ function ItemFormDialog({ kind, year, fields, item, onClose, onSaved }: FormProp
             error={errors.limit}
           />
         )}
-        {fields.color && (
-          <fieldset className="flex flex-col gap-2">
-            <legend className="text-sm font-medium text-ink">{t('catalog.fields.color')}</legend>
-            <div className="flex flex-wrap gap-1">
-              {(['', ...TAG_COLORS] as const).map((key) => (
-                <label
-                  key={key || 'none'}
-                  title={t(`catalog.colors.${key || 'none'}`)}
-                  className="grid size-11 cursor-pointer place-items-center rounded-lg has-[:checked]:bg-soft has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-focus"
-                >
-                  <input
-                    type="radio"
-                    name="tag-color"
-                    value={key}
-                    checked={color === key}
-                    onChange={() => setColor(key)}
-                    className="sr-only"
-                    aria-label={t(`catalog.colors.${key || 'none'}`)}
-                  />
-                  {key ? (
-                    <span aria-hidden className={`size-6 rounded-full ${TAG_DOT_CLASS[key]} ${color === key ? 'ring-2 ring-ink ring-offset-2 ring-offset-card' : ''}`} />
-                  ) : (
-                    <span aria-hidden className={`size-6 rounded-full border-2 border-dashed border-line-strong ${color === '' ? 'ring-2 ring-ink ring-offset-2 ring-offset-card' : ''}`} />
-                  )}
-                </label>
-              ))}
-            </div>
-          </fieldset>
+        {fields.color && <ColorPicker value={color} onChange={setColor} />}
+        {fields.logo && (
+          <BrandPicker
+            value={brand}
+            onChange={(picked) => {
+              setBrand(picked?.key ?? '')
+              // a known brand fills an empty name, so a new card is one tap away
+              if (picked && !name.trim()) setName(picked.name)
+            }}
+          />
         )}
         {fields.logo && (
           <div className="flex flex-col gap-2">
@@ -371,7 +357,7 @@ function ItemFormDialog({ kind, year, fields, item, onClose, onSaved }: FormProp
               {t('catalog.fields.logo')}
             </label>
             <div className="flex items-center gap-3">
-              {item && !logoFile && !removeLogo && <CardBadge id={item.id} name={item.name} hasLogo={item.hasLogo} />}
+              {item && !logoFile && !removeLogo && <CardBadge id={item.id} name={item.name} hasLogo={item.hasLogo} brand={brand} />}
               <input
                 id="card-logo"
                 type="file"

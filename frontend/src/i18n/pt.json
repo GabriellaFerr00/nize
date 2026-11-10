@@ -213,7 +213,19 @@
       "pink": "Rosa",
       "red": "Vermelho",
       "orange": "Laranja",
-      "brown": "Marrom"
+      "brown": "Marrom",
+      "more": "Mais cores e tons",
+      "less": "Menos cores",
+      "tones": "Paleta de cores e tons",
+      "tone": "Cor {{hex}}",
+      "custom": "Outra cor (seletor do aparelho)"
+    },
+    "brand": {
+      "title": "Banco ou cartão",
+      "search": "Buscar banco ou cartão",
+      "none": "Nenhuma",
+      "noMatch": "Nenhum banco encontrado. Digite o nome do cartão abaixo.",
+      "notice": "Nomes e logotipos são marcas dos seus donos e servem só para você reconhecer seus cartões."
     }
   },
   "settings": {

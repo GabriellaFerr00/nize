@@ -42,21 +42,25 @@ public class CardService {
     }
 
     @Transactional
-    public Card create(Long userId, int year, String name, int dueDay) {
+    public Card create(Long userId, int year, String name, int dueDay, String brand) {
         yearGuard.requireYear(userId, year);
         if (cards.existsByUserIdAndYearNumberAndNameIgnoreCase(userId, year, name)) {
             throw new CardNameTakenException();
         }
-        return cards.save(new Card(userId, year, name, dueDay));
+        Card card = new Card(userId, year, name, dueDay);
+        card.setBrand(brand);
+        return cards.save(card);
     }
 
     @Transactional
-    public Card update(Long userId, Long id, String name, int dueDay, boolean active) {
+    /** Full replacement: a missing {@code brand} removes it (REQ-052). */
+    public Card update(Long userId, Long id, String name, int dueDay, boolean active, String brand) {
         Card card = cards.findByIdAndUserId(id, userId).orElseThrow(ResourceNotFoundException::new);
         if (cards.existsByUserIdAndYearNumberAndNameIgnoreCaseAndIdNot(userId, card.getYearNumber(), name, card.getId())) {
             throw new CardNameTakenException();
         }
         card.update(name, dueDay, active);
+        card.setBrand(brand);
         return card;
     }
 
