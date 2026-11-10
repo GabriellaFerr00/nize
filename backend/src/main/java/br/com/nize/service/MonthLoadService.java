@@ -1,20 +1,14 @@
 package br.com.nize.service;
 
-import br.com.nize.domain.Card;
-import br.com.nize.domain.Category;
 import br.com.nize.domain.Expense;
 import br.com.nize.domain.ExpenseType;
 import br.com.nize.domain.Income;
 import br.com.nize.domain.LoadedMonth;
 import br.com.nize.domain.LoadedMonthId;
-import br.com.nize.domain.Person;
 import br.com.nize.domain.UserYearId;
-import br.com.nize.repository.CardRepository;
-import br.com.nize.repository.CategoryRepository;
 import br.com.nize.repository.ExpenseRepository;
 import br.com.nize.repository.IncomeRepository;
 import br.com.nize.repository.LoadedMonthRepository;
-import br.com.nize.repository.PersonRepository;
 import br.com.nize.repository.SettingsRepository;
 import br.com.nize.repository.UserYearRepository;
 import br.com.nize.rules.MonthLoad;
@@ -45,23 +39,15 @@ public class MonthLoadService {
     private final LoadedMonthRepository loaded;
     private final ExpenseRepository expenses;
     private final IncomeRepository incomes;
-    private final CategoryRepository categories;
-    private final CardRepository cards;
-    private final PersonRepository people;
     private final SettingsRepository settings;
     private final UserYearRepository years;
     private final YearService yearService;
 
-    public MonthLoadService(LoadedMonthRepository loaded, ExpenseRepository expenses, IncomeRepository incomes,
-                            CategoryRepository categories,
-                            CardRepository cards, PersonRepository people, SettingsRepository settings,
+    public MonthLoadService(LoadedMonthRepository loaded, ExpenseRepository expenses, IncomeRepository incomes, SettingsRepository settings,
                             UserYearRepository years, YearService yearService) {
         this.loaded = loaded;
         this.expenses = expenses;
         this.incomes = incomes;
-        this.categories = categories;
-        this.cards = cards;
-        this.people = people;
         this.settings = settings;
         this.years = years;
         this.yearService = yearService;
@@ -182,12 +168,9 @@ public class MonthLoadService {
         incomes.saveAll(created);
     }
 
-    /** The next installment of an income; null when its person no longer exists in the target year. */
+    /** The next installment of an income, with the same person (catalogs have no year, D-22). */
     private Income copy(Long userId, YearMonth month, Income source, int nextNumber) {
-        Long personId = source.getPersonId() == null ? null : mapPerson(userId, month.getYear(), source.getPersonId());
-        if (source.getPersonId() != null && personId == null) {
-            return null;
-        }
+        Long personId = source.getPersonId();
         LocalDate date = month.atDay(Math.min(source.getDate().getDayOfMonth(), month.lengthOfMonth()));
         return new Income(userId, month.toString(), source.getName(), date, source.getAmountCents(), personId,
                 nextNumber, source.getInstallmentCount(), source.getInstallmentGroupId());
@@ -222,56 +205,13 @@ public class MonthLoadService {
         yearService.create(userId, year);
     }
 
-    /** Copies one expense into the target month; null when its category (or card, person) no longer exists there. */
+    /** Copies one expense into the target month, with the same category, card and person (D-22). */
     private Expense copy(Long userId, YearMonth month, Expense source, Integer nextNumber) {
-        int year = month.getYear();
-        Long categoryId = mapCategory(userId, year, source.getCategoryId());
-        Long cardId = source.getCardId() == null ? null : mapCard(userId, year, source.getCardId());
-        Long personId = source.getPersonId() == null ? null : mapPerson(userId, year, source.getPersonId());
-        boolean missing = categoryId == null
-                || (source.getCardId() != null && cardId == null)
-                || (source.getPersonId() != null && personId == null);
-        if (missing) {
-            return null;
-        }
         LocalDate date = month.atDay(Math.min(source.getDate().getDayOfMonth(), month.lengthOfMonth()));
         boolean installment = nextNumber != null;
-        return new Expense(userId, month.toString(), source.getName(), categoryId, source.getAmountCents(),
-                source.getType(), source.getPaymentMethod(), cardId, personId, false, date,
+        return new Expense(userId, month.toString(), source.getName(), source.getCategoryId(), source.getAmountCents(),
+                source.getType(), source.getPaymentMethod(), source.getCardId(), source.getPersonId(), false, date,
                 installment ? nextNumber : null, installment ? source.getInstallmentCount() : null,
                 installment ? source.getInstallmentGroupId() : null);
-    }
-
-    private Long mapCategory(Long userId, int year, Long sourceId) {
-        Category source = categories.findByIdAndUserId(sourceId, userId).orElse(null);
-        if (source == null) {
-            return null;
-        }
-        if (source.getYearNumber() == year) {
-            return source.getId();
-        }
-        return categories.findByUserIdAndYearNumberAndNameIgnoreCase(userId, year, source.getName()).map(Category::getId).orElse(null);
-    }
-
-    private Long mapCard(Long userId, int year, Long sourceId) {
-        Card source = cards.findByIdAndUserId(sourceId, userId).orElse(null);
-        if (source == null) {
-            return null;
-        }
-        if (source.getYearNumber() == year) {
-            return source.getId();
-        }
-        return cards.findByUserIdAndYearNumberAndNameIgnoreCase(userId, year, source.getName()).map(Card::getId).orElse(null);
-    }
-
-    private Long mapPerson(Long userId, int year, Long sourceId) {
-        Person source = people.findByIdAndUserId(sourceId, userId).orElse(null);
-        if (source == null) {
-            return null;
-        }
-        if (source.getYearNumber() == year) {
-            return source.getId();
-        }
-        return people.findByUserIdAndYearNumberAndNameIgnoreCase(userId, year, source.getName()).map(Person::getId).orElse(null);
     }
 }

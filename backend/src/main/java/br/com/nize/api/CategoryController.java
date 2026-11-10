@@ -26,16 +26,15 @@ public class CategoryController {
     }
 
     /** {@code ?active=true} returns only the categories offered in the entry form. */
-    @GetMapping("/api/years/{year}/categories")
-    public List<CategoryResponse> list(@PathVariable int year,
-                                       @RequestParam(defaultValue = "false") boolean active) {
-        return service.list(CurrentUser.id(), year, active).stream().map(CategoryResponse::from).toList();
+    @GetMapping("/api/categories")
+    public List<CategoryResponse> list(@RequestParam(defaultValue = "false") boolean active) {
+        return service.list(CurrentUser.id(), active).stream().map(CategoryResponse::from).toList();
     }
 
-    @PostMapping("/api/years/{year}/categories")
+    @PostMapping("/api/categories")
     @ResponseStatus(HttpStatus.CREATED)
-    public CategoryResponse create(@PathVariable int year, @Valid @RequestBody CreateCategoryRequest request) {
-        return CategoryResponse.from(service.create(CurrentUser.id(), year, request.name(), request.description(),
+    public CategoryResponse create(@Valid @RequestBody CreateCategoryRequest request) {
+        return CategoryResponse.from(service.create(CurrentUser.id(), request.name(), request.description(),
                 request.monthlyLimitCents(), request.color()));
     }
 

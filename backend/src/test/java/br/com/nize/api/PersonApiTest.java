@@ -23,7 +23,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class PersonApiTest extends IsolationTestBase {
 
     private static final int YEAR = Year.now().getValue();
-    private static final String LIST = "/api/years/" + YEAR + "/people";
+    private static final String LIST = "/api/people";
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -63,7 +63,6 @@ class PersonApiTest extends IsolationTestBase {
         as(userA, json(post(LIST), create("  Mainha  ")))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").isNumber())
-                .andExpect(jsonPath("$.year").value(YEAR))
                 .andExpect(jsonPath("$.name").value("Mainha"))
                 .andExpect(jsonPath("$.active").value(true));
 
@@ -82,7 +81,7 @@ class PersonApiTest extends IsolationTestBase {
     }
 
     @Test
-    void aRepeatedNameInTheSameYearIsRejectedIgnoringCase() throws Exception {
+    void aRepeatedNameIsRejectedIgnoringCase() throws Exception {
         createPerson(userA, "Mainha");
         as(userA, json(post(LIST), create("MAINHA")))
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("PERSON_NAME_TAKEN"));
@@ -90,19 +89,9 @@ class PersonApiTest extends IsolationTestBase {
     }
 
     @Test
-    void theSameNameIsFineForAnotherUserAndAnotherYear() throws Exception {
+    void theSameNameIsFineForAnotherUser() throws Exception {
         createPerson(userA, "Mainha");
         createPerson(userB, "Mainha");
-
-        entityManager.flush();
-        jdbc.update("INSERT INTO user_year (user_id, year_number) VALUES (?, 2030)", userA.id());
-        as(userA, json(post("/api/years/2030/people"), create("Mainha"))).andExpect(status().isCreated());
-    }
-
-    @Test
-    void aYearTheUserDoesNotHaveIs404() throws Exception {
-        as(userA, get("/api/years/2099/people")).andExpect(status().isNotFound());
-        as(userA, json(post("/api/years/2099/people"), create("Mainha"))).andExpect(status().isNotFound());
     }
 
     @Test

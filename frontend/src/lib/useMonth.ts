@@ -36,10 +36,11 @@ export type YearCatalogs = {
 }
 
 /** Categories, cards and people of a year, shared (same cache keys) with the catalog screens and the forms. */
-export function useYearCatalogs(year: number): YearCatalogs {
-  const categories = useQuery({ queryKey: ['catalog', 'categories', year], queryFn: () => listItems('categories', year) })
-  const cards = useQuery({ queryKey: ['catalog', 'cards', year], queryFn: () => listItems('cards', year) })
-  const people = useQuery({ queryKey: ['catalog', 'people', year], queryFn: () => listItems('people', year) })
+/** Categories, cards and people: one list each, the same in every month (D-22). */
+export function useCatalogs(): YearCatalogs {
+  const categories = useQuery({ queryKey: ['catalog', 'categories'], queryFn: () => listItems('categories') })
+  const cards = useQuery({ queryKey: ['catalog', 'cards'], queryFn: () => listItems('cards') })
+  const people = useQuery({ queryKey: ['catalog', 'people'], queryFn: () => listItems('people') })
   const lists = { categories: categories.data ?? [], cards: cards.data ?? [], people: people.data ?? [] }
   return {
     ...lists,

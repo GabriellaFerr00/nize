@@ -54,7 +54,7 @@ public abstract class IsolationTestBase {
         String key = user.id() + "/" + year;
         Long card = testCards.get(key);
         if (card == null) {
-            String body = as(user, post("/api/years/" + year + "/cards").contentType(MediaType.APPLICATION_JSON)
+            String body = as(user, post("/api/cards").contentType(MediaType.APPLICATION_JSON)
                     .content("{\"name\":\"Cartão de teste\",\"dueDay\":31}"))
                     .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
             card = ((Number) JsonPath.read(body, "$.id")).longValue();

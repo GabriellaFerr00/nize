@@ -49,11 +49,15 @@ function Row({ name, date, details, installmentLabel, cents, tone = false, leadi
   return (
     <li className="flex items-start gap-3 py-3">
       {leading}
-      {/* the day leads the row (ledger style); screen readers get the full date */}
-      <time dateTime={date} className="w-7 shrink-0 text-lg leading-6 font-semibold text-ink tabular-nums">
-        <span aria-hidden>{date.slice(8)}</span>
-        <span className="sr-only">{formatDay(date, i18n.language)}</span>
-      </time>
+      {/* the entry date leads the row (ledger style): day/month with a caption saying what it is; screen readers
+          get the full date */}
+      <span className="flex w-12 shrink-0 flex-col items-center">
+        <time dateTime={date} className="text-base leading-6 font-semibold text-ink tabular-nums">
+          <span aria-hidden>{`${date.slice(8)}/${date.slice(5, 7)}`}</span>
+          <span className="sr-only">{t('month.entryDate', { date: formatDay(date, i18n.language) })}</span>
+        </time>
+        <span aria-hidden className="text-xs text-ink-soft">{t('month.entryDateCaption')}</span>
+      </span>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <div className="flex min-w-0 items-baseline justify-between gap-2">
           <p className="flex min-w-0 items-center gap-2">

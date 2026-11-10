@@ -77,9 +77,7 @@
     "INVALID_MONTH": "Invalid month.",
     "DATE_OUT_OF_MONTH": "The date must be inside the month.",
     "INACTIVE_REFERENCE": "The chosen category, card or person is deactivated.",
-    "REFERENCE_UNAVAILABLE": "The installments run into a year where the category, card or person no longer exists. Adjust that year's lists.",
-    "INVALID_IMAGE": "The image must be PNG, JPG or WebP.",
-    "IMAGE_TOO_LARGE": "The image can be at most 200 KB."
+    "REFERENCE_UNAVAILABLE": "The installments run into a year where the category, card or person no longer exists. Adjust that year's lists."
   },
   "auth": {
     "fields": {
@@ -152,18 +150,15 @@
       "name": "Name",
       "description": "Description (optional)",
       "dueDay": "Due day (1 to 31)",
-      "monthlyLimit": "Monthly limit (R$, optional)",
-      "color": "Color",
-      "logo": "Card logo (optional)"
+      "monthlyLimit": "Default monthly limit (R$, optional)",
+      "color": "Color"
     },
     "errors": {
       "nameRequired": "Enter a name.",
       "nameTooLong": "The name can have at most 80 characters.",
       "descriptionTooLong": "The description can have at most 255 characters.",
       "dueDay": "Enter a day from 1 to 31.",
-      "limit": "Enter an amount above zero or leave it empty.",
-      "logoType": "Choose a PNG, JPG or WebP image.",
-      "logoSize": "The image can be at most 200 KB."
+      "limit": "Enter an amount above zero or leave it empty."
     },
     "categories": {
       "new": "New category",
@@ -201,9 +196,7 @@
     "deactivateItem": "Deactivate {{name}}",
     "activateItem": "Reactivate {{name}}",
     "deleteItem": "Delete {{name}}",
-    "limitPerMonth": "Monthly limit:",
-    "logoHelp": "PNG, JPG or WebP, up to 200 KB. Use your own image.",
-    "removeLogo": "Remove logo",
+    "limitPerMonth": "Default monthly limit:",
     "colors": {
       "none": "No color",
       "green": "Green",
@@ -213,7 +206,19 @@
       "pink": "Pink",
       "red": "Red",
       "orange": "Orange",
-      "brown": "Brown"
+      "brown": "Brown",
+      "more": "More colors and tones",
+      "less": "Fewer colors",
+      "tones": "Palette of colors and tones",
+      "tone": "Color {{hex}}",
+      "custom": "Another color (device picker)"
+    },
+    "brand": {
+      "title": "Bank or card",
+      "search": "Search bank or card",
+      "none": "None",
+      "noMatch": "No bank found. Type the card name below.",
+      "notice": "Names and logos belong to their owners and only help you recognise your cards."
     }
   },
   "settings": {
@@ -224,7 +229,7 @@
     "autoInstallments": "Automatic installments",
     "autoInstallmentsHelp": "When you record an installment purchase, Nize creates one installment per month.",
     "newYear": "New year",
-    "newYearHelp": "Creates the year copying categories, cards and people from the previous year. Older years stay editable.",
+    "newYearHelp": "Creates the year so you can enter its months. Categories, cards and people are the same in every year.",
     "yearNumber": "Year",
     "createYear": "Create year",
     "yearCreated": "Year {{year}} created.",
@@ -384,10 +389,18 @@
       "noThirdParty": "No third-party expenses this month."
     },
     "limits": {
-      "title": "Spending limits",
       "near": "is close to its limit",
       "over": "is over its limit",
-      "of": "of"
-    }
+      "of": "of",
+      "close": "Close notice",
+      "open": "Month limits",
+      "dialogTitle": "Limits of {{month}}",
+      "dialogHelp": "Each category uses its default limit (set in Categories). Type a value only to change this month's limit; leave it empty to use the default.",
+      "default": "Default:",
+      "noDefault": "No default limit",
+      "thisMonth": "{{name}} limit this month (R$)"
+    },
+    "entryDate": "Entered on {{date}}",
+    "entryDateCaption": "entered"
   }
 }

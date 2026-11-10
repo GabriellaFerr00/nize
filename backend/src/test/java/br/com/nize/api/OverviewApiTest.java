@@ -40,7 +40,7 @@ class OverviewApiTest extends IsolationTestBase {
     }
 
     private long categoryId(TestUser user, int year) throws Exception {
-        String body = as(user, get("/api/years/" + year + "/categories")).andReturn().getResponse().getContentAsString();
+        String body = as(user, get("/api/categories")).andReturn().getResponse().getContentAsString();
         List<Integer> ids = JsonPath.read(body, "$[?(@.name == 'Mercado')].id");
         return ids.get(0);
     }

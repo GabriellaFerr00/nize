@@ -56,3 +56,15 @@ export type MonthView = {
 
 /** Opens the month: the first open runs the month load on the server (REQ-022). */
 export const getMonth = (month: string) => apiRequest<MonthView>(`/months/${month}`)
+
+/** A category's limit in one month (REQ-051, D-22): `monthCents` null = the month uses `defaultCents`. */
+export type MonthLimit = { categoryId: number; categoryName: string; defaultCents: number | null; monthCents: number | null }
+
+export const getMonthLimits = (month: string) => apiRequest<MonthLimit[]>(`/months/${month}/category-limits`)
+
+export const setMonthLimit = (month: string, categoryId: number, limitCents: number) =>
+  apiRequest(`/months/${month}/category-limits/${categoryId}`, { method: 'PUT', body: { limitCents } })
+
+/** Back to the category's default in that month. */
+export const clearMonthLimit = (month: string, categoryId: number) =>
+  apiRequest(`/months/${month}/category-limits/${categoryId}`, { method: 'DELETE' })

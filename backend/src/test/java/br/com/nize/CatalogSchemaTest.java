@@ -37,16 +37,16 @@ class CatalogSchemaTest {
         return jdbc.queryForObject("SELECT id FROM app_user WHERE email = ?", Long.class, email);
     }
 
-    private void insertCategory(long user, int year, String name) {
-        jdbc.update("INSERT INTO category (user_id, year_number, name) VALUES (?, ?, ?)", user, year, name);
+    private void insertCategory(long user, String name) {
+        jdbc.update("INSERT INTO category (user_id, name) VALUES (?, ?)", user, name);
     }
 
-    private void insertCard(long user, int year, String name, int dueDay) {
-        jdbc.update("INSERT INTO card (user_id, year_number, name, due_day) VALUES (?, ?, ?, ?)", user, year, name, dueDay);
+    private void insertCard(long user, String name, int dueDay) {
+        jdbc.update("INSERT INTO card (user_id, name, due_day) VALUES (?, ?, ?)", user, name, dueDay);
     }
 
-    private void insertPerson(long user, int year, String name) {
-        jdbc.update("INSERT INTO person (user_id, year_number, name) VALUES (?, ?, ?)", user, year, name);
+    private void insertPerson(long user, String name) {
+        jdbc.update("INSERT INTO person (user_id, name) VALUES (?, ?)", user, name);
     }
 
     @Test
@@ -59,9 +59,9 @@ class CatalogSchemaTest {
 
     @Test
     void newRowsAreActiveByDefaultAndDescriptionIsOptional() {
-        insertCategory(userA, 2026, "Mercado");
-        insertCard(userA, 2026, "Nubank", 10);
-        insertPerson(userA, 2026, "Mainha");
+        insertCategory(userA, "Mercado");
+        insertCard(userA, "Nubank", 10);
+        insertPerson(userA, "Mainha");
 
         assertThat(jdbc.queryForObject("SELECT active FROM category WHERE user_id = ?", Boolean.class, userA)).isTrue();
         assertThat(jdbc.queryForObject("SELECT description FROM category WHERE user_id = ?", String.class, userA)).isNull();
@@ -70,44 +70,29 @@ class CatalogSchemaTest {
     }
 
     @Test
-    void repeatedNameInTheSameYearForTheSameUserFails() {
-        insertCategory(userA, 2026, "Mercado");
-        insertCard(userA, 2026, "Nubank", 10);
-        insertPerson(userA, 2026, "Mainha");
-
-        assertThatThrownBy(() -> insertCategory(userA, 2026, "Mercado")).isInstanceOf(DataIntegrityViolationException.class);
-        assertThatThrownBy(() -> insertCard(userA, 2026, "Nubank", 12)).isInstanceOf(DataIntegrityViolationException.class);
-        assertThatThrownBy(() -> insertPerson(userA, 2026, "Mainha")).isInstanceOf(DataIntegrityViolationException.class);
-    }
-
-    @Test
-    void sameNameIsAllowedInAnotherYearOrForAnotherUser() {
-        insertCategory(userA, 2026, "Mercado");
-        insertCard(userA, 2026, "Nubank", 10);
-        insertPerson(userA, 2026, "Mainha");
-
-        insertCategory(userA, 2027, "Mercado");
-        insertCard(userA, 2027, "Nubank", 10);
-        insertPerson(userA, 2027, "Mainha");
-        insertCategory(userB, 2026, "Mercado");
-        insertCard(userB, 2026, "Nubank", 10);
-        insertPerson(userB, 2026, "Mainha");
-
-        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM category WHERE name = 'Mercado'", Integer.class)).isEqualTo(3);
+    void catalogsHaveNoYearAnyMore() {
+        // D-22: one list per user; names stay unique per user in the service (409 *_NAME_TAKEN)
+        assertThat(jdbc.queryForObject("""
+                SELECT COUNT(*) FROM information_schema.columns
+                WHERE LOWER(column_name) = 'year_number' AND LOWER(table_name) IN ('category', 'card', 'person')""",
+                Integer.class)).isZero();
+        insertCategory(userA, "Mercado");
+        insertCategory(userB, "Mercado");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM category WHERE name = 'Mercado'", Integer.class)).isEqualTo(2);
     }
 
     @Test
     void cardDueDayMustBeBetween1And31() {
-        assertThatThrownBy(() -> insertCard(userA, 2026, "Zero", 0)).isInstanceOf(DataIntegrityViolationException.class);
-        assertThatThrownBy(() -> insertCard(userA, 2026, "TooHigh", 32)).isInstanceOf(DataIntegrityViolationException.class);
-        insertCard(userA, 2026, "First", 1);
-        insertCard(userA, 2026, "Last", 31);
+        assertThatThrownBy(() -> insertCard(userA, "Zero", 0)).isInstanceOf(DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> insertCard(userA, "TooHigh", 32)).isInstanceOf(DataIntegrityViolationException.class);
+        insertCard(userA, "First", 1);
+        insertCard(userA, "Last", 31);
     }
 
     @Test
     void everyRowBelongsToAnExistingUser() {
-        assertThatThrownBy(() -> insertCategory(999_999L, 2026, "Orphan")).isInstanceOf(DataIntegrityViolationException.class);
-        assertThatThrownBy(() -> insertCard(999_999L, 2026, "Orphan", 5)).isInstanceOf(DataIntegrityViolationException.class);
-        assertThatThrownBy(() -> insertPerson(999_999L, 2026, "Orphan")).isInstanceOf(DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> insertCategory(999_999L, "Orphan")).isInstanceOf(DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> insertCard(999_999L, "Orphan", 5)).isInstanceOf(DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> insertPerson(999_999L, "Orphan")).isInstanceOf(DataIntegrityViolationException.class);
     }
 }

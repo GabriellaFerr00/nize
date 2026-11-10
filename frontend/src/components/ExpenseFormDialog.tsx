@@ -15,7 +15,8 @@ import { getSettings } from '../api/yearsApi'
 import { apiErrorMessage } from '../lib/apiErrorMessage'
 import { centsToInput, parseCents } from '../lib/money'
 import { defaultDate } from '../lib/month'
-import { selectable, useRefreshMonths, useYearCatalogs } from '../lib/useMonth'
+import { selectable, useRefreshMonths, useCatalogs } from '../lib/useMonth'
+import { BrandPicker } from './BrandPicker'
 import { Dialog } from './Dialog'
 import { FormMessage } from './FormMessage'
 import { TextField } from './TextField'
@@ -32,12 +33,11 @@ const NEW_CARD = 'new'
 export function ExpenseFormDialog({ month, expense, onClose }: Props) {
   const { t } = useTranslation()
   const refreshMonths = useRefreshMonths()
-  const year = Number(month.slice(0, 4))
   const nameInput = useRef<HTMLInputElement>(null)
   const editing = expense !== undefined
 
   const settings = useQuery({ queryKey: ['settings'], queryFn: getSettings })
-  const catalogs = useYearCatalogs(year)
+  const catalogs = useCatalogs()
   const autoAllowed = settings.data?.autoInstallments ?? false
 
   const [name, setName] = useState(expense?.name ?? '')
@@ -225,7 +225,7 @@ export function ExpenseFormDialog({ month, expense, onClose }: Props) {
                 {errors.card}
               </p>
             )}
-            {cardId === NEW_CARD && <NewCardFields year={year} onCreated={(id) => setCardId(String(id))} />}
+            {cardId === NEW_CARD && <NewCardFields onCreated={(id) => setCardId(String(id))} />}
           </div>
         )}
 
@@ -349,14 +349,15 @@ export function ExpenseFormDialog({ month, expense, onClose }: Props) {
  * Creates a card without leaving the entry (REQ-016, 2026-11-09): name and due day, the same rules as the Cards
  * screen. The new card is selected right away.
  */
-function NewCardFields({ year, onCreated }: { year: number; onCreated: (id: number) => void }) {
+function NewCardFields({ onCreated }: { onCreated: (id: number) => void }) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [name, setName] = useState('')
   const [dueDay, setDueDay] = useState('')
+  const [brand, setBrand] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const create = useMutation({
-    mutationFn: () => createItem('cards', year, { name: name.trim(), dueDay: Number(dueDay) }),
+    mutationFn: () => createItem('cards', { name: name.trim(), dueDay: Number(dueDay), ...(brand && { brand }) }),
     onSuccess: async (card) => {
       await queryClient.invalidateQueries({ queryKey: ['catalog', 'cards'] })
       onCreated(card.id)
@@ -376,6 +377,13 @@ function NewCardFields({ year, onCreated }: { year: number; onCreated: (id: numb
     <fieldset className="mt-2 flex flex-col gap-3 rounded-xl border border-line p-3">
       <legend className="px-1 text-sm font-medium text-ink">{t('expense.newCard.title')}</legend>
       {create.isError && <FormMessage kind="error">{apiErrorMessage(t, create.error)}</FormMessage>}
+      <BrandPicker
+        value={brand}
+        onChange={(picked) => {
+          setBrand(picked?.key ?? '')
+          if (picked && !name.trim()) setName(picked.name)
+        }}
+      />
       <TextField label={t('catalog.fields.name')} value={name} onChange={(e) => setName(e.target.value)} error={errors.name} />
       <TextField
         label={t('catalog.fields.dueDay')}

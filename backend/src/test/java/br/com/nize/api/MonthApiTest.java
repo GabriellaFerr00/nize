@@ -34,7 +34,7 @@ class MonthApiTest extends IsolationTestBase {
     private JdbcTemplate jdbc;
 
     private long categoryId(TestUser user) throws Exception {
-        String body = as(user, get("/api/years/" + YEAR + "/categories")).andReturn().getResponse().getContentAsString();
+        String body = as(user, get("/api/categories")).andReturn().getResponse().getContentAsString();
         List<Integer> ids = JsonPath.read(body, "$[?(@.name == 'Mercado')].id");
         return ids.get(0);
     }
@@ -56,7 +56,7 @@ class MonthApiTest extends IsolationTestBase {
     }
 
     private long createIn(TestUser user, String kind, String json) throws Exception {
-        return idOf(as(user, post("/api/years/" + YEAR + "/" + kind).contentType(MediaType.APPLICATION_JSON).content(json)));
+        return idOf(as(user, post("/api/" + kind).contentType(MediaType.APPLICATION_JSON).content(json)));
     }
 
     private ResultActions month(TestUser user, String month) throws Exception {
@@ -180,7 +180,7 @@ class MonthApiTest extends IsolationTestBase {
     // ---- Resumos (REQ-035..038, TASK-038) ----
 
     private long categoryNamed(TestUser user, String name) throws Exception {
-        String body = as(user, get("/api/years/" + YEAR + "/categories")).andReturn().getResponse().getContentAsString();
+        String body = as(user, get("/api/categories")).andReturn().getResponse().getContentAsString();
         List<Integer> ids = JsonPath.read(body, "$[?(@.name == '" + name + "')].id");
         return ids.get(0);
     }

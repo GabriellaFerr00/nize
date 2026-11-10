@@ -39,19 +39,19 @@ class ExpenseCreateApiTest extends IsolationTestBase {
     // ---- helpers ----
 
     private long categoryId(TestUser user, String name) throws Exception {
-        String body = as(user, get("/api/years/" + MONTH.getYear() + "/categories")).andReturn().getResponse().getContentAsString();
+        String body = as(user, get("/api/categories")).andReturn().getResponse().getContentAsString();
         List<Integer> ids = JsonPath.read(body, "$[?(@.name == '" + name + "')].id");
         return ids.get(0);
     }
 
     private long createCard(TestUser user, String name, int dueDay) throws Exception {
-        String body = as(user, post("/api/years/" + MONTH.getYear() + "/cards").contentType(MediaType.APPLICATION_JSON)
+        String body = as(user, post("/api/cards").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"%s\",\"dueDay\":%d}".formatted(name, dueDay))).andReturn().getResponse().getContentAsString();
         return ((Number) JsonPath.read(body, "$.id")).longValue();
     }
 
     private long createPerson(TestUser user, String name) throws Exception {
-        String body = as(user, post("/api/years/" + MONTH.getYear() + "/people").contentType(MediaType.APPLICATION_JSON)
+        String body = as(user, post("/api/people").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"%s\"}".formatted(name))).andReturn().getResponse().getContentAsString();
         return ((Number) JsonPath.read(body, "$.id")).longValue();
     }

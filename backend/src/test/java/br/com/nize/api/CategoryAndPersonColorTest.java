@@ -14,13 +14,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/** Colors of categories and people from the Nize palette (TASK-069, REQ-052, D-21). */
+/** Colors of categories and people: quick keys or any #rrggbb (TASK-069, TASK-071, REQ-052, D-21). */
 class CategoryAndPersonColorTest extends IsolationTestBase {
 
     private static final int YEAR = Year.now().getValue();
 
     private long categoryId(TestUser user, String name) throws Exception {
-        String body = as(user, get("/api/years/" + YEAR + "/categories")).andReturn().getResponse().getContentAsString();
+        String body = as(user, get("/api/categories")).andReturn().getResponse().getContentAsString();
         List<Integer> ids = JsonPath.read(body, "$[?(@.name == '" + name + "')].id");
         return ids.get(0);
     }
@@ -28,7 +28,7 @@ class CategoryAndPersonColorTest extends IsolationTestBase {
     @Test
     void aCategoryTakesAColorOfThePaletteAndCanLoseIt() throws Exception {
         long mercado = categoryId(userA, "Mercado");
-        as(userA, get("/api/years/" + YEAR + "/categories")).andExpect(jsonPath("$[?(@.name == 'Mercado')].color").isEmpty());
+        as(userA, get("/api/categories")).andExpect(jsonPath("$[?(@.name == 'Mercado')].color").isEmpty());
 
         as(userA, put("/api/categories/" + mercado).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Mercado\",\"active\":true,\"color\":\"teal\"}"))
@@ -41,7 +41,7 @@ class CategoryAndPersonColorTest extends IsolationTestBase {
 
     @Test
     void aPersonTakesAColorAtCreationAndOnEdit() throws Exception {
-        String created = as(userA, post("/api/years/" + YEAR + "/people").contentType(MediaType.APPLICATION_JSON)
+        String created = as(userA, post("/api/people").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Mainha\",\"color\":\"pink\"}"))
                 .andExpect(status().isCreated()).andExpect(jsonPath("$.color").value("pink"))
                 .andReturn().getResponse().getContentAsString();
@@ -55,29 +55,40 @@ class CategoryAndPersonColorTest extends IsolationTestBase {
     @Test
     void aColorOutsideThePaletteIsRefused() throws Exception {
         long mercado = categoryId(userA, "Mercado");
-        for (String bad : List.of("\"#ff0000\"", "\"GREEN\"", "\"black\"", "\"\"")) {
+        for (String bad : List.of("\"#FF0000\"", "\"#ff00\"", "\"ff0000\"", "\"GREEN\"", "\"black\"", "\"\"", "\"rgb(1,2,3)\"")) {
             as(userA, put("/api/categories/" + mercado).contentType(MediaType.APPLICATION_JSON)
                     .content("{\"name\":\"Mercado\",\"active\":true,\"color\":%s}".formatted(bad)))
                     .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
         }
-        as(userA, post("/api/years/" + YEAR + "/people").contentType(MediaType.APPLICATION_JSON)
+        as(userA, post("/api/people").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"X\",\"color\":\"url(javascript:1)\"}"))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
-    void aNewYearKeepsTheColors() throws Exception {
+    void anyColorFromThePaletteOfHuesAndTonesIsAccepted() throws Exception {
+        long mercado = categoryId(userA, "Mercado");
+        as(userA, put("/api/categories/" + mercado).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Mercado\",\"active\":true,\"color\":\"#3a7bd5\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.color").value("#3a7bd5"));
+        as(userA, post("/api/people").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Mainha\",\"color\":\"#c2185b\"}"))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.color").value("#c2185b"));
+    }
+
+    @Test
+    void aNewYearKeepsTheSameColors() throws Exception {
         long mercado = categoryId(userA, "Mercado");
         as(userA, put("/api/categories/" + mercado).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Mercado\",\"active\":true,\"color\":\"blue\"}")).andExpect(status().isOk());
-        as(userA, post("/api/years/" + YEAR + "/people").contentType(MediaType.APPLICATION_JSON)
+        as(userA, post("/api/people").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Mainha\",\"color\":\"pink\"}")).andExpect(status().isCreated());
 
         as(userA, post("/api/years/" + (YEAR + 1))).andExpect(status().isCreated());
 
-        as(userA, get("/api/years/" + (YEAR + 1) + "/categories"))
+        as(userA, get("/api/categories"))
                 .andExpect(jsonPath("$[?(@.name == 'Mercado')].color").value("blue"));
-        as(userA, get("/api/years/" + (YEAR + 1) + "/people")).andExpect(jsonPath("$[0].color").value("pink"));
+        as(userA, get("/api/people")).andExpect(jsonPath("$[0].color").value("pink"));
     }
 
     @Test

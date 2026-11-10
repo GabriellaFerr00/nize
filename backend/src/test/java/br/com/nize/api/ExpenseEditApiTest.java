@@ -36,7 +36,7 @@ class ExpenseEditApiTest extends IsolationTestBase {
     private EntityManager entityManager;
 
     private long categoryId(TestUser user, String name) throws Exception {
-        String body = as(user, get("/api/years/" + YEAR + "/categories")).andReturn().getResponse().getContentAsString();
+        String body = as(user, get("/api/categories")).andReturn().getResponse().getContentAsString();
         List<Integer> ids = JsonPath.read(body, "$[?(@.name == '" + name + "')].id");
         return ids.get(0);
     }
@@ -228,9 +228,9 @@ class ExpenseEditApiTest extends IsolationTestBase {
         long id = create(userA, "CARD", "");
         Object cardBefore = row(id).get("CARD_ID");
         long category = categoryId(userA, "Aluguel");
-        String cardOfB = as(userB, post("/api/years/" + YEAR + "/cards").contentType(MediaType.APPLICATION_JSON)
+        String cardOfB = as(userB, post("/api/cards").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Nubank\",\"dueDay\":10}")).andReturn().getResponse().getContentAsString();
-        String personOfB = as(userB, post("/api/years/" + YEAR + "/people").contentType(MediaType.APPLICATION_JSON)
+        String personOfB = as(userB, post("/api/people").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Mainha\"}")).andReturn().getResponse().getContentAsString();
         String date = MONTH.atDay(5).toString();
 

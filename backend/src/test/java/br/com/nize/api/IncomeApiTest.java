@@ -52,7 +52,7 @@ class IncomeApiTest extends IsolationTestBase {
     }
 
     private long person(TestUser user, int year, String name) throws Exception {
-        String body = as(user, post("/api/years/" + year + "/people").contentType(MediaType.APPLICATION_JSON)
+        String body = as(user, post("/api/people").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"" + name + "\"}")).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         return ((Number) JsonPath.read(body, "$.id")).longValue();
     }
@@ -152,16 +152,10 @@ class IncomeApiTest extends IsolationTestBase {
     }
 
     @Test
-    void aPersonOfAnotherUserOrYearIsNotFound() throws Exception {
+    void aPersonOfAnotherUserIsNotFound() throws Exception {
         long ofB = person(userB, YEAR, "Mainha");
         create(userA, MONTH.toString(), """
                 {"name":"x","amountCents":100,"date":"%s","personId":%d}""".formatted(MONTH.atDay(5), ofB))
-                .andExpect(status().isNotFound());
-
-        as(userA, post("/api/years/" + (YEAR + 1)).contentType(MediaType.APPLICATION_JSON)).andExpect(status().isCreated());
-        long nextYear = person(userA, YEAR + 1, "Tia");
-        create(userA, MONTH.toString(), """
-                {"name":"x","amountCents":100,"date":"%s","personId":%d}""".formatted(MONTH.atDay(5), nextYear))
                 .andExpect(status().isNotFound());
     }
 

@@ -9,17 +9,15 @@ import java.util.Optional;
 /** Every query carries the user id (NFR-004). */
 public interface CategoryRepository extends JpaRepository<Category, Long> {
 
-    boolean existsByUserIdAndYearNumber(Long userId, int yearNumber);
+    boolean existsByUserId(Long userId);
 
-    List<Category> findByUserIdAndYearNumberOrderByIdAsc(Long userId, int yearNumber);
+    List<Category> findByUserIdOrderByIdAsc(Long userId);
 
-    List<Category> findByUserIdAndYearNumberAndActiveOrderByIdAsc(Long userId, int yearNumber, boolean active);
+    List<Category> findByUserIdAndActiveOrderByIdAsc(Long userId, boolean active);
 
     Optional<Category> findByIdAndUserId(Long id, Long userId);
 
-    boolean existsByUserIdAndYearNumberAndNameIgnoreCase(Long userId, int yearNumber, String name);
+    boolean existsByUserIdAndNameIgnoreCase(Long userId, String name);
 
-    boolean existsByUserIdAndYearNumberAndNameIgnoreCaseAndIdNot(Long userId, int yearNumber, String name, Long id);
-
-    Optional<Category> findByUserIdAndYearNumberAndNameIgnoreCase(Long userId, int yearNumber, String name);
+    boolean existsByUserIdAndNameIgnoreCaseAndIdNot(Long userId, String name, Long id);
 }

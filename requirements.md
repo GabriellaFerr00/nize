@@ -1,5 +1,5 @@
 # requirements.md
-> Nize — Version 0.2.0 (MVP web) — 2026-11-09
+> Nize — Version 0.3.0 (MVP web) — 2026-11-09
 
 Fonte: `Nize — Funcionalidades e escopo do MVP web.pdf` (1 nov 2026). Em caso de dúvida entre este arquivo e o PDF, pergunte antes de implementar.
 
@@ -38,8 +38,8 @@ O Nize é a versão web da planilha "Finanças 2026". A usuária lança gastos e
 ### Configuração e anos
 - **REQ-006**: A usuária shall poder definir o ano vigente, que é o ano exibido por padrão.
   - _Acceptance_: ao trocar o ano vigente, a tela do mês abre nesse ano no próximo acesso.
-- **REQ-007**: A usuária shall poder criar um novo ano, que copia categorias, cartões e pessoas do ano anterior.
-  - _Acceptance_: após criar 2027, as listas de 2027 são cópias das de 2026 e editá-las não altera 2026.
+- **REQ-007**: A usuária shall poder criar um novo ano.
+  - _Acceptance_: criar 2027 libera os meses de 2027; categorias, cartões e pessoas são os mesmos de todos os anos (não há cópia por ano; decisão da usuária em 2026-11-09).
 - **REQ-008**: A usuária shall poder consultar e alterar dados de anos anteriores.
   - _Acceptance_: ao abrir 2026 estando em 2027 vigente, todos os lançamentos continuam editáveis.
 - **REQ-009**: A usuária shall poder ligar ou desligar a permissão de parcelas automáticas.
@@ -48,8 +48,9 @@ O Nize é a versão web da planilha "Finanças 2026". A usuária lança gastos e
   - _Acceptance_: conta nova mostra posições nos dias 15 e 31 (último dia); com os dias 5, 10 e 20 a tela mostra três posições; desligado, a tela do mês não mostra posições e os demais totais não mudam.
 
 ### Categorias, cartões e pessoas
-- **REQ-010**: O sistema shall entregar as categorias de fábrica, cada uma com descrição, para cada ano.
-  - _Acceptance_: uma conta nova tem as 15 categorias de fábrica no ano vigente (lista em `design.md`, "Categorias de fábrica"). "Mainha" não é categoria: terceiros são cadastrados como pessoas.
+Categorias, cartões e pessoas existem **uma vez por conta**, independentes de ano e mês: a mesma categoria vale para todos os meses (decisão da usuária em 2026-11-09; até a 0.2.2 eram listas por ano, unidas pela migração V12, ficando a versão do ano mais recente).
+- **REQ-010**: O sistema shall entregar as categorias de fábrica, cada uma com descrição, uma vez por conta.
+  - _Acceptance_: uma conta nova tem as 15 categorias de fábrica (lista em `design.md`, "Categorias de fábrica"). "Mainha" não é categoria: terceiros são cadastrados como pessoas.
 - **REQ-011**: A usuária shall poder criar, renomear e desativar categorias.
   - _Acceptance_: categoria desativada não aparece no formulário de lançamento, mas lançamentos antigos continuam exibindo-a.
 - **REQ-012**: A usuária shall poder excluir categorias, respeitando a regra de lançamentos existentes.
@@ -64,7 +65,7 @@ O Nize é a versão web da planilha "Finanças 2026". A usuária lança gastos e
   - _Acceptance_: o fixo aparece na lista de Fixos do mês e entra no total de fixos e no total de gastos. Um fixo no crédito também entra no total de crédito e no resumo por cartão.
 - **REQ-016**: A usuária shall poder lançar gasto de cartão de crédito com nome, categoria, valor, cartão, data e parcelas.
   - _Acceptance_: o gasto aparece na lista de Cartão do mês e entra no total de gastos.
-  - **Cartão obrigatório no crédito** (pedido da usuária em 2026-11-09): todo gasto no crédito, fixo ou de cartão, novo ou editado, exige um cartão do ano (sem cartão → 400 `CARD_REQUIRED`). No formulário, a usuária escolhe um cartão existente ou cria um ali mesmo, sem sair do lançamento. Não existe mais "Sem cartão". Lançamentos antigos no crédito sem cartão continuam contando nos totais (gastos e crédito) até a usuária ajustá-los à mão, mas não aparecem em nenhum cartão do resumo; ao editá-los, o cartão passa a ser exigido. A carga do mês (REQ-022) continua copiando-os como estão.
+  - **Cartão obrigatório no crédito** (pedido da usuária em 2026-11-09): todo gasto no crédito, fixo ou de cartão, novo ou editado, exige um cartão (sem cartão → 400 `CARD_REQUIRED`). No formulário, a usuária escolhe um cartão existente ou cria um ali mesmo, sem sair do lançamento. Não existe mais "Sem cartão". Lançamentos antigos no crédito sem cartão continuam contando nos totais (gastos e crédito) até a usuária ajustá-los à mão, mas não aparecem em nenhum cartão do resumo; ao editá-los, o cartão passa a ser exigido. A carga do mês (REQ-022) continua copiando-os como estão.
 - **REQ-017**: A usuária shall poder marcar um gasto de terceiro informando a pessoa e o cartão usado.
   - _Acceptance_: o gasto fica no total do mês e aparece no resumo por pessoa.
 - **REQ-018**: Com a permissão de parcelas automáticas ligada, a usuária shall poder lançar a compra uma vez, informando número de parcelas e valor total ou valor da parcela, e o sistema shall criar uma parcela por mês a partir do mês escolhido.
@@ -141,9 +142,9 @@ O Nize é a versão web da planilha "Finanças 2026". A usuária lança gastos e
 - **REQ-050**: Ao excluir uma parcela (gasto ou entrada parcelada), a usuária shall poder escolher entre excluir só aquela ou aquela e as dos meses seguintes da mesma compra.
   - _Acceptance_: compra em 10 parcelas, exclusão da 4/10 em abril: "só esta" (padrão, se ela só confirmar) apaga a 4/10 e mantém as demais; "esta e as próximas" apaga da 4/10 à 10/10 e as que ainda não foram criadas não são criadas pela carga dos meses seguintes (REQ-022). As parcelas 1/10 a 3/10 continuam. Lançamento sem parcela não mostra a escolha.
 - **REQ-051**: A usuária shall poder definir, se quiser, um limite mensal de gasto por categoria, e o sistema shall avisar quando o gasto da categoria no mês chegar perto do limite ou passar dele, sem bloquear o lançamento.
-  - _Acceptance_: o limite é opcional (categoria sem limite funciona como antes), em centavos, vale para todos os meses do ano da categoria. Com limite de 100000: gastos de 80000 no mês → aviso "perto do limite" (≥ 80%); 100001 → aviso "limite passou"; o lançamento é salvo nos dois casos. O aviso aparece numa faixa no topo da tela do mês assim que o lançamento é salvo, e o resumo por categoria mostra "usado de limite". O cálculo fica no back-end. O limite é copiado com a categoria quando um ano novo é criado.
-- **REQ-052**: A usuária shall poder escolher uma cor para cada categoria e pessoa e enviar uma imagem própria (logotipo) para cada cartão; cor e imagem aparecem nas telas que mostram esses itens.
-  - _Acceptance_: a cor é escolhida de uma paleta fixa do Nize, com contraste AA nos dois temas; sem cor escolhida, vale a cor neutra. A imagem do cartão é PNG, JPG ou WebP de até 200 KB (outro formato ou maior → 400); sem imagem, o cartão mostra a inicial do nome. As imagens são da usuária: o Nize não traz logotipos de bancos.
+  - _Acceptance_: o limite é opcional (categoria sem limite funciona como antes), em centavos. Cada categoria tem um **limite padrão** que vale para todos os meses e, em qualquer mês, a usuária pode **ajustar o limite só daquele mês** (ex.: Lazer 50000 sempre, 120000 em dezembro); tirar o ajuste volta ao padrão; um mês pode ter limite mesmo com a categoria sem padrão (decisão da usuária em 2026-11-09). Com limite de 100000: gastos de 80000 no mês → aviso "perto do limite" (≥ 80%); 100001 → aviso "limite passou"; o lançamento é salvo nos dois casos. O aviso é uma notificação passageira (some sozinha em alguns segundos ou ao fechar) que aparece só quando um lançamento leva a categoria a "perto" ou "passou"; abrir o mês não mostra aviso e nada fica fixo na tela (decisão da usuária 2026-11-09). O resumo por categoria mostra "usado de limite". O cálculo fica no back-end.
+- **REQ-052**: A usuária shall poder escolher uma cor para cada categoria e pessoa e identificar cada cartão por um banco ou cartão brasileiro da lista do Nize; cor e marca aparecem nas telas que mostram esses itens.
+  - _Acceptance_: **cores**: além das 8 cores rápidas do Nize, a usuária escolhe qualquer cor numa paleta de matizes e tons (ou no seletor de cor do aparelho); a cor fica guardada como `#rrggbb` e aparece como uma bolinha com contorno (legível nos dois temas); sem cor, neutra; outro formato → 400. **Cartões**: ao criar ou editar um cartão (também no "+ Novo cartão" do lançamento), a tela lista os bancos e cartões mais usados no Brasil (com busca); escolher um preenche o nome, se vazio, e guarda a marca. Itaú, Bradesco, Santander, Banco do Brasil, Caixa, Inter, C6 Bank, PicPay e Mercado Pago mostram o logotipo que a própria instituição publica no Open Finance Brasil; Nubank, Carrefour, American Express, Diners Club, Visa e Mastercard, um ícone CC0; os demais, um selo com as iniciais na cor do banco; sem marca, a inicial do nome. Os logotipos ficam salvos no projeto. **A usuária não envia imagem própria** (decisão de 2026-11-09; o envio da 0.2.0 foi retirado e as imagens enviadas foram apagadas).
 
 ### Idioma
 - **REQ-046**: A usuária shall poder escolher o idioma da interface entre inglês e português.
@@ -188,6 +189,9 @@ O Nize é a versão web da planilha "Finanças 2026". A usuária lança gastos e
 | 0.1.1 | 2026-11-01 | REQ-046 (idioma da interface en/pt) |
 | 0.1.2 | 2026-11-01 | REQ-015: fixo pode ser pago no crédito; glossário "Total de crédito" |
 | 0.1.3 | 2026-11-01 | REQ-022: carga continua parcelas à mão e respeita a permissão |
+| 0.3.0 | 2026-11-09 | Categorias, cartões e pessoas sem ano (uma lista por conta; REQ-007, REQ-010..014); limite da categoria = padrão + ajuste por mês (REQ-051). Decisões da usuária |
+| 0.2.2 | 2026-11-09 | REQ-052: logotipos do Open Finance para Itaú, Bradesco, Santander, BB, Caixa, Inter, C6, PicPay e Mercado Pago; fim do envio de imagem própria (pedido da usuária) |
+| 0.2.1 | 2026-11-09 | REQ-052: marcas de cartão brasileiras pré-carregadas (logotipo CC0 ou selo com iniciais) e cores livres por paleta de matizes e tons (pedido da usuária) |
 | 0.2.0 | 2026-11-09 | NFR-001: dinheiro em `DECIMAL(12,2)` no banco, centavos no resto (pedido da usuária). Melhorias pedidas pela usuária: REQ-013 (excluir cartão), REQ-015/016 (cartão obrigatório no crédito), REQ-045 (sol/lua), REQ-049 (ocultar valores), REQ-050 (excluir parcelas seguintes), REQ-051 (limite por categoria), REQ-052 (cores e imagem do cartão). Exportar planilha continua fora (fase 2) |
 | 0.1.9 | 2026-11-09 | REQ-030/031: cada posição é só a soma dos gastos do intervalo (sem entradas, sem sobra/falta); decisão da usuária |
 | 0.1.8 | 2026-11-05 | REQ-045: identidade Verde Nize, modo claro/escuro com seletor de tema (pedido da usuária) |

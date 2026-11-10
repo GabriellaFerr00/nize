@@ -14,6 +14,7 @@ import java.time.YearMonth;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -25,7 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class CategoryLimitApiTest extends IsolationTestBase {
 
     private static final int YEAR = Year.now().getValue();
-    private static final String LIST = "/api/years/" + YEAR + "/categories";
+    private static final String LIST = "/api/categories";
     private static final YearMonth APRIL = YearMonth.of(YEAR, 4);
 
     @Autowired
@@ -125,13 +126,13 @@ class CategoryLimitApiTest extends IsolationTestBase {
     }
 
     @Test
-    void aNewYearCopiesTheLimit() throws Exception {
+    void aNewYearKeepsTheSameCategoryAndLimit() throws Exception {
         long mercado = categoryId(userA, "Mercado");
         setLimit(userA, mercado, "Mercado", "70000");
 
         as(userA, post("/api/years/" + (YEAR + 1))).andExpect(status().isCreated());
 
-        as(userA, get("/api/years/" + (YEAR + 1) + "/categories"))
+        as(userA, get("/api/categories"))
                 .andExpect(jsonPath("$[?(@.name == 'Mercado')].monthlyLimitCents").value(70_000));
     }
 
@@ -143,5 +144,98 @@ class CategoryLimitApiTest extends IsolationTestBase {
                 .content("{\"name\":\"Mercado\",\"active\":true,\"monthlyLimitCents\":1}"))
                 .andExpect(status().isNotFound());
         as(userA, get(LIST)).andExpect(jsonPath("$[?(@.name == 'Mercado')].monthlyLimitCents").isEmpty());
+    }
+
+    // ---- the month's own limit (REQ-051, D-22, TASK-074) ----
+
+    private org.springframework.test.web.servlet.ResultActions setMonth(TestUser user, YearMonth month, long category, String cents)
+            throws Exception {
+        return as(user, put("/api/months/" + month + "/category-limits/" + category).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"limitCents\":%s}".formatted(cents)));
+    }
+
+    private String limitsOf(TestUser user, YearMonth month) throws Exception {
+        return as(user, get("/api/months/" + month + "/category-limits")).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+    }
+
+    @Test
+    void aMonthCanHaveItsOwnLimitAndTheOtherMonthsKeepTheDefault() throws Exception {
+        long lazer = categoryId(userA, "Lazer");
+        setLimit(userA, lazer, "Lazer", "50000");
+        setMonth(userA, APRIL, lazer, "120000").andExpect(status().isNoContent());
+
+        assertThat((List<Integer>) JsonPath.read(limitsOf(userA, APRIL), "$[?(@.categoryName == 'Lazer')].defaultCents")).containsExactly(50_000);
+        assertThat((List<Integer>) JsonPath.read(limitsOf(userA, APRIL), "$[?(@.categoryName == 'Lazer')].monthCents")).containsExactly(120_000);
+        assertThat((List<Object>) JsonPath.read(limitsOf(userA, APRIL.plusMonths(1)), "$[?(@.categoryName == 'Lazer')].monthCents"))
+                .containsExactly((Object) null);
+
+        // the month uses its own limit: 100000 of 120000 is near, not over the default 50000
+        spend(userA, lazer, 100_000);
+        String body = month(userA);
+        assertThat((List<Integer>) JsonPath.read(body, "$.summaries.byCategory[?(@.categoryName == 'Lazer')].limitCents")).containsExactly(120_000);
+        assertThat((List<String>) JsonPath.read(body, "$.summaries.byCategory[?(@.categoryName == 'Lazer')].limitStatus")).containsExactly("NEAR");
+    }
+
+    @Test
+    void changingTheMonthAgainReplacesItAndRemovingBringsTheDefaultBack() throws Exception {
+        long lazer = categoryId(userA, "Lazer");
+        setLimit(userA, lazer, "Lazer", "50000");
+        setMonth(userA, APRIL, lazer, "120000").andExpect(status().isNoContent());
+        setMonth(userA, APRIL, lazer, "90000").andExpect(status().isNoContent());
+        assertThat((List<Integer>) JsonPath.read(limitsOf(userA, APRIL), "$[?(@.categoryName == 'Lazer')].monthCents")).containsExactly(90_000);
+        entityManager.flush();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM category_month_limit", Integer.class)).isEqualTo(1);
+
+        as(userA, delete("/api/months/" + APRIL + "/category-limits/" + lazer)).andExpect(status().isNoContent());
+
+        spend(userA, lazer, 60_000);
+        assertThat((List<String>) JsonPath.read(month(userA), "$.summaries.byCategory[?(@.categoryName == 'Lazer')].limitStatus"))
+                .containsExactly("OVER");
+    }
+
+    @Test
+    void aMonthLimitWorksEvenWithoutADefault() throws Exception {
+        long mercado = categoryId(userA, "Mercado");
+        setMonth(userA, APRIL, mercado, "10000").andExpect(status().isNoContent());
+        spend(userA, mercado, 10_001);
+
+        assertThat((List<String>) JsonPath.read(month(userA), "$.summaries.byCategory[?(@.categoryName == 'Mercado')].limitStatus"))
+                .containsExactly("OVER");
+    }
+
+    @Test
+    void aMonthLimitMustBePositiveAndTheMonthValid() throws Exception {
+        long mercado = categoryId(userA, "Mercado");
+        for (String bad : List.of("0", "-5", "1000000000000", "null", "1.5")) {
+            setMonth(userA, APRIL, mercado, bad).andExpect(status().isBadRequest());
+        }
+        as(userA, put("/api/months/2026-13/category-limits/" + mercado).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"limitCents\":100}")).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void deletingACategoryAlsoDeletesItsMonthLimits() throws Exception {
+        String created = as(userA, post(LIST).contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Pets\"}"))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        long pets = ((Number) JsonPath.read(created, "$.id")).longValue();
+        setMonth(userA, APRIL, pets, "5000").andExpect(status().isNoContent());
+
+        as(userA, delete("/api/categories/" + pets)).andExpect(status().isNoContent());
+        entityManager.flush();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM category_month_limit", Integer.class)).isZero();
+    }
+
+    @Test
+    void onlyTheOwnerSeesAndChangesTheMonthLimits() throws Exception {
+        long mercadoOfA = categoryId(userA, "Mercado");
+        long mercadoOfB = categoryId(userB, "Mercado");
+        setMonth(userA, APRIL, mercadoOfA, "7000").andExpect(status().isNoContent());
+
+        assertOnlyOwnerCanAccess(user -> put("/api/months/" + APRIL + "/category-limits/" + (user.id() == userA.id() ? mercadoOfA : mercadoOfB))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"limitCents\":8000}"));
+        as(userB, delete("/api/months/" + APRIL + "/category-limits/" + mercadoOfA)).andExpect(status().isNotFound());
+        assertThat((List<Object>) JsonPath.read(limitsOf(userB, APRIL), "$[*].monthCents")).containsOnly((Object) null, 8_000);
+        assertThat((List<Integer>) JsonPath.read(limitsOf(userA, APRIL), "$[?(@.categoryName == 'Mercado')].monthCents")).containsExactly(8_000);
     }
 }

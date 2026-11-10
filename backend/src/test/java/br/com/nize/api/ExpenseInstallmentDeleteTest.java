@@ -40,13 +40,13 @@ class ExpenseInstallmentDeleteTest extends IsolationTestBase {
     private EntityManager entityManager;
 
     private long id(TestUser user, String kind, String name) throws Exception {
-        String body = as(user, get("/api/years/" + YEAR + "/" + kind)).andReturn().getResponse().getContentAsString();
+        String body = as(user, get("/api/" + kind)).andReturn().getResponse().getContentAsString();
         List<Integer> ids = JsonPath.read(body, "$[?(@.name == '" + name + "')].id");
         return ids.get(0);
     }
 
     private long cardId(TestUser user) throws Exception {
-        String body = as(user, post("/api/years/" + YEAR + "/cards").contentType(MediaType.APPLICATION_JSON)
+        String body = as(user, post("/api/cards").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Nubank\",\"dueDay\":10}")).andReturn().getResponse().getContentAsString();
         return ((Number) JsonPath.read(body, "$.id")).longValue();
     }

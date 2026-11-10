@@ -12,20 +12,20 @@ const replies = (autoInstallments = true): Replies => ({
   'GET /api/me': { body: { id: 1, name: 'Ana', email: 'a@x.com', onboardingSeen: true } },
   'GET /api/settings': { body: { currentYear: 2026, autoInstallments } },
   'GET /api/years': { body: [{ year: 2026, current: true }] },
-  'GET /api/years/2026/categories': {
+  'GET /api/categories': {
     body: [
       { id: 1, year: 2026, name: 'Mercado', active: true },
       { id: 2, year: 2026, name: 'Lazer', active: false },
       { id: 3, year: 2026, name: 'Eletrônicos', active: true },
     ],
   },
-  'GET /api/years/2026/cards': {
+  'GET /api/cards': {
     body: [
       { id: 5, year: 2026, name: 'Nubank', dueDay: 10, active: true },
       { id: 6, year: 2026, name: 'Velho', dueDay: 3, active: false },
     ],
   },
-  'GET /api/years/2026/people': { body: [{ id: 7, year: 2026, name: 'Mainha', active: true }] },
+  'GET /api/people': { body: [{ id: 7, year: 2026, name: 'Mainha', active: true }] },
   [POST]: CREATED,
 })
 
@@ -153,7 +153,7 @@ describe('new expense window (REQ-016..019, REQ-042)', () => {
 
   it('creates a card inside the entry and selects it', async () => {
     const map = replies()
-    map['POST /api/years/2026/cards'] = { status: 201, body: { id: 9, year: 2026, name: 'Inter', dueDay: 20, active: true } }
+    map['POST /api/cards'] = { status: 201, body: { id: 9, year: 2026, name: 'Inter', dueDay: 20, active: true } }
     const { calls, dialog } = await openForm(map)
     await userEvent.selectOptions(within(dialog).getByLabelText('Tipo'), 'CARD')
     await fillBasics(dialog, 'Tênis', '200')
@@ -164,9 +164,10 @@ describe('new expense window (REQ-016..019, REQ-042)', () => {
     expect(within(fields).getByText('Informe um nome.')).toBeInTheDocument()
     expect(within(fields).getByText('Informe um dia de 1 a 31.')).toBeInTheDocument()
 
-    await userEvent.type(within(fields).getByLabelText('Nome'), 'Inter')
+    await userEvent.click(within(fields).getByRole('radio', { name: 'Inter' }))
+    expect(within(fields).getByLabelText('Nome')).toHaveValue('Inter')
     await userEvent.type(within(fields).getByLabelText('Dia de vencimento (1 a 31)'), '20')
-    map['GET /api/years/2026/cards'] = {
+    map['GET /api/cards'] = {
       body: [
         { id: 5, year: 2026, name: 'Nubank', dueDay: 10, active: true },
         { id: 9, year: 2026, name: 'Inter', dueDay: 20, active: true },
@@ -176,7 +177,7 @@ describe('new expense window (REQ-016..019, REQ-042)', () => {
 
     await waitFor(() => expect(within(dialog).getByLabelText('Cartão')).toHaveValue('9'))
     expect(within(dialog).queryByRole('group', { name: 'Novo cartão' })).not.toBeInTheDocument()
-    expect(calls.find((c) => c.key === 'POST /api/years/2026/cards')?.body).toEqual({ name: 'Inter', dueDay: 20 })
+    expect(calls.find((c) => c.key === 'POST /api/cards')?.body).toEqual({ name: 'Inter', dueDay: 20, brand: 'inter' })
     await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }))
     await waitFor(() => expect(posted(calls)).toHaveLength(1))
     expect(posted(calls)[0]).toMatchObject({ type: 'CARD', paymentMethod: 'CREDIT', cardId: 9 })

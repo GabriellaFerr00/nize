@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import type { MonthView } from '../api/monthApi'
+import { LIMIT_NOTICE_MS } from '../components/LimitToast'
 import { renderApp, stubApi } from '../test/renderApp'
 
 type Replies = Parameters<typeof stubApi>[0]
@@ -79,15 +80,15 @@ const baseReplies = (view: MonthView = november()): Replies => ({
   'GET /api/me': { body: { id: 1, name: 'Ana', email: 'a@x.com', onboardingSeen: true } },
   'GET /api/settings': { body: { currentYear: 2026, autoInstallments: true, closingsEnabled: true, closingDays: [15, 31] } },
   'GET /api/years': { body: [{ year: 2025, current: false }, { year: 2026, current: true }] },
-  'GET /api/years/2026/categories': {
+  'GET /api/categories': {
     body: [
       { id: 1, year: 2026, name: 'Mercado', active: true },
       { id: 9, year: 2026, name: 'Despesas eventuais', active: true },
       { id: 4, year: 2026, name: 'Antiga', active: false },
     ],
   },
-  'GET /api/years/2026/cards': { body: [{ id: 5, year: 2026, name: 'Nubank', dueDay: 10, active: true }] },
-  'GET /api/years/2026/people': {
+  'GET /api/cards': { body: [{ id: 5, year: 2026, name: 'Nubank', dueDay: 10, active: true }] },
+  'GET /api/people': {
     body: [
       { id: 7, year: 2026, name: 'Mainha', active: true },
       { id: 8, year: 2026, name: 'Primo', active: false },
@@ -155,9 +156,9 @@ describe('month screen header and navigation (TASK-039: REQ-041, REQ-040)', () =
     const replies = baseReplies()
     replies['GET /api/months/2026-03'] = { body: empty('2026-03') }
     replies['GET /api/months/2025-03'] = { body: empty('2025-03') }
-    replies['GET /api/years/2025/categories'] = { body: [] }
-    replies['GET /api/years/2025/cards'] = { body: [] }
-    replies['GET /api/years/2025/people'] = { body: [] }
+    replies['GET /api/categories'] = { body: [] }
+    replies['GET /api/cards'] = { body: [] }
+    replies['GET /api/people'] = { body: [] }
     const { router } = await openMonth(replies)
 
     const year = screen.getByRole('combobox', { name: 'Escolher ano' })
@@ -197,30 +198,104 @@ describe('month screen header and navigation (TASK-039: REQ-041, REQ-040)', () =
 })
 
 describe('category limits (TASK-068: REQ-051)', () => {
-  it('warns about categories near or over the limit, as the API marked them', async () => {
+  const withLimits = (mercado: MonthView['summaries']['byCategory'][number]['limitStatus'], eventuais?: 'NEAR' | 'OVER' | 'UNDER') => {
     const view = november()
     view.summaries.byCategory = [
-      { categoryId: 9, categoryName: 'Despesas eventuais', amountCents: 141_814, percent: 23.86, limitCents: 140_000, limitStatus: 'OVER' },
-      { categoryId: 1, categoryName: 'Mercado', amountCents: 452_474, percent: 76.14, limitCents: 500_000, limitStatus: 'NEAR' },
+      { categoryId: 9, categoryName: 'Despesas eventuais', amountCents: 141_814, percent: 23.86, limitCents: 140_000, limitStatus: eventuais ?? 'UNDER' },
+      { categoryId: 1, categoryName: 'Mercado', amountCents: 452_474, percent: 76.14, limitCents: 500_000, limitStatus: mercado },
     ]
-    await openMonth(baseReplies(view))
+    return view
+  }
 
-    const alerts = screen.getByRole('status', { name: 'Limites de gasto' })
-    expect(alerts).toHaveTextContent('Despesas eventuais passou do limite (R$ 1.418,14 de R$ 1.400,00)')
-    expect(alerts).toHaveTextContent('Mercado está perto do limite (R$ 4.524,74 de R$ 5.000,00)')
+  /** Marks the rent as paid: the month is fetched again and the API answers with `after`. */
+  async function saveSomethingAndRefetch(replies: Replies, after: MonthView) {
+    replies['PATCH /api/expenses/11/paid'] = { body: { ...november().expenses[0], paid: true } }
+    after.expenses[0].paid = true
+    replies[NOV] = { body: after }
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Aluguel pago' }))
+  }
+
+  it('opening a month never pops a notice, and nothing stays fixed on the screen', async () => {
+    await openMonth(baseReplies(withLimits('NEAR', 'OVER')))
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    // the summary keeps "used of limit"
     const byCategory = section('Por categoria')
     expect(within(byCategory).getByText('Mercado').closest('li')).toHaveTextContent('R$ 4.524,74 de R$ 5.000,00 · está perto do limite')
+    expect(within(byCategory).getByText('Despesas eventuais').closest('li')).toHaveTextContent('passou do limite')
   })
 
-  it('shows no warning under the limit or without one', async () => {
-    const view = november()
-    view.summaries.byCategory = [
-      { categoryId: 9, categoryName: 'Despesas eventuais', amountCents: 141_814, percent: 23.86, limitCents: 900_000, limitStatus: 'UNDER' },
-      { categoryId: 1, categoryName: 'Mercado', amountCents: 452_474, percent: 76.14 },
-    ]
-    await openMonth(baseReplies(view))
-    expect(screen.queryByRole('status', { name: 'Limites de gasto' })).not.toBeInTheDocument()
-    expect(within(section('Por categoria')).getByText('Despesas eventuais').closest('li')).toHaveTextContent('R$ 1.418,14 de R$ 9.000,00')
+  it('notifies when an entry takes a category near or over its limit, and the notice can be closed', async () => {
+    const replies = baseReplies(withLimits('UNDER', 'NEAR'))
+    await openMonth(replies)
+    await saveSomethingAndRefetch(replies, withLimits('NEAR', 'OVER'))
+
+    const notices = await screen.findAllByRole('status')
+    expect(notices).toHaveLength(2)
+    expect(notices[0]).toHaveTextContent('Despesas eventuais passou do limite (R$ 1.418,14 de R$ 1.400,00)')
+    expect(notices[1]).toHaveTextContent('Mercado está perto do limite (R$ 4.524,74 de R$ 5.000,00)')
+
+    await userEvent.click(within(notices[0]).getByRole('button', { name: 'Fechar aviso' }))
+    expect(screen.getAllByRole('status')).toHaveLength(1)
+  })
+
+  it('does not notify again while the status stays the same', async () => {
+    const replies = baseReplies(withLimits('NEAR'))
+    await openMonth(replies)
+    await saveSomethingAndRefetch(replies, withLimits('NEAR'))
+    await waitFor(() => expect(screen.getByRole('checkbox', { name: 'Aluguel pago' })).toBeChecked())
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+
+  it('the notice goes away on its own', async () => {
+    const replies = baseReplies(withLimits('UNDER'))
+    await openMonth(replies)
+    await saveSomethingAndRefetch(replies, withLimits('OVER'))
+    expect(await screen.findByRole('status')).toHaveTextContent('Mercado passou do limite')
+    await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument(), { timeout: LIMIT_NOTICE_MS + 2000 })
+  }, LIMIT_NOTICE_MS + 5000)
+})
+
+describe('month limits (TASK-074: REQ-051, D-22)', () => {
+  const limits = [
+    { categoryId: 1, categoryName: 'Mercado', defaultCents: 100_000, monthCents: null },
+    { categoryId: 9, categoryName: 'Lazer', defaultCents: 50_000, monthCents: 120_000 },
+    { categoryId: 4, categoryName: 'Pets', defaultCents: null, monthCents: null },
+  ]
+
+  it('shows each default and changes, keeps or removes only this month', async () => {
+    const replies = baseReplies()
+    replies['GET /api/months/2026-11/category-limits'] = { body: limits }
+    replies['PUT /api/months/2026-11/category-limits/1'] = { status: 204 }
+    replies['DELETE /api/months/2026-11/category-limits/9'] = { status: 204 }
+    const { calls } = await openMonth(replies)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Limites do mês' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Limites de novembro de 2026' })
+    expect(within(dialog).getByText('Mercado').closest('li')).toHaveTextContent('Padrão: R$ 1.000,00')
+    expect(within(dialog).getByText('Pets').closest('li')).toHaveTextContent('Sem limite padrão')
+    expect(within(dialog).getByLabelText('Limite de Lazer neste mês (R$)')).toHaveValue('1200,00')
+
+    await userEvent.type(within(dialog).getByLabelText('Limite de Mercado neste mês (R$)'), '800')
+    await userEvent.clear(within(dialog).getByLabelText('Limite de Lazer neste mês (R$)'))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }))
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(calls.find((c) => c.key === 'PUT /api/months/2026-11/category-limits/1')?.body).toEqual({ limitCents: 80_000 })
+    expect(calls.some((c) => c.key === 'DELETE /api/months/2026-11/category-limits/9')).toBe(true)
+    // nothing changed for Pets: nothing sent
+    expect(calls.some((c) => c.key.includes('/category-limits/4'))).toBe(false)
+  })
+
+  it('refuses a limit that is not a positive amount', async () => {
+    const replies = baseReplies()
+    replies['GET /api/months/2026-11/category-limits'] = { body: limits }
+    const { calls } = await openMonth(replies)
+    await userEvent.click(screen.getByRole('button', { name: 'Limites do mês' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Limites de novembro de 2026' })
+    await userEvent.type(within(dialog).getByLabelText('Limite de Pets neste mês (R$)'), '0')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }))
+    expect(within(dialog).getByText('Informe um valor maior que zero ou deixe em branco.')).toBeInTheDocument()
+    expect(calls.some((c) => c.key.startsWith('PUT') || c.key.startsWith('DELETE'))).toBe(false)
   })
 })
 
@@ -265,6 +340,10 @@ describe('month lists (TASK-040: REQ-015, REQ-016, REQ-021, REQ-023, REQ-024)', 
     expect(within(fixed).getByText(/^Mercado · Pix/)).toBeInTheDocument()
     // the day leads the row; the full date is there for screen readers
     expect(within(fixed).getByText('05/11').closest('time')).toHaveAttribute('dateTime', '2026-11-05')
+    // the date says what it is: day/month with "lançado" under it; screen readers hear "Lançado em …"
+    const row = within(fixed).getByText('05/11').closest('li') as HTMLElement
+    expect(row).toHaveTextContent('05/11lançado')
+    expect(within(row).getByText(/^Lançado em /)).toHaveClass('sr-only')
     expect(within(fixed).getByText('R$ 993,99', { selector: 'h2 + span' })).toBeInTheDocument()
 
     const card = section('Cartão')

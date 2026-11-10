@@ -14,7 +14,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Income rules (REQ-024..026). The user id comes from the token (D-6); a person of another user or of another year is
+ * Income rules (REQ-024..026). The user id comes from the token (D-6); a person of another user is
  * "not found". An installment income (N of M) gets its own group so the month load continues it (REQ-025, D-8).
  */
 @Service
@@ -46,7 +46,7 @@ public class IncomeService {
         yearGuard.requireYear(userId, month.getYear());
         requireDateInMonth(in.date(), month);
         validateInstallments(in.installmentNumber(), in.installmentCount());
-        Long personId = resolvePerson(userId, month.getYear(), in.personId(), null);
+        Long personId = resolvePerson(userId, in.personId(), null);
         String group = in.installmentNumber() != null ? UUID.randomUUID().toString() : null;
         return incomes.save(new Income(userId, month.toString(), in.name(), in.date(), in.amountCents(), personId,
                 in.installmentNumber(), in.installmentCount(), group));
@@ -57,7 +57,7 @@ public class IncomeService {
         Income income = incomes.findByIdAndUserId(id, userId).orElseThrow(ResourceNotFoundException::new);
         YearMonth month = YearMonth.parse(income.getMonth());
         requireDateInMonth(in.date(), month);
-        Long personId = resolvePerson(userId, month.getYear(), in.personId(), income.getPersonId());
+        Long personId = resolvePerson(userId, in.personId(), income.getPersonId());
         income.update(in.name(), in.date(), in.amountCents(), personId);
         return income;
     }
@@ -96,12 +96,11 @@ public class IncomeService {
     }
 
     /** An inactive person is refused, except the one the income already had (it stays editable). */
-    private Long resolvePerson(Long userId, int year, Long personId, Long currentPersonId) {
+    private Long resolvePerson(Long userId, Long personId, Long currentPersonId) {
         if (personId == null) {
             return null;
         }
-        Person person = people.findByIdAndUserId(personId, userId)
-                .filter(p -> p.getYearNumber() == year).orElseThrow(ResourceNotFoundException::new);
+        Person person = people.findByIdAndUserId(personId, userId).orElseThrow(ResourceNotFoundException::new);
         if (!person.isActive() && !Objects.equals(personId, currentPersonId)) {
             throw new InvalidExpenseException("INACTIVE_REFERENCE");
         }

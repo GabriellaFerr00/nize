@@ -1,11 +1,10 @@
-import { apiImageDataUrl, apiRequest, apiUpload } from './client'
+import { apiRequest } from './client'
 
-/** The three per-year catalogs share one shape on the wire. */
+/** The three catalogs (no year, D-22) share one shape on the wire. */
 export type CatalogKind = 'categories' | 'cards' | 'people'
 
 export type CatalogItem = {
   id: number
-  year: number
   name: string
   active: boolean
   description?: string
@@ -14,8 +13,8 @@ export type CatalogItem = {
   monthlyLimitCents?: number
   /** Palette key of a category or person (REQ-052). */
   color?: string
-  /** A card has the user's own image (REQ-052). */
-  hasLogo?: boolean
+  /** Key of a Brazilian card brand (lib/cardBrands), null when none (REQ-052). */
+  brand?: string | null
 }
 
 export type CatalogInput = {
@@ -24,23 +23,17 @@ export type CatalogInput = {
   dueDay?: number
   monthlyLimitCents?: number
   color?: string
+  brand?: string
 }
 
-export const listItems = (kind: CatalogKind, year: number) =>
-  apiRequest<CatalogItem[]>(`/years/${year}/${kind}`)
+/** One list per user, the same in every month and year (D-22). */
+export const listItems = (kind: CatalogKind) => apiRequest<CatalogItem[]>(`/${kind}`)
 
-export const createItem = (kind: CatalogKind, year: number, input: CatalogInput) =>
-  apiRequest<CatalogItem>(`/years/${year}/${kind}`, { method: 'POST', body: input })
+export const createItem = (kind: CatalogKind, input: CatalogInput) =>
+  apiRequest<CatalogItem>(`/${kind}`, { method: 'POST', body: input })
 
 export const updateItem = (kind: CatalogKind, id: number, input: CatalogInput & { active: boolean }) =>
   apiRequest<CatalogItem>(`/${kind}/${id}`, { method: 'PUT', body: input })
 
 /** 204, or 409 `CATEGORY_IN_USE` / `CARD_IN_USE` with the count of expenses that still use it (REQ-012, REQ-013). */
 export const deleteItem = (kind: CatalogKind, id: number) => apiRequest(`/${kind}/${id}`, { method: 'DELETE' })
-
-/** Card logo (REQ-052): PNG, JPEG or WebP up to 200 KB; the API checks the real format. */
-export const MAX_LOGO_BYTES = 200 * 1024
-export const LOGO_TYPES = ['image/png', 'image/jpeg', 'image/webp']
-export const uploadCardLogo = (id: number, file: Blob) => apiUpload(`/cards/${id}/logo`, file)
-export const deleteCardLogo = (id: number) => apiRequest(`/cards/${id}/logo`, { method: 'DELETE' })
-export const cardLogoDataUrl = (id: number) => apiImageDataUrl(`/cards/${id}/logo`)

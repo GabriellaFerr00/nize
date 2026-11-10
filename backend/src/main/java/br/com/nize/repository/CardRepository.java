@@ -9,15 +9,13 @@ import java.util.Optional;
 /** Every query carries the user id (NFR-004). */
 public interface CardRepository extends JpaRepository<Card, Long> {
 
-    List<Card> findByUserIdAndYearNumberOrderByIdAsc(Long userId, int yearNumber);
+    List<Card> findByUserIdOrderByIdAsc(Long userId);
 
-    List<Card> findByUserIdAndYearNumberAndActiveOrderByIdAsc(Long userId, int yearNumber, boolean active);
+    List<Card> findByUserIdAndActiveOrderByIdAsc(Long userId, boolean active);
 
     Optional<Card> findByIdAndUserId(Long id, Long userId);
 
-    boolean existsByUserIdAndYearNumberAndNameIgnoreCase(Long userId, int yearNumber, String name);
+    boolean existsByUserIdAndNameIgnoreCase(Long userId, String name);
 
-    boolean existsByUserIdAndYearNumberAndNameIgnoreCaseAndIdNot(Long userId, int yearNumber, String name, Long id);
-
-    Optional<Card> findByUserIdAndYearNumberAndNameIgnoreCase(Long userId, int yearNumber, String name);
+    boolean existsByUserIdAndNameIgnoreCaseAndIdNot(Long userId, String name, Long id);
 }

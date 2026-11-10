@@ -27,7 +27,7 @@ import java.util.UUID;
 
 /**
  * Expense rules. The user id comes from the token (D-6); categories, cards and people of other users or of
- * another year are "not found". Consistency rules: see "Regras de consistência do lançamento" in design.md.
+ * another user are "not found". Consistency rules: see "Regras de consistência do lançamento" in design.md.
  */
 @Service
 public class ExpenseService {
@@ -98,7 +98,7 @@ public class ExpenseService {
                 : (in.type() == ExpenseType.CARD ? PaymentMethod.CREDIT : PaymentMethod.PIX);
         validateCombination(generate ? in : single, payment, generate);
 
-        References refs = resolve(userId, month.getYear(), in.categoryId(), in.cardId(), in.personId(), null);
+        References refs = resolve(userId, in.categoryId(), in.cardId(), in.personId(), null);
         if (!generate) {
             // a manual installment gets its own group, so the month load can continue it without duplicating (D-8)
             String group = single.installmentNumber() != null ? UUID.randomUUID().toString() : null;
@@ -122,9 +122,11 @@ public class ExpenseService {
         List<Expense> created = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
             YearMonth month = first.plusMonths(i);
-            References refs = month.getYear() == first.getYear()
-                    ? firstRefs
-                    : referencesInYear(userId, month.getYear(), firstRefs);
+            // catalogs have no year (D-22): the same category, card and person; a later year is only opened
+            if (month.getYear() != first.getYear() && !years.existsById(new UserYearId(userId, month.getYear()))) {
+                yearService.create(userId, month.getYear());
+            }
+            References refs = firstRefs;
             LocalDate date = month.atDay(Math.min(in.date().getDayOfMonth(), month.lengthOfMonth()));
             created.add(build(userId, month, in, payment, amounts.get(i), refs, i + 1, count, group, date,
                     i == 0 && Boolean.TRUE.equals(in.paid())));
@@ -132,39 +134,19 @@ public class ExpenseService {
         return expenses.saveAll(created);
     }
 
-    /** The same category, card and person (found by name) in another year, creating the year if needed. */
-    private References referencesInYear(Long userId, int year, References original) {
-        if (!years.existsById(new UserYearId(userId, year))) {
-            yearService.create(userId, year);
-        }
-        Category category = categories.findByUserIdAndYearNumberAndNameIgnoreCase(userId, year, original.category().getName())
-                .orElseThrow(() -> new InvalidExpenseException("REFERENCE_UNAVAILABLE"));
-        Card card = original.card() == null ? null
-                : cards.findByUserIdAndYearNumberAndNameIgnoreCase(userId, year, original.card().getName())
-                        .orElseThrow(() -> new InvalidExpenseException("REFERENCE_UNAVAILABLE"));
-        Person person = original.person() == null ? null
-                : people.findByUserIdAndYearNumberAndNameIgnoreCase(userId, year, original.person().getName())
-                        .orElseThrow(() -> new InvalidExpenseException("REFERENCE_UNAVAILABLE"));
-        if (!category.isActive() || (card != null && !card.isActive()) || (person != null && !person.isActive())) {
-            throw new InvalidExpenseException("INACTIVE_REFERENCE");
-        }
-        return new References(category, card, person);
-    }
-
     private record References(Category category, Card card, Person person) {
     }
 
     /**
-     * Finds category, card and person of the user in that year. Inactive ones are refused, except those the
+     * Finds category, card and person of the user (no year, D-22). Inactive ones are refused, except those the
      * expense already used ({@code current}): an old expense stays editable after its category is deactivated.
      */
-    private References resolve(Long userId, int year, Long categoryId, Long cardId, Long personId, Expense current) {
-        Category category = categories.findByIdAndUserId(categoryId, userId)
-                .filter(c -> c.getYearNumber() == year).orElseThrow(ResourceNotFoundException::new);
-        Card card = cardId == null ? null : cards.findByIdAndUserId(cardId, userId)
-                .filter(c -> c.getYearNumber() == year).orElseThrow(ResourceNotFoundException::new);
-        Person person = personId == null ? null : people.findByIdAndUserId(personId, userId)
-                .filter(p -> p.getYearNumber() == year).orElseThrow(ResourceNotFoundException::new);
+    private References resolve(Long userId, Long categoryId, Long cardId, Long personId, Expense current) {
+        Category category = categories.findByIdAndUserId(categoryId, userId).orElseThrow(ResourceNotFoundException::new);
+        Card card = cardId == null ? null
+                : cards.findByIdAndUserId(cardId, userId).orElseThrow(ResourceNotFoundException::new);
+        Person person = personId == null ? null
+                : people.findByIdAndUserId(personId, userId).orElseThrow(ResourceNotFoundException::new);
         boolean inactive =
                 (!category.isActive() && (current == null || !Objects.equals(categoryId, current.getCategoryId())))
                 || (card != null && !card.isActive() && (current == null || !Objects.equals(cardId, current.getCardId())))
@@ -258,7 +240,7 @@ public class ExpenseService {
         validateCombination(new NewExpense(in.name(), in.categoryId(), in.amountCents(), in.type(), payment,
                 in.cardId(), in.personId(), in.paid(), in.date(), expense.getInstallmentNumber(),
                 expense.getInstallmentCount(), false, true), payment, false);
-        References refs = resolve(userId, month.getYear(), in.categoryId(), in.cardId(), in.personId(), expense);
+        References refs = resolve(userId, in.categoryId(), in.cardId(), in.personId(), expense);
 
         expense.update(in.name(), refs.category().getId(), in.amountCents(), in.type(), payment,
                 refs.card() == null ? null : refs.card().getId(),

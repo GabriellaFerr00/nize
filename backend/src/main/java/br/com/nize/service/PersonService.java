@@ -12,28 +12,24 @@ import java.util.List;
 public class PersonService {
 
     private final PersonRepository people;
-    private final YearGuard yearGuard;
 
-    public PersonService(PersonRepository people, YearGuard yearGuard) {
+    public PersonService(PersonRepository people) {
         this.people = people;
-        this.yearGuard = yearGuard;
     }
 
     @Transactional(readOnly = true)
-    public List<Person> list(Long userId, int year, boolean activeOnly) {
-        yearGuard.requireYear(userId, year);
+    public List<Person> list(Long userId, boolean activeOnly) {
         return activeOnly
-                ? people.findByUserIdAndYearNumberAndActiveOrderByIdAsc(userId, year, true)
-                : people.findByUserIdAndYearNumberOrderByIdAsc(userId, year);
+                ? people.findByUserIdAndActiveOrderByIdAsc(userId, true)
+                : people.findByUserIdOrderByIdAsc(userId);
     }
 
     @Transactional
-    public Person create(Long userId, int year, String name, String color) {
-        yearGuard.requireYear(userId, year);
-        if (people.existsByUserIdAndYearNumberAndNameIgnoreCase(userId, year, name)) {
+    public Person create(Long userId, String name, String color) {
+        if (people.existsByUserIdAndNameIgnoreCase(userId, name)) {
             throw new PersonNameTakenException();
         }
-        Person person = new Person(userId, year, name);
+        Person person = new Person(userId, name);
         person.setColor(color);
         return people.save(person);
     }
@@ -41,7 +37,7 @@ public class PersonService {
     @Transactional
     public Person update(Long userId, Long id, String name, boolean active, String color) {
         Person person = people.findByIdAndUserId(id, userId).orElseThrow(ResourceNotFoundException::new);
-        if (people.existsByUserIdAndYearNumberAndNameIgnoreCaseAndIdNot(userId, person.getYearNumber(), name, person.getId())) {
+        if (people.existsByUserIdAndNameIgnoreCaseAndIdNot(userId, name, person.getId())) {
             throw new PersonNameTakenException();
         }
         person.update(name, active);
