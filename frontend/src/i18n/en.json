@@ -393,6 +393,8 @@
       "over": "is over its limit",
       "of": "of",
       "close": "Close notice"
-    }
+    },
+    "entryDate": "Entered on {{date}}",
+    "entryDateCaption": "entered"
   }
 }

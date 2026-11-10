@@ -296,6 +296,10 @@ describe('month lists (TASK-040: REQ-015, REQ-016, REQ-021, REQ-023, REQ-024)', 
     expect(within(fixed).getByText(/^Mercado · Pix/)).toBeInTheDocument()
     // the day leads the row; the full date is there for screen readers
     expect(within(fixed).getByText('05/11').closest('time')).toHaveAttribute('dateTime', '2026-11-05')
+    // the date says what it is: day/month with "lançado" under it; screen readers hear "Lançado em …"
+    const row = within(fixed).getByText('05/11').closest('li') as HTMLElement
+    expect(row).toHaveTextContent('05/11lançado')
+    expect(within(row).getByText(/^Lançado em /)).toHaveClass('sr-only')
     expect(within(fixed).getByText('R$ 993,99', { selector: 'h2 + span' })).toBeInTheDocument()
 
     const card = section('Cartão')

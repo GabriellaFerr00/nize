@@ -393,6 +393,8 @@
       "over": "passou do limite",
       "of": "de",
       "close": "Fechar aviso"
-    }
+    },
+    "entryDate": "Lançado em {{date}}",
+    "entryDateCaption": "lançado"
   }
 }
