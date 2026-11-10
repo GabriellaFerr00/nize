@@ -36,14 +36,14 @@ public class CategoryController {
     @ResponseStatus(HttpStatus.CREATED)
     public CategoryResponse create(@PathVariable int year, @Valid @RequestBody CreateCategoryRequest request) {
         return CategoryResponse.from(service.create(CurrentUser.id(), year, request.name(), request.description(),
-                request.monthlyLimitCents()));
+                request.monthlyLimitCents(), request.color()));
     }
 
     @PutMapping("/api/categories/{id}")
     public CategoryResponse update(@PathVariable Long id, @Valid @RequestBody UpdateCategoryRequest request) {
         return CategoryResponse.from(service.update(
                 CurrentUser.id(), id, request.name(), request.description(), request.active(),
-                request.monthlyLimitCents()));
+                request.monthlyLimitCents(), request.color()));
     }
 
     /** 204 when deleted; 409 {@code CATEGORY_IN_USE} with the expense count when expenses still use it. */

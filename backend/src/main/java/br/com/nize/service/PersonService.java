@@ -28,21 +28,24 @@ public class PersonService {
     }
 
     @Transactional
-    public Person create(Long userId, int year, String name) {
+    public Person create(Long userId, int year, String name, String color) {
         yearGuard.requireYear(userId, year);
         if (people.existsByUserIdAndYearNumberAndNameIgnoreCase(userId, year, name)) {
             throw new PersonNameTakenException();
         }
-        return people.save(new Person(userId, year, name));
+        Person person = new Person(userId, year, name);
+        person.setColor(color);
+        return people.save(person);
     }
 
     @Transactional
-    public Person update(Long userId, Long id, String name, boolean active) {
+    public Person update(Long userId, Long id, String name, boolean active, String color) {
         Person person = people.findByIdAndUserId(id, userId).orElseThrow(ResourceNotFoundException::new);
         if (people.existsByUserIdAndYearNumberAndNameIgnoreCaseAndIdNot(userId, person.getYearNumber(), name, person.getId())) {
             throw new PersonNameTakenException();
         }
         person.update(name, active);
+        person.setColor(color);
         return person;
     }
 }

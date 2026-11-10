@@ -3,7 +3,10 @@ import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { CardEntry, MonthView } from '../api/monthApi'
 import { formatPercent } from '../lib/format'
+import type { YearCatalogs } from '../lib/useMonth'
+import { CardBadge } from './CardBadge'
 import { Money } from './Money'
+import { TagDot } from './TagDot'
 
 function Block({ title, empty, children }: { title: string; empty?: string; children: ReactNode }) {
   return (
@@ -14,13 +17,25 @@ function Block({ title, empty, children }: { title: string; empty?: string; chil
   )
 }
 
-type LineProps = { label: string; cents: number; extra?: string; sub?: boolean; percent?: number; limit?: ReactNode }
+type LineProps = {
+  label: string
+  cents: number
+  extra?: string
+  sub?: boolean
+  percent?: number
+  limit?: ReactNode
+  /** Color dot or card image before the name (REQ-052). */
+  lead?: ReactNode
+}
 
-function Line({ label, cents, extra, sub = false, percent, limit }: LineProps) {
+function Line({ label, cents, extra, sub = false, percent, limit, lead }: LineProps) {
   return (
     <li className={`flex flex-col gap-1 text-sm ${sub ? 'pl-3 text-ink-soft' : 'text-ink'}`}>
       <span className="flex items-baseline justify-between gap-2">
-        <span className="min-w-0 break-words">{label}</span>
+        <span className="flex min-w-0 items-center gap-2 break-words">
+          {lead}
+          {label}
+        </span>
         <span className="flex shrink-0 items-baseline gap-2">
           {extra && <span className="text-xs text-ink-soft tabular-nums">{extra}</span>}
           <Money cents={cents} className={sub ? '' : 'font-medium'} />
@@ -42,7 +57,7 @@ function Line({ label, cents, extra, sub = false, percent, limit }: LineProps) {
  * category with percentage (and "used of limit", REQ-051), payment method, card and third parties by person and card.
  * Collapsible on phones; always open from 768px up (NFR-006).
  */
-export function SummaryPanel({ view }: { view: MonthView }) {
+export function SummaryPanel({ view, catalogs }: { view: MonthView; catalogs?: YearCatalogs }) {
   const { t, i18n } = useTranslation()
   const [open, setOpen] = useState(false)
   const { totals, summaries } = view
@@ -84,6 +99,7 @@ export function SummaryPanel({ view }: { view: MonthView }) {
             <Line
               key={c.categoryId}
               label={c.categoryName ?? '—'}
+              lead={<TagDot color={catalogs?.categories.find((x) => x.id === c.categoryId)?.color} />}
               cents={c.amountCents}
               extra={formatPercent(c.percent, i18n.language)}
               percent={c.percent}
@@ -108,7 +124,12 @@ export function SummaryPanel({ view }: { view: MonthView }) {
 
         <Block title={t('month.summary.byCard')} empty={summaries.byCard.length === 0 ? t('month.summary.noCredit') : undefined}>
           {summaries.byCard.map((c) => (
-            <Line key={c.cardId} label={cardName(c)} cents={c.amountCents} />
+            <Line
+              key={c.cardId}
+              label={cardName(c)}
+              cents={c.amountCents}
+              lead={<CardBadge id={c.cardId} name={cardName(c)} size="sm" hasLogo={catalogs?.cards.find((x) => x.id === c.cardId)?.hasLogo} />}
+            />
           ))}
         </Block>
 
@@ -119,7 +140,11 @@ export function SummaryPanel({ view }: { view: MonthView }) {
           {summaries.byPerson.map((p) => (
             <li key={p.personId} className="flex flex-col gap-1">
               <ul className="flex flex-col gap-1">
-                <Line label={p.personName ?? '—'} cents={p.amountCents} />
+                <Line
+                  label={p.personName ?? '—'}
+                  cents={p.amountCents}
+                  lead={<TagDot color={catalogs?.people.find((x) => x.id === p.personId)?.color} />}
+                />
                 {p.byCard.map((c) => (
                   <Line sub key={c.cardId} label={cardName(c)} cents={c.amountCents} />
                 ))}

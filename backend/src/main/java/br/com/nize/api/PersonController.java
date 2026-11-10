@@ -33,11 +33,11 @@ public class PersonController {
     @PostMapping("/api/years/{year}/people")
     @ResponseStatus(HttpStatus.CREATED)
     public PersonResponse create(@PathVariable int year, @Valid @RequestBody CreatePersonRequest request) {
-        return PersonResponse.from(service.create(CurrentUser.id(), year, request.name()));
+        return PersonResponse.from(service.create(CurrentUser.id(), year, request.name(), request.color()));
     }
 
     @PutMapping("/api/people/{id}")
     public PersonResponse update(@PathVariable Long id, @Valid @RequestBody UpdatePersonRequest request) {
-        return PersonResponse.from(service.update(CurrentUser.id(), id, request.name(), request.active()));
+        return PersonResponse.from(service.update(CurrentUser.id(), id, request.name(), request.active(), request.color()));
     }
 }

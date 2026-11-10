@@ -146,7 +146,7 @@ export function MonthPage() {
                 onDelete={(i) => askDelete('income', i)}
               />
             </EntryLists>
-            <SummaryPanel view={view} />
+            <SummaryPanel view={view} catalogs={catalogs} />
           </div>
         </>
       )}

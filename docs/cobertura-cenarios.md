@@ -72,6 +72,8 @@ linha de A (e vice-versa), listas e o mês só mostram linhas da própria usuár
 | GET /api/years/{year}/cards | CardController | `CardApiTest` (teste de criação: B lista 0 cartões) |
 | POST /api/years/{year}/cards | CardController | `CardApiTest#theSameNameIsFineForAnotherUserAndAnotherYear` |
 | PUT /api/cards/{id} | CardController | `CardApiTest#onlyTheOwnerCanUpdateACardAndOthersGet404`, `#anotherUsersChangeNeverTouchesMyCard` |
+| DELETE /api/cards/{id} | CardController | `CardDeleteTest#onlyTheOwnerCanDeleteACardAndOthersGet404`, `#anotherUserCannotDeleteMyCard`, `#anotherUsersExpensesDoNotCount` (2026-11-09) |
+| PUT/GET/DELETE /api/cards/{id}/logo | CardController | `CardLogoTest#onlyTheOwnerCanSendSeeOrRemoveTheImage` (`assertOnlyOwnerCanAccess`), `#anImageNeedsASignedInUser` (2026-11-09) |
 | GET /api/years/{year}/people | PersonController | `PersonApiTest` (teste de criação: B lista 0 pessoas) |
 | POST /api/years/{year}/people | PersonController | `PersonApiTest#theSameNameIsFineForAnotherUserAndAnotherYear` |
 | PUT /api/people/{id} | PersonController | `PersonApiTest#onlyTheOwnerCanUpdateAPersonAndOthersGet404`, `#anotherUsersChangeNeverTouchesMyPerson` |
@@ -79,13 +81,13 @@ linha de A (e vice-versa), listas e o mês só mostram linhas da própria usuár
 | POST /api/months/{month}/expenses | ExpenseController | `ExpenseCreateApiTest#anotherUsersCategoryCardAndPersonAre404AndNothingIsCreated`, `#theExpenseBelongsToTheCallerNoMatterWhatTheBodySays`; parcelas: `ExpenseInstallmentsApiTest#generatedInstallmentsBelongToTheCallerOnly` |
 | PUT /api/expenses/{id} | ExpenseController | `ExpenseEditApiTest#anotherUserGets404OnPutPatchAndDeleteAndNothingChanges`, `#editCannotPointToAnotherUsersCategory`, **`#editCannotPointToAnotherUsersCardOrPerson` (novo)** |
 | PATCH /api/expenses/{id}/paid | ExpenseController | `ExpenseEditApiTest#anotherUserGets404OnPutPatchAndDeleteAndNothingChanges`, `#ownerAccessWorksAndEverythingRequiresAuthentication` (`assertOnlyOwnerCanAccess`) |
-| DELETE /api/expenses/{id} | ExpenseController | `ExpenseEditApiTest#anotherUserGets404OnPutPatchAndDeleteAndNothingChanges` |
+| DELETE /api/expenses/{id} | ExpenseController | `ExpenseEditApiTest#anotherUserGets404OnPutPatchAndDeleteAndNothingChanges`; `?scope=following`: `ExpenseInstallmentDeleteTest#anotherUserCannotDeleteMyInstallmentsAndGets404` (2026-11-09) |
 | POST /api/months/{month}/incomes | IncomeController | `IncomeApiTest#aPersonOfAnotherUserOrYearIsNotFound`, teste do corpo com `userId` de B (a entrada fica com A) |
 | PUT /api/incomes/{id} | IncomeController | `IncomeApiTest#onlyTheOwnerCanEditAnIncome` (`assertOnlyOwnerCanAccess`), **`#editCannotPointToAnotherUsersPerson` (novo)** |
-| DELETE /api/incomes/{id} | IncomeController | `IncomeApiTest#onlyTheOwnerCanDeleteAnIncome` |
+| DELETE /api/incomes/{id} | IncomeController | `IncomeApiTest#onlyTheOwnerCanDeleteAnIncome`; `?scope=following`: `ExpenseInstallmentDeleteTest#anotherUserCannotDeleteMyIncomeInstallments` (2026-11-09) |
 | GET /api/years/{year}/overview | `OverviewApiTest#onlyTheOwnerCanReadTheOverviewOfHerYear`, `#anotherUsersMovementsNeverShowUp` | ok (TASK-044) |
 
-**Resultado**: 25 de 25 endpoints de dados cobertos (100%), incluindo o panorama (TASK-044). Faltavam dois casos de referência de outra
+**Resultado**: 25 de 25 endpoints de dados cobertos (100%), incluindo o panorama (TASK-044). Em 2026-11-09 entraram mais 4 (excluir cartão e o logotipo do cartão: enviar, ver e remover), todos cobertos: 29 de 29. Cores (`color`) e limite (`monthlyLimitCents`) usam os endpoints de categoria/pessoa já cobertos; `CategoryLimitApiTest#anotherUserCannotSetMyLimit` e `CategoryAndPersonColorTest#anotherUserCannotColorMyCategory` conferem. Faltavam dois casos de referência de outra
 usuária na edição (cartão/pessoa no `PUT /api/expenses/{id}` e pessoa no `PUT /api/incomes/{id}`); os testes foram
 acrescentados e passam (o código já devolvia 404). TASK-047 fica aberta só pelo endpoint do panorama.
 

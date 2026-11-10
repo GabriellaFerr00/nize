@@ -30,20 +30,22 @@ public class CategoryService {
     }
 
     @Transactional
-    public Category create(Long userId, int year, String name, String description, Long monthlyLimitCents) {
+    public Category create(Long userId, int year, String name, String description, Long monthlyLimitCents,
+                           String color) {
         yearGuard.requireYear(userId, year);
         if (categories.existsByUserIdAndYearNumberAndNameIgnoreCase(userId, year, name)) {
             throw new CategoryNameTakenException();
         }
         Category category = new Category(userId, year, name, description);
         category.setMonthlyLimitCents(monthlyLimitCents);
+        category.setColor(color);
         return categories.save(category);
     }
 
     @Transactional
     /** Full replacement (REQ-011): a missing {@code monthlyLimitCents} removes the limit (REQ-051). */
     public Category update(Long userId, Long id, String name, String description, boolean active,
-                           Long monthlyLimitCents) {
+                           Long monthlyLimitCents, String color) {
         Category category = categories.findByIdAndUserId(id, userId).orElseThrow(ResourceNotFoundException::new);
         if (categories.existsByUserIdAndYearNumberAndNameIgnoreCaseAndIdNot(
                 userId, category.getYearNumber(), name, category.getId())) {
@@ -51,6 +53,7 @@ public class CategoryService {
         }
         category.update(name, description, active);
         category.setMonthlyLimitCents(monthlyLimitCents);
+        category.setColor(color);
         return category;
     }
 

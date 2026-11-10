@@ -5,7 +5,11 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import {
   createItem,
+  deleteCardLogo,
   deleteItem,
+  LOGO_TYPES,
+  MAX_LOGO_BYTES,
+  uploadCardLogo,
   listItems,
   updateItem,
   type CatalogInput,
@@ -15,11 +19,14 @@ import {
 import { ApiError } from '../api/client'
 import { apiErrorMessage } from '../lib/apiErrorMessage'
 import { centsToInput, parseCents } from '../lib/money'
+import { TAG_COLORS, TAG_DOT_CLASS } from '../lib/tagColors'
 import { useDefaultMonth } from '../lib/useMonth'
 import { useSelectedYear } from '../lib/useSelectedYear'
+import { CardBadge } from './CardBadge'
 import { Dialog } from './Dialog'
 import { Money } from './Money'
 import { FormMessage } from './FormMessage'
+import { TagDot } from './TagDot'
 import { TextField } from './TextField'
 import { YearSelect } from './YearSelect'
 import { dangerButton, iconButton, pageTitle, primaryButton, quietButton } from '../lib/ui'
@@ -27,7 +34,7 @@ import { dangerButton, iconButton, pageTitle, primaryButton, quietButton } from 
 type Props = {
   kind: CatalogKind
   /** Which extra fields the form shows besides the name. */
-  fields: { description?: boolean; dueDay?: boolean; monthlyLimit?: boolean }
+  fields: { description?: boolean; dueDay?: boolean; monthlyLimit?: boolean; color?: boolean; logo?: boolean }
   canDelete?: boolean
 }
 
@@ -43,6 +50,7 @@ const asInput = (item: CatalogItem): CatalogInput => ({
   ...(item.dueDay !== undefined && { dueDay: item.dueDay }),
   // PUT replaces every field: keep the limit when only (de)activating (REQ-051)
   ...(item.monthlyLimitCents !== undefined && { monthlyLimitCents: item.monthlyLimitCents }),
+  ...(item.color !== undefined && { color: item.color }),
 })
 
 /** List + create/edit/activate/delete for categories, cards and people (REQ-011..014). */
@@ -190,8 +198,12 @@ function CatalogRow({ item, canDelete, busy, onEdit, onToggle, onDelete }: RowPr
           <span className="sr-only">{t('catalog.dueOn', { day: item.dueDay })}</span>
         </span>
       )}
+      {item.hasLogo !== undefined && <CardBadge id={item.id} name={name} hasLogo={item.hasLogo} />}
       <div className="flex min-w-0 flex-1 flex-col pt-px">
-        <span className={`leading-6 font-medium break-words ${item.active ? 'text-ink' : 'text-ink-soft'}`}>{name}</span>
+        <span className={`flex items-center gap-2 leading-6 font-medium break-words ${item.active ? 'text-ink' : 'text-ink-soft'}`}>
+          <TagDot color={item.color} />
+          {name}
+        </span>
         {item.description && <span className="text-sm text-ink-soft">{item.description}</span>}
         {item.monthlyLimitCents !== undefined && (
           <span className="text-sm text-ink-soft">
@@ -244,13 +256,39 @@ function ItemFormDialog({ kind, year, fields, item, onClose, onSaved }: FormProp
   const [description, setDescription] = useState(item?.description ?? '')
   const [dueDay, setDueDay] = useState(item?.dueDay !== undefined ? String(item.dueDay) : '')
   const [limit, setLimit] = useState(item?.monthlyLimitCents !== undefined ? centsToInput(item.monthlyLimitCents) : '')
-  const [errors, setErrors] = useState<{ name?: string; description?: string; dueDay?: string; limit?: string }>({})
+  const [color, setColor] = useState(item?.color ?? '')
+  const [logoFile, setLogoFile] = useState<File | null>(null)
+  const [removeLogo, setRemoveLogo] = useState(false)
+  const [errors, setErrors] = useState<{ name?: string; description?: string; dueDay?: string; limit?: string; logo?: string }>({})
+  const queryClient = useQueryClient()
 
   const save = useMutation({
-    mutationFn: (input: CatalogInput) =>
-      item ? updateItem(kind, item.id, { ...input, active: item.active }) : createItem(kind, year, input),
+    mutationFn: async (input: CatalogInput) => {
+      const saved = item ? await updateItem(kind, item.id, { ...input, active: item.active }) : await createItem(kind, year, input)
+      // the card's own image goes after the card exists (REQ-052)
+      if (fields.logo && logoFile) await uploadCardLogo(saved.id, logoFile)
+      else if (fields.logo && removeLogo && item?.hasLogo) await deleteCardLogo(saved.id)
+      if (fields.logo && (logoFile || removeLogo)) await queryClient.invalidateQueries({ queryKey: ['cardLogo', saved.id] })
+      return saved
+    },
     onSuccess: onSaved,
   })
+
+  function pickLogo(file: File | null) {
+    setRemoveLogo(false)
+    if (file && !LOGO_TYPES.includes(file.type)) {
+      setErrors((e) => ({ ...e, logo: t('catalog.errors.logoType') }))
+      setLogoFile(null)
+      return
+    }
+    if (file && file.size > MAX_LOGO_BYTES) {
+      setErrors((e) => ({ ...e, logo: t('catalog.errors.logoSize') }))
+      setLogoFile(null)
+      return
+    }
+    setErrors((e) => ({ ...e, logo: undefined }))
+    setLogoFile(file)
+  }
 
   function onSubmit(event: FormEvent) {
     event.preventDefault()
@@ -266,12 +304,13 @@ function ItemFormDialog({ kind, year, fields, item, onClose, onSaved }: FormProp
       limit: fields.monthlyLimit && limitCents === undefined ? t('catalog.errors.limit') : undefined,
     }
     setErrors(next)
-    if (next.name || next.description || next.dueDay || next.limit) return
+    if (next.name || next.description || next.dueDay || next.limit || errors.logo) return
     save.mutate({
       name: name.trim(),
       ...(fields.description && { description: description.trim() }),
       ...(fields.dueDay && { dueDay: day }),
       ...(fields.monthlyLimit && limitCents !== null && limitCents !== undefined && { monthlyLimitCents: limitCents }),
+      ...(fields.color && color && { color }),
     })
   }
 
@@ -296,6 +335,66 @@ function ItemFormDialog({ kind, year, fields, item, onClose, onSaved }: FormProp
             onChange={(e) => setLimit(e.target.value)}
             error={errors.limit}
           />
+        )}
+        {fields.color && (
+          <fieldset className="flex flex-col gap-2">
+            <legend className="text-sm font-medium text-ink">{t('catalog.fields.color')}</legend>
+            <div className="flex flex-wrap gap-1">
+              {(['', ...TAG_COLORS] as const).map((key) => (
+                <label
+                  key={key || 'none'}
+                  title={t(`catalog.colors.${key || 'none'}`)}
+                  className="grid size-11 cursor-pointer place-items-center rounded-lg has-[:checked]:bg-soft has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-focus"
+                >
+                  <input
+                    type="radio"
+                    name="tag-color"
+                    value={key}
+                    checked={color === key}
+                    onChange={() => setColor(key)}
+                    className="sr-only"
+                    aria-label={t(`catalog.colors.${key || 'none'}`)}
+                  />
+                  {key ? (
+                    <span aria-hidden className={`size-6 rounded-full ${TAG_DOT_CLASS[key]} ${color === key ? 'ring-2 ring-ink ring-offset-2 ring-offset-card' : ''}`} />
+                  ) : (
+                    <span aria-hidden className={`size-6 rounded-full border-2 border-dashed border-line-strong ${color === '' ? 'ring-2 ring-ink ring-offset-2 ring-offset-card' : ''}`} />
+                  )}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        )}
+        {fields.logo && (
+          <div className="flex flex-col gap-2">
+            <label htmlFor="card-logo" className="text-sm font-medium text-ink">
+              {t('catalog.fields.logo')}
+            </label>
+            <div className="flex items-center gap-3">
+              {item && !logoFile && !removeLogo && <CardBadge id={item.id} name={item.name} hasLogo={item.hasLogo} />}
+              <input
+                id="card-logo"
+                type="file"
+                accept={LOGO_TYPES.join(',')}
+                aria-invalid={errors.logo ? true : undefined}
+                aria-describedby={errors.logo ? 'card-logo-error' : 'card-logo-help'}
+                onChange={(e) => pickLogo(e.target.files?.[0] ?? null)}
+                className="min-w-0 text-sm text-ink file:mr-3 file:min-h-11 file:rounded-xl file:border file:border-line-strong file:bg-card file:px-3 file:font-medium file:text-ink"
+              />
+            </div>
+            <p id="card-logo-help" className="text-xs text-ink-soft">{t('catalog.logoHelp')}</p>
+            {errors.logo && (
+              <p id="card-logo-error" className="text-sm text-negative">
+                {errors.logo}
+              </p>
+            )}
+            {item?.hasLogo && !logoFile && (
+              <label className="flex min-h-11 items-center gap-2 text-sm text-ink">
+                <input type="checkbox" checked={removeLogo} onChange={(e) => setRemoveLogo(e.target.checked)} className="size-4 accent-brand" />
+                {t('catalog.removeLogo')}
+              </label>
+            )}
+          </div>
         )}
         {fields.dueDay && (
           <TextField

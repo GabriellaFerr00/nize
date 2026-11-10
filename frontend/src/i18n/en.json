@@ -77,7 +77,9 @@
     "INVALID_MONTH": "Invalid month.",
     "DATE_OUT_OF_MONTH": "The date must be inside the month.",
     "INACTIVE_REFERENCE": "The chosen category, card or person is deactivated.",
-    "REFERENCE_UNAVAILABLE": "The installments run into a year where the category, card or person no longer exists. Adjust that year's lists."
+    "REFERENCE_UNAVAILABLE": "The installments run into a year where the category, card or person no longer exists. Adjust that year's lists.",
+    "INVALID_IMAGE": "The image must be PNG, JPG or WebP.",
+    "IMAGE_TOO_LARGE": "The image can be at most 200 KB."
   },
   "auth": {
     "fields": {
@@ -150,14 +152,18 @@
       "name": "Name",
       "description": "Description (optional)",
       "dueDay": "Due day (1 to 31)",
-      "monthlyLimit": "Monthly limit (R$, optional)"
+      "monthlyLimit": "Monthly limit (R$, optional)",
+      "color": "Color",
+      "logo": "Card logo (optional)"
     },
     "errors": {
       "nameRequired": "Enter a name.",
       "nameTooLong": "The name can have at most 80 characters.",
       "descriptionTooLong": "The description can have at most 255 characters.",
       "dueDay": "Enter a day from 1 to 31.",
-      "limit": "Enter an amount above zero or leave it empty."
+      "limit": "Enter an amount above zero or leave it empty.",
+      "logoType": "Choose a PNG, JPG or WebP image.",
+      "logoSize": "The image can be at most 200 KB."
     },
     "categories": {
       "new": "New category",
@@ -195,7 +201,20 @@
     "deactivateItem": "Deactivate {{name}}",
     "activateItem": "Reactivate {{name}}",
     "deleteItem": "Delete {{name}}",
-    "limitPerMonth": "Monthly limit:"
+    "limitPerMonth": "Monthly limit:",
+    "logoHelp": "PNG, JPG or WebP, up to 200 KB. Use your own image.",
+    "removeLogo": "Remove logo",
+    "colors": {
+      "none": "No color",
+      "green": "Green",
+      "teal": "Teal",
+      "blue": "Blue",
+      "purple": "Purple",
+      "pink": "Pink",
+      "red": "Red",
+      "orange": "Orange",
+      "brown": "Brown"
+    }
   },
   "settings": {
     "general": "Preferences",

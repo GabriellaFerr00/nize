@@ -266,8 +266,9 @@ Nomes em inglês: ver "Nomenclatura em inglês" em `design.md` (os termos em por
 - [x] **TASK-068** [REQ-051]: Limite mensal opcional por categoria, aviso a 80% e acima de 100% sem bloquear; "usado de limite" no resumo.
   - _Verify_: teste de regra antes do código (80%, 100%, sem limite), API e tela.
   - _Feito_: V8 `category.limit_amount DECIMAL(12,2)`; regra `CategoryLimit` (`CategoryLimitTest`, 7 testes, escrito antes); `monthlyLimitCents` na categoria (criar/editar/copiar para o ano novo); `limitCents`/`limitStatus` em `byCategory` (`CategoryLimitApiTest`, 7 testes). Tela: campo "Limite por mês (R$, opcional)" em Categorias, faixa "Limites de gasto" no topo do mês (`LimitAlerts`) e "usado de limite" no resumo; 4 testes de tela.
-- [ ] **TASK-069** [REQ-052]: Cor de categoria e pessoa (paleta fixa) e imagem própria do cartão (PNG/JPG/WebP ≤ 200 KB), exibidas nas telas.
+- [x] **TASK-069** [REQ-052]: Cor de categoria e pessoa (paleta fixa) e imagem própria do cartão (PNG/JPG/WebP ≤ 200 KB), exibidas nas telas.
   - _Verify_: testes de API (formatos, tamanho, isolamento da imagem), contraste da paleta nos dois temas e testes de tela.
+  - _Feito_: V9 (`category.color`, `person.color`, tabela `card_logo` MEDIUMBLOB); regra `ImageFormat` (bytes iniciais; SVG recusado; teste antes); `PUT/GET/DELETE /api/cards/{id}/logo` (corpo lido só até 200 KB + 1), `hasLogo` na lista, logotipo e cores copiados para o ano novo, logotipo apagado com o cartão (`CardLogoTest` 9, `CategoryAndPersonColorTest` 5). Paleta de 8 cores, ≥ 4:1 contra card e soft nos dois temas (`contraste.py`). Tela: seletor de cor (Categorias, Pessoas), bolinha de cor nas listas, lançamentos e resumos; logotipo no formulário do cartão (tipo e tamanho conferidos antes de enviar) e `CardBadge` (imagem como `data:` ou inicial) em Cartões e no resumo por cartão; 5 testes de tela. Validado num MySQL 8.4 (Docker): V1–V9, schema, envio/leitura de 200 KB, `check-schema.sql` limpo. 417 testes back (verify com JaCoCo ok), 161 front (97,6% linhas).
 
 ---
 

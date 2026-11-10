@@ -3,7 +3,9 @@ package br.com.nize.api;
 import static br.com.nize.domain.MoneyColumnConverter.MAX_CENTS;
 
 import jakarta.validation.constraints.Max;
+import br.com.nize.domain.TagColor;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -13,7 +15,8 @@ public record UpdateCategoryRequest(
         @NotBlank @Size(max = 80) String name,
         @Size(max = 255) String description,
         @NotNull Boolean active,
-        @Positive @Max(MAX_CENTS) Long monthlyLimitCents) {
+        @Positive @Max(MAX_CENTS) Long monthlyLimitCents,
+        @Pattern(regexp = TagColor.PATTERN) String color) {
 
     public UpdateCategoryRequest {
         name = name == null ? null : name.trim();

@@ -56,6 +56,7 @@ Monorepo com dois módulos independentes: `backend` (API REST) e `frontend` (SPA
 | D-18 | Healthcheck por Spring Boot Actuator, expondo só `GET /actuator/health` (sem detalhes, sem autenticação) | Smoke test e `HEALTHCHECK` do Docker |
 | D-19 | `GET /api/years/{year}/overview` faz a carga do mês (`MonthLoadService.open`, idempotente) de cada mês do ano até o mês vigente, em ordem (janeiro primeiro, para cada mês copiar do anterior); ano passado → os 12 meses; ano futuro → nenhum. Meses depois do vigente só mostram o que já existe. Cada mês devolvido bate com `GET /api/months/{m}` (mesmos totais e saldo) | Decisão da usuária, 2026-11-04 |
 | D-20 | Identidade visual "Verde Nize" (substitui a verde-azulada): paleta, tokens e regras da skill `design-nize` (`.claude/skills/design-nize`). Cores só como tokens semânticos em `src/styles/index.css` (`page`, `sidebar`, `card`, `soft`, `line`, `line-strong`, `ink`, `ink-soft`, `brand`, `on-brand`, `brand-text`, `positive`, `negative`, `on-negative`, `warning`, `focus`, `backdrop`, `chart-*`), com valores para claro e escuro; as cores padrão do Tailwind ficam desligadas. O Verde Nize `#B8F45A` só é preenchimento no modo claro (texto verde usa `brand-text`). Tema: só Claro e Escuro; o seletor grava `nize.theme` (`light`/`dark`) no `localStorage` e o `<html>` sempre recebe `data-theme` (`lib/theme.ts`); sem escolha gravada, o tema inicial vem de `prefers-color-scheme` (decisão da usuária 2026-11-05: sem opção "Sistema"). Logotipo: o padrão de `public/logoPadrao/` (`nize-logo-n-bloco-verde-*`: bloco verde arredondado com o "N" + "ize"), mostrado por `components/Logo.tsx`; no modo escuro usa a variante `nize-logo-n-bloco-verde-fundo-escuro-*` (só a palavra "ize" em off-white `#F2F5EC`, gerada a partir do original) por meio da variante `dark:` do Tailwind, que acompanha o mesmo tema dos tokens. Ícones quadrados em `public/logotipo/` (favicon, `apple-touch-icon`, `site.webmanifest`). Fonte do sistema (a CSP não permite fonte externa). Menu lateral continua a partir de 768px (REQ-043), não 1024px como na skill | REQ-045, decisão da usuária 2026-11-05 |
+| D-21 | Cores e logotipos (REQ-052, 2026-11-09): categoria e pessoa guardam a **chave** de uma paleta fixa (`green`, `teal`, `blue`, `purple`, `pink`, `red`, `orange`, `brown`; NULL = neutra); o front mapeia a chave para tokens `--nz-tag-*` com valor claro e escuro (≥ 4:1 contra card e soft nos dois temas, conferido com `contraste.py`) e mostra uma bolinha ao lado do nome (nunca como cor de texto). O logotipo do cartão é uma imagem enviada pela usuária (PNG, JPEG ou WebP conferidos pelos primeiros bytes, ≤ 200 KB; SVG recusado por poder conter script), guardada na tabela `card_logo` e servida pela API; o front a mostra como `data:` URL (a CSP já permite `img-src data:`). Sem logotipo, a inicial do nome. O Nize não traz logotipos de bancos | REQ-052 |
 | D-9 | Posição por quinzena usa "data efetiva" (pela forma de pagamento, não pelo tipo): Pix = `data`; crédito com cartão = dia de vencimento do cartão dentro do mês do lançamento; crédito sem cartão = `data` (confirmado 2026-11-01) | REQ-032 |
 
 ## Nomenclatura em inglês
@@ -141,6 +142,7 @@ Convenções: todas as tabelas têm `usuario_id BIGINT NOT NULL` (FK `usuario.id
 | nome | VARCHAR(80) | NOT NULL | UNIQUE (usuario_id, ano, nome) |
 | descricao | VARCHAR(255) | NULL | |
 | ativa | BOOLEAN | NOT NULL, default true | |
+| cor | VARCHAR(16) | NULL, CHECK na paleta (D-21) | REQ-052; coluna `color` (V9) |
 | limite_mensal | DECIMAL(12,2) | NULL, CHECK > 0 | REQ-051; coluna `limit_amount` (V8), `monthlyLimitCents` na API; NULL = sem limite; copiado com a categoria para o ano novo |
 
 ### cartao
@@ -161,6 +163,16 @@ Convenções: todas as tabelas têm `usuario_id BIGINT NOT NULL` (FK `usuario.id
 | ano | SMALLINT | NOT NULL | |
 | nome | VARCHAR(80) | NOT NULL | UNIQUE (usuario_id, ano, nome) |
 | ativa | BOOLEAN | NOT NULL, default true | |
+| cor | VARCHAR(16) | NULL, CHECK na paleta (D-21) | REQ-052; coluna `color` (V9) |
+
+### logotipo_cartao
+Tabela `card_logo` (V9), uma linha por cartão que tem imagem (REQ-052, D-21).
+| Field | Type | Constraints | Notes |
+|---|---|---|---|
+| cartao_id | BIGINT | PK, FK cartao | `card_id`; excluído junto com o cartão |
+| usuario_id | BIGINT | NOT NULL, FK | `user_id`; toda consulta filtra por ele |
+| tipo | VARCHAR(16) | NOT NULL, CHECK em `image/png`, `image/jpeg`, `image/webp` | `content_type`, do conteúdo, não do cabeçalho |
+| imagem | MEDIUMBLOB | NOT NULL | `data`, até 200 KB |
 
 ### lancamento
 | Field | Type | Constraints | Notes |
@@ -275,6 +287,9 @@ REST JSON sob `/api`. Todos os endpoints exceto `/api/auth/**` exigem `Authoriza
 | DELETE | /api/categorias/{id} | sim | REQ-012 | exclui; 409 com contagem se houver lançamentos |
 | GET/POST | /api/anos/{ano}/cartoes | sim | REQ-013 | lista / cria |
 | PUT | /api/cartoes/{id} | sim | REQ-013 | edita |
+| PUT | /api/cartoes/{id}/logotipo | sim | REQ-052 | `PUT /api/cards/{id}/logo`, corpo = bytes da imagem; 204; não é PNG/JPEG/WebP → 400 `INVALID_IMAGE`; > 200 KB → 400 `IMAGE_TOO_LARGE`; cartão de outra usuária → 404 |
+| GET | /api/cartoes/{id}/logotipo | sim | REQ-052 | bytes com o `Content-Type` guardado, `nosniff`, `Cache-Control: private, no-cache`; sem imagem → 404. `CardResponse.hasLogo` diz se existe |
+| DELETE | /api/cartoes/{id}/logotipo | sim | REQ-052 | remove a imagem; 204 |
 | DELETE | /api/cartoes/{id} | sim | REQ-013 | `DELETE /api/cards/{id}`: exclui; 409 `CARD_IN_USE` com `count` se houver lançamentos com o cartão (de qualquer mês do ano) |
 | GET/POST | /api/anos/{ano}/pessoas | sim | REQ-014 | lista / cria |
 | PUT | /api/pessoas/{id} | sim | REQ-014 | edita |
@@ -419,7 +434,7 @@ GitHub Actions (detalhes em `docs/ci-cd.md`; NFR-010). **Um workflow por tema**,
 | 0.1.7 | 2026-11-01 | Fixo pode ser no crédito (tipo e forma de pagamento independentes); regras de consistência do lançamento; Open Questions da Phase 3 resolvidas |
 | 0.1.8 | 2026-11-01 | `month` reservado no H2: coluna `month_ref`; data do lançamento `expense_date` |
 | 0.1.9 | 2026-11-01 | Carga do mês: continua parcelas à mão (grupo próprio) e respeita a permissão de parcelas automáticas |
-| 0.3.0 | 2026-11-09 | Limite mensal opcional por categoria (V8 `category.limit_amount`, regra `CategoryLimit`, `limitCents`/`limitStatus` no resumo; REQ-051). Cartão obrigatório no crédito (`CARD_REQUIRED`) e fim do "Sem cartão" nos resumos (REQ-015/016/037). Front: `lib/privacy.ts` + `ValuesToggle` (REQ-049, olho ao lado do tema), ícone sol/lua no `ThemeSwitcher` (REQ-045). Dinheiro em `DECIMAL(12,2)` no banco (V7: `expense.amount`, `income.amount`), `MoneyColumnConverter`; centavos no resto (D-2, NFR-001). `DELETE /api/cards/{id}` (REQ-013). Pedidos da usuária |
+| 0.3.0 | 2026-11-09 | D-21: cores de categoria/pessoa (paleta fixa) e logotipo do cartão (V9 `color`, `card_logo`, `/api/cards/{id}/logo`; REQ-052). Limite mensal opcional por categoria (V8 `category.limit_amount`, regra `CategoryLimit`, `limitCents`/`limitStatus` no resumo; REQ-051). Cartão obrigatório no crédito (`CARD_REQUIRED`) e fim do "Sem cartão" nos resumos (REQ-015/016/037). Front: `lib/privacy.ts` + `ValuesToggle` (REQ-049, olho ao lado do tema), ícone sol/lua no `ThemeSwitcher` (REQ-045). Dinheiro em `DECIMAL(12,2)` no banco (V7: `expense.amount`, `income.amount`), `MoneyColumnConverter`; centavos no resto (D-2, NFR-001). `DELETE /api/cards/{id}` (REQ-013). Pedidos da usuária |
 | 0.2.10 | 2026-11-09 | Posição = só a soma dos gastos do intervalo (sem entradas); JSON `{fromDay, toDay, totalExpensesCents}`; tela "Gastos R$ X" sem sobra/falta (REQ-030 0.1.9, decisão da usuária) |
 | 0.2.9 | 2026-11-05 | Layout das demais telas (menu, cadastros, configurações, panorama, janelas, entrar) no estilo da tela do mês; tema por botão que alterna; `lib/ui.ts` (aprovado pela usuária) |
 | 0.2.8 | 2026-11-05 | Layout da tela do mês: saldo em destaque com totais numa linha, lista simples com o total de cada fechamento (a régua proposta foi descartada pela usuária), listas em estilo livro-caixa, resumos com barra por categoria (aprovado pela usuária) |

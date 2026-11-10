@@ -31,6 +31,10 @@ public class Person {
     @Column(nullable = false)
     private boolean active = true;
 
+    // a key of the Nize palette (REQ-052, D-21); null = neutral
+    @Column(length = 16)
+    private String color;
+
     protected Person() {
     }
 
@@ -45,6 +49,11 @@ public class Person {
         this.active = active;
     }
 
+    public void setColor(String color) {
+        this.color = color;
+    }
+
+    public String getColor() { return color; }
     public Long getId() { return id; }
     public Long getUserId() { return userId; }
     public int getYearNumber() { return yearNumber; }

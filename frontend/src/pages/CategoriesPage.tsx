@@ -1,5 +1,5 @@
 import { CatalogManager } from '../components/CatalogManager'
 
 export function CategoriesPage() {
-  return <CatalogManager kind="categories" fields={{ description: true, monthlyLimit: true }} canDelete />
+  return <CatalogManager kind="categories" fields={{ description: true, monthlyLimit: true, color: true }} canDelete />
 }
