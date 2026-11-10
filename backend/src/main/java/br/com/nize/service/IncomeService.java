@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.time.YearMonth;
 import java.util.Objects;
 import java.util.UUID;
@@ -29,11 +30,14 @@ public class IncomeService {
     private final IncomeRepository incomes;
     private final PersonRepository people;
     private final YearGuard yearGuard;
+    private final MonthLoadService monthLoad;
 
-    public IncomeService(IncomeRepository incomes, PersonRepository people, YearGuard yearGuard) {
+    public IncomeService(IncomeRepository incomes, PersonRepository people, YearGuard yearGuard,
+                         MonthLoadService monthLoad) {
         this.incomes = incomes;
         this.people = people;
         this.yearGuard = yearGuard;
+        this.monthLoad = monthLoad;
     }
 
     @Transactional
@@ -59,8 +63,19 @@ public class IncomeService {
     }
 
     @Transactional
-    public void delete(Long userId, Long id) {
-        incomes.delete(incomes.findByIdAndUserId(id, userId).orElseThrow(ResourceNotFoundException::new));
+    public void delete(Long userId, Long id, DeleteScope scope) {
+        Income income = incomes.findByIdAndUserId(id, userId).orElseThrow(ResourceNotFoundException::new);
+        String group = income.getInstallmentGroupId();
+        Integer number = income.getInstallmentNumber();
+        if (scope == DeleteScope.FOLLOWING && group != null && number != null) {
+            // this installment and the ones after it (later months) of the same income (REQ-050)
+            incomes.deleteAll(incomes.findByUserIdAndInstallmentGroupIdIn(userId, List.of(group)).stream()
+                    .filter(i -> i.getInstallmentNumber() != null && i.getInstallmentNumber() >= number)
+                    .toList());
+            return;
+        }
+        incomes.delete(income);
+        monthLoad.keepInstallmentsComing(userId, income);
     }
 
     private static void requireDateInMonth(LocalDate date, YearMonth month) {

@@ -1,5 +1,5 @@
 import { CatalogManager } from '../components/CatalogManager'
 
 export function PeoplePage() {
-  return <CatalogManager kind="people" fields={{}} />
+  return <CatalogManager kind="people" fields={{ color: true }} />
 }

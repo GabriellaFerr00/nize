@@ -25,6 +25,10 @@
   "theme": {
     "darkMode": "Tema escuro"
   },
+  "privacy": {
+    "hideValues": "Ocultar valores",
+    "hidden": "valor oculto"
+  },
   "pages": {
     "month": "Mês",
     "overview": "Panorama anual",
@@ -63,6 +67,8 @@
     "CARD_NAME_TAKEN": "Já existe um cartão com esse nome neste ano.",
     "PERSON_NAME_TAKEN": "Já existe uma pessoa com esse nome neste ano.",
     "CATEGORY_IN_USE": "Esta categoria ainda tem lançamentos.",
+    "CARD_IN_USE": "Este cartão ainda é usado em lançamentos.",
+    "CARD_REQUIRED": "Escolha um cartão: no crédito ele é obrigatório.",
     "YEAR_ALREADY_EXISTS": "Esse ano já existe na sua conta.",
     "INVALID_YEAR": "Informe um ano entre 2000 e 2100.",
     "NOT_FOUND": "Não encontramos esse item. Atualize a página.",
@@ -71,7 +77,9 @@
     "INVALID_MONTH": "Mês inválido.",
     "DATE_OUT_OF_MONTH": "A data precisa estar dentro do mês.",
     "INACTIVE_REFERENCE": "A categoria, o cartão ou a pessoa escolhida está desativada.",
-    "REFERENCE_UNAVAILABLE": "As parcelas passam para um ano em que a categoria, o cartão ou a pessoa não existe mais. Ajuste os cadastros desse ano."
+    "REFERENCE_UNAVAILABLE": "As parcelas passam para um ano em que a categoria, o cartão ou a pessoa não existe mais. Ajuste os cadastros desse ano.",
+    "INVALID_IMAGE": "A imagem precisa ser PNG, JPG ou WebP.",
+    "IMAGE_TOO_LARGE": "A imagem pode ter no máximo 200 KB."
   },
   "auth": {
     "fields": {
@@ -117,7 +125,7 @@
     "signOut": "Sair",
     "pitch": {
       "month": "Lance os gastos fixos, os do cartão e as entradas de cada mês.",
-      "closings": "Veja quanto sobra ou falta em cada fechamento do mês.",
+      "closings": "Veja quanto gastou em cada fechamento do mês.",
       "noBank": "Sem conectar ao banco: você anota e o Nize faz as contas."
     }
   },
@@ -126,7 +134,7 @@
     "intro": "Em poucos passos você começa a acompanhar o seu mês.",
     "steps": {
       "log": "Lance seus gastos fixos, de cartão e suas entradas na tela do mês.",
-      "position": "Veja o saldo e quanto falta ou sobra em cada período do mês (padrão: do dia 1 ao 15 e do 16 ao fim do mês).",
+      "position": "Veja o saldo e quanto gastou em cada período do mês (padrão: do dia 1 ao 15 e do 16 ao fim do mês).",
       "setup": "Ajuste categorias, cartões e pessoas quando quiser, em Categorias, Cartões e Pessoas."
     },
     "dismiss": "Entendi"
@@ -143,25 +151,43 @@
     "fields": {
       "name": "Nome",
       "description": "Descrição (opcional)",
-      "dueDay": "Dia de vencimento (1 a 31)"
+      "dueDay": "Dia de vencimento (1 a 31)",
+      "monthlyLimit": "Limite por mês (R$, opcional)",
+      "color": "Cor",
+      "logo": "Logotipo do cartão (opcional)"
     },
     "errors": {
       "nameRequired": "Informe um nome.",
       "nameTooLong": "O nome pode ter no máximo 80 caracteres.",
       "descriptionTooLong": "A descrição pode ter no máximo 255 caracteres.",
-      "dueDay": "Informe um dia de 1 a 31."
+      "dueDay": "Informe um dia de 1 a 31.",
+      "limit": "Informe um valor maior que zero ou deixe em branco.",
+      "logoType": "Escolha uma imagem PNG, JPG ou WebP.",
+      "logoSize": "A imagem pode ter no máximo 200 KB."
     },
     "categories": {
       "new": "Nova categoria",
       "edit": "Editar categoria",
       "empty": "Nenhuma categoria neste ano.",
-      "inactiveGroup": "Inativas"
+      "inactiveGroup": "Inativas",
+      "deleteTitle": "Excluir categoria",
+      "deleteQuestion": "Excluir a categoria \"{{name}}\"? Isso não pode ser desfeito.",
+      "inUseTitle": "Categoria em uso",
+      "inUse_one": "A categoria \"{{name}}\" tem {{count}} lançamento e não pode ser excluída.",
+      "inUse_other": "A categoria \"{{name}}\" tem {{count}} lançamentos e não pode ser excluída.",
+      "inUseQuestion": "Quer alterar esses lançamentos antes? A categoria continua existindo."
     },
     "cards": {
       "new": "Novo cartão",
       "edit": "Editar cartão",
       "empty": "Nenhum cartão neste ano. Cadastre os seus para lançar gastos de crédito.",
-      "inactiveGroup": "Inativos"
+      "inactiveGroup": "Inativos",
+      "deleteTitle": "Excluir cartão",
+      "deleteQuestion": "Excluir o cartão \"{{name}}\"? Isso não pode ser desfeito.",
+      "inUseTitle": "Cartão em uso",
+      "inUse_one": "O cartão \"{{name}}\" é usado em {{count}} lançamento e por isso não pode ser excluído.",
+      "inUse_other": "O cartão \"{{name}}\" é usado em {{count}} lançamentos e por isso não pode ser excluído.",
+      "inUseQuestion": "Troque o cartão desses lançamentos ou desative o cartão. Ele continua existindo."
     },
     "people": {
       "new": "Nova pessoa",
@@ -169,18 +195,26 @@
       "empty": "Nenhuma pessoa neste ano. Cadastre quem usa o seu cartão, como a sua mãe.",
       "inactiveGroup": "Inativas"
     },
-    "deleteTitle": "Excluir categoria",
-    "deleteQuestion": "Excluir a categoria \"{{name}}\"? Isso não pode ser desfeito.",
-    "inUseTitle": "Categoria em uso",
-    "inUse_one": "A categoria \"{{name}}\" tem {{count}} lançamento e não pode ser excluída.",
-    "inUse_other": "A categoria \"{{name}}\" tem {{count}} lançamentos e não pode ser excluída.",
-    "inUseQuestion": "Quer alterar esses lançamentos antes? A categoria continua existindo.",
     "changeExpenses": "Alterar lançamentos",
     "due": "vence",
     "editItem": "Editar {{name}}",
     "deactivateItem": "Desativar {{name}}",
     "activateItem": "Reativar {{name}}",
-    "deleteItem": "Excluir {{name}}"
+    "deleteItem": "Excluir {{name}}",
+    "limitPerMonth": "Limite por mês:",
+    "logoHelp": "PNG, JPG ou WebP, até 200 KB. Use uma imagem sua.",
+    "removeLogo": "Remover logotipo",
+    "colors": {
+      "none": "Sem cor",
+      "green": "Verde",
+      "teal": "Verde-água",
+      "blue": "Azul",
+      "purple": "Roxo",
+      "pink": "Rosa",
+      "red": "Vermelho",
+      "orange": "Laranja",
+      "brown": "Marrom"
+    }
   },
   "settings": {
     "general": "Preferências",
@@ -195,7 +229,7 @@
     "createYear": "Criar ano",
     "yearCreated": "Ano {{year}} criado.",
     "closings": "Fechamentos do mês",
-    "closingsHelp": "Mostra na tela do mês quanto sobra ou falta até cada dia escolhido. Um dia depois do fim do mês vale como o último dia.",
+    "closingsHelp": "Mostra na tela do mês a soma dos gastos de cada período até o dia escolhido. Um dia depois do fim do mês vale como o último dia.",
     "closingDays": "Dias de fechamento",
     "closingDay": "Dia {{day}}",
     "lastDay": "Último dia",
@@ -211,7 +245,13 @@
     "saved": "Lançamento salvo.",
     "saveAndAnother": "Salvar e lançar outro",
     "choose": "Escolha…",
-    "noCard": "Sem cartão",
+    "chooseCard": "Escolha um cartão…",
+    "cardMissing": "Cartão a definir",
+    "newCard": {
+      "option": "+ Novo cartão",
+      "title": "Novo cartão",
+      "create": "Criar cartão"
+    },
     "nobody": "Ninguém (gasto meu)",
     "fields": {
       "name": "Nome",
@@ -252,7 +292,8 @@
       "date": "Escolha uma data dentro do mês {{month}}.",
       "autoCount": "Informe de 2 a 120 parcelas.",
       "manualCount": "Informe o total de parcelas, de 2 a 120.",
-      "manualNumber": "A parcela atual deve estar entre 1 e o total."
+      "manualNumber": "A parcela atual deve estar entre 1 e o total.",
+      "card": "Escolha um cartão ou crie um novo."
     },
     "editTitle": "Editar lançamento",
     "installmentFixed": "Parcela {{label}}: o tipo e as parcelas não mudam na edição."
@@ -302,8 +343,7 @@
     "positions": {
       "title": "Fechamentos",
       "range": "Do dia {{from}} ao {{to}}",
-      "left": "Sobram",
-      "missing": "Faltam"
+      "spent": "Gastos"
     },
     "lists": {
       "fixed": "Fixos",
@@ -321,6 +361,11 @@
     "delete": "Excluir {{name}}",
     "deleteTitle": "Excluir",
     "deleteQuestion": "Excluir \"{{name}}\"? Isso não pode ser desfeito.",
+    "deleteScope": {
+      "title": "O que excluir",
+      "this": "Só esta parcela ({{number}}/{{count}})",
+      "following": "Esta e as próximas ({{number}}/{{count}} até {{count}}/{{count}})"
+    },
     "summary": {
       "title": "Resumos",
       "show": "Mostrar",
@@ -337,6 +382,12 @@
       "noExpenses": "Nenhum gasto neste mês.",
       "noCredit": "Nenhum gasto no crédito neste mês.",
       "noThirdParty": "Nenhum gasto de terceiros neste mês."
+    },
+    "limits": {
+      "title": "Limites de gasto",
+      "near": "está perto do limite",
+      "over": "passou do limite",
+      "of": "de"
     }
   }
 }

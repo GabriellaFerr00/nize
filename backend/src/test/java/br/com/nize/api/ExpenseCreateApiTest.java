@@ -1,5 +1,6 @@
 package br.com.nize.api;
 
+import static br.com.nize.DbMoney.cents;
 import br.com.nize.IsolationTestBase;
 import com.jayway.jsonpath.JsonPath;
 import jakarta.persistence.EntityManager;
@@ -70,7 +71,7 @@ class ExpenseCreateApiTest extends IsolationTestBase {
     }
 
     private ResultActions create(TestUser user, Map<String, String> fields) throws Exception {
-        return as(user, post(URL).contentType(MediaType.APPLICATION_JSON).content(json(fields)));
+        return as(user, post(URL).contentType(MediaType.APPLICATION_JSON).content(withCard(user, MONTH, json(fields))));
     }
 
     private List<Map<String, Object>> rows(TestUser user) {
@@ -97,12 +98,12 @@ class ExpenseCreateApiTest extends IsolationTestBase {
 
         Map<String, Object> row = rows(userA).get(0);
         assertThat(row.get("MONTH_REF")).isEqualTo(MONTH.toString());
-        assertThat(((Number) row.get("AMOUNT_CENTS")).longValue()).isEqualTo(150000L);
+        assertThat(cents(row.get("AMOUNT"))).isEqualTo(150000L);
         assertThat(row.get("CARD_ID")).isNull();
     }
 
     @Test
-    void aFixedExpenseMayBePaidOnCreditWithOrWithoutACard() throws Exception {
+    void aFixedExpenseMayBePaidOnCreditButAlwaysWithACard() throws Exception {
         long category = categoryId(userA, "Assinaturas");
         long card = createCard(userA, "Nubank", 10);
 
@@ -114,9 +115,16 @@ class ExpenseCreateApiTest extends IsolationTestBase {
                 .andExpect(jsonPath("$.type").value("FIXED")).andExpect(jsonPath("$.paymentMethod").value("CREDIT"))
                 .andExpect(jsonPath("$.cardId").value(card));
 
+        // credit without a card is refused (REQ-015/016, 2026-11-09), fixed or card type
         Map<String, String> noCard = base(category);
         noCard.put("paymentMethod", "\"CREDIT\"");
-        create(userA, noCard).andExpect(status().isCreated()).andExpect(jsonPath("$.cardId").doesNotExist());
+        as(userA, post(URL).contentType(MediaType.APPLICATION_JSON).content(json(noCard)))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("CARD_REQUIRED"));
+        Map<String, String> cardType = base(category);
+        cardType.put("type", "\"CARD\"");
+        as(userA, post(URL).contentType(MediaType.APPLICATION_JSON).content(json(cardType)))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("CARD_REQUIRED"));
+        assertThat(rows(userA)).hasSize(1);
     }
 
     @Test
@@ -284,9 +292,19 @@ class ExpenseCreateApiTest extends IsolationTestBase {
     @Test
     void largeAmountsKeepEveryCent() throws Exception {
         Map<String, String> fields = base(categoryId(userA, "Aluguel"));
-        fields.put("amountCents", "9000000000001");
-        create(userA, fields).andExpect(status().isCreated()).andExpect(jsonPath("$.amountCents").value(9000000000001L));
-        assertThat(((Number) rows(userA).get(0).get("AMOUNT_CENTS")).longValue()).isEqualTo(9000000000001L);
+        // the largest amount DECIMAL(12,2) holds: 9 999 999 999.99 reais (D-2)
+        fields.put("amountCents", "999999999999");
+        create(userA, fields).andExpect(status().isCreated()).andExpect(jsonPath("$.amountCents").value(999_999_999_999L));
+        assertThat(rows(userA).get(0).get("AMOUNT")).isEqualTo(new java.math.BigDecimal("9999999999.99"));
+        assertThat(cents(rows(userA).get(0).get("AMOUNT"))).isEqualTo(999_999_999_999L);
+    }
+
+    @Test
+    void anAmountThatDoesNotFitTheColumnIsRejected() throws Exception {
+        Map<String, String> fields = base(categoryId(userA, "Aluguel"));
+        fields.put("amountCents", "1000000000000");
+        create(userA, fields).andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+        assertThat(rows(userA)).isEmpty();
     }
 
     // ---- references: inactive and foreign ----

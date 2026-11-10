@@ -1,6 +1,7 @@
 package br.com.nize.domain;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -35,7 +36,9 @@ public class Expense {
     @Column(name = "category_id", nullable = false)
     private Long categoryId;
 
-    @Column(name = "amount_cents", nullable = false)
+    // DECIMAL(12,2) in reais in the database, cents here (D-2)
+    @Column(name = "amount", nullable = false, precision = 12, scale = 2)
+    @Convert(converter = MoneyColumnConverter.class)
     private long amountCents;
 
     // varchar, not a native enum column: keeps the MySQL schema validation happy

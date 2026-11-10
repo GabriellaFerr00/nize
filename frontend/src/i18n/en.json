@@ -25,6 +25,10 @@
   "theme": {
     "darkMode": "Dark theme"
   },
+  "privacy": {
+    "hideValues": "Hide values",
+    "hidden": "hidden value"
+  },
   "pages": {
     "month": "Month",
     "overview": "Yearly overview",
@@ -63,6 +67,8 @@
     "CARD_NAME_TAKEN": "A card with this name already exists this year.",
     "PERSON_NAME_TAKEN": "A person with this name already exists this year.",
     "CATEGORY_IN_USE": "This category still has expenses.",
+    "CARD_IN_USE": "This card is still used by expenses.",
+    "CARD_REQUIRED": "Choose a card: it is required for credit.",
     "YEAR_ALREADY_EXISTS": "That year already exists in your account.",
     "INVALID_YEAR": "Enter a year between 2000 and 2100.",
     "NOT_FOUND": "We could not find this item. Refresh the page.",
@@ -71,7 +77,9 @@
     "INVALID_MONTH": "Invalid month.",
     "DATE_OUT_OF_MONTH": "The date must be inside the month.",
     "INACTIVE_REFERENCE": "The chosen category, card or person is deactivated.",
-    "REFERENCE_UNAVAILABLE": "The installments run into a year where the category, card or person no longer exists. Adjust that year's lists."
+    "REFERENCE_UNAVAILABLE": "The installments run into a year where the category, card or person no longer exists. Adjust that year's lists.",
+    "INVALID_IMAGE": "The image must be PNG, JPG or WebP.",
+    "IMAGE_TOO_LARGE": "The image can be at most 200 KB."
   },
   "auth": {
     "fields": {
@@ -117,7 +125,7 @@
     "signOut": "Sign out",
     "pitch": {
       "month": "Record fixed costs, card spending and income for each month.",
-      "closings": "See what is left or missing at each closing of the month.",
+      "closings": "See how much you spent at each closing of the month.",
       "noBank": "No bank connection: you write it down and Nize does the math."
     }
   },
@@ -126,7 +134,7 @@
     "intro": "In a few steps you start tracking your month.",
     "steps": {
       "log": "Add your fixed expenses, card expenses and income on the month screen.",
-      "position": "See your balance and what is missing or left over in each part of the month (by default: day 1 to 15 and 16 to the end).",
+      "position": "See your balance and how much you spent in each part of the month (by default: day 1 to 15 and 16 to the end).",
       "setup": "Adjust categories, cards and people whenever you like, under Categories, Cards and People."
     },
     "dismiss": "Got it"
@@ -143,25 +151,43 @@
     "fields": {
       "name": "Name",
       "description": "Description (optional)",
-      "dueDay": "Due day (1 to 31)"
+      "dueDay": "Due day (1 to 31)",
+      "monthlyLimit": "Monthly limit (R$, optional)",
+      "color": "Color",
+      "logo": "Card logo (optional)"
     },
     "errors": {
       "nameRequired": "Enter a name.",
       "nameTooLong": "The name can have at most 80 characters.",
       "descriptionTooLong": "The description can have at most 255 characters.",
-      "dueDay": "Enter a day from 1 to 31."
+      "dueDay": "Enter a day from 1 to 31.",
+      "limit": "Enter an amount above zero or leave it empty.",
+      "logoType": "Choose a PNG, JPG or WebP image.",
+      "logoSize": "The image can be at most 200 KB."
     },
     "categories": {
       "new": "New category",
       "edit": "Edit category",
       "empty": "No categories this year.",
-      "inactiveGroup": "Inactive"
+      "inactiveGroup": "Inactive",
+      "deleteTitle": "Delete category",
+      "deleteQuestion": "Delete the category \"{{name}}\"? This cannot be undone.",
+      "inUseTitle": "Category in use",
+      "inUse_one": "The category \"{{name}}\" has {{count}} expense and cannot be deleted.",
+      "inUse_other": "The category \"{{name}}\" has {{count}} expenses and cannot be deleted.",
+      "inUseQuestion": "Do you want to change those expenses first? The category stays as it is."
     },
     "cards": {
       "new": "New card",
       "edit": "Edit card",
       "empty": "No cards this year. Add yours to record credit expenses.",
-      "inactiveGroup": "Inactive"
+      "inactiveGroup": "Inactive",
+      "deleteTitle": "Delete card",
+      "deleteQuestion": "Delete the card \"{{name}}\"? This cannot be undone.",
+      "inUseTitle": "Card in use",
+      "inUse_one": "The card \"{{name}}\" is used by {{count}} expense, so it cannot be deleted.",
+      "inUse_other": "The card \"{{name}}\" is used by {{count}} expenses, so it cannot be deleted.",
+      "inUseQuestion": "Change the card of those expenses or deactivate the card. It stays as it is."
     },
     "people": {
       "new": "New person",
@@ -169,18 +195,26 @@
       "empty": "No people this year. Add whoever uses your card, like your mother.",
       "inactiveGroup": "Inactive"
     },
-    "deleteTitle": "Delete category",
-    "deleteQuestion": "Delete the category \"{{name}}\"? This cannot be undone.",
-    "inUseTitle": "Category in use",
-    "inUse_one": "The category \"{{name}}\" has {{count}} expense and cannot be deleted.",
-    "inUse_other": "The category \"{{name}}\" has {{count}} expenses and cannot be deleted.",
-    "inUseQuestion": "Do you want to change those expenses first? The category stays as it is.",
     "changeExpenses": "Change expenses",
     "due": "due",
     "editItem": "Edit {{name}}",
     "deactivateItem": "Deactivate {{name}}",
     "activateItem": "Reactivate {{name}}",
-    "deleteItem": "Delete {{name}}"
+    "deleteItem": "Delete {{name}}",
+    "limitPerMonth": "Monthly limit:",
+    "logoHelp": "PNG, JPG or WebP, up to 200 KB. Use your own image.",
+    "removeLogo": "Remove logo",
+    "colors": {
+      "none": "No color",
+      "green": "Green",
+      "teal": "Teal",
+      "blue": "Blue",
+      "purple": "Purple",
+      "pink": "Pink",
+      "red": "Red",
+      "orange": "Orange",
+      "brown": "Brown"
+    }
   },
   "settings": {
     "general": "Preferences",
@@ -195,7 +229,7 @@
     "createYear": "Create year",
     "yearCreated": "Year {{year}} created.",
     "closings": "Month closings",
-    "closingsHelp": "Shows on the month screen what is left or missing up to each chosen day. A day past the end of the month counts as the last day.",
+    "closingsHelp": "Shows on the month screen the sum of the expenses of each period up to the chosen day. A day past the end of the month counts as the last day.",
     "closingDays": "Closing days",
     "closingDay": "Day {{day}}",
     "lastDay": "Last day",
@@ -211,7 +245,13 @@
     "saved": "Expense saved.",
     "saveAndAnother": "Save and add another",
     "choose": "Choose…",
-    "noCard": "No card",
+    "chooseCard": "Choose a card…",
+    "cardMissing": "Card to be set",
+    "newCard": {
+      "option": "+ New card",
+      "title": "New card",
+      "create": "Create card"
+    },
     "nobody": "Nobody (my expense)",
     "fields": {
       "name": "Name",
@@ -252,7 +292,8 @@
       "date": "Pick a date inside {{month}}.",
       "autoCount": "Enter 2 to 120 installments.",
       "manualCount": "Enter the total installments, from 2 to 120.",
-      "manualNumber": "The current installment must be between 1 and the total."
+      "manualNumber": "The current installment must be between 1 and the total.",
+      "card": "Choose a card or create a new one."
     },
     "editTitle": "Edit expense",
     "installmentFixed": "Installment {{label}}: the type and the installments do not change when editing."
@@ -302,8 +343,7 @@
     "positions": {
       "title": "Closings",
       "range": "Day {{from}} to {{to}}",
-      "left": "Left",
-      "missing": "Missing"
+      "spent": "Spent"
     },
     "lists": {
       "fixed": "Fixed",
@@ -321,6 +361,11 @@
     "delete": "Delete {{name}}",
     "deleteTitle": "Delete",
     "deleteQuestion": "Delete \"{{name}}\"? This cannot be undone.",
+    "deleteScope": {
+      "title": "What to delete",
+      "this": "Only this installment ({{number}}/{{count}})",
+      "following": "This one and the next ones ({{number}}/{{count}} to {{count}}/{{count}})"
+    },
     "summary": {
       "title": "Summaries",
       "show": "Show",
@@ -337,6 +382,12 @@
       "noExpenses": "No expenses this month.",
       "noCredit": "No credit expenses this month.",
       "noThirdParty": "No third-party expenses this month."
+    },
+    "limits": {
+      "title": "Spending limits",
+      "near": "is close to its limit",
+      "over": "is over its limit",
+      "of": "of"
     }
   }
 }

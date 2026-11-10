@@ -34,18 +34,21 @@ class IncomeSchemaTest {
 
     private void insert(long amount, Long personId, Integer number, Integer count, String group) {
         jdbc.update("""
-                INSERT INTO income (user_id, month_ref, name, income_date, amount_cents, person_id,
+                INSERT INTO income (user_id, month_ref, name, income_date, amount, person_id,
                                     installment_number, installment_count, installment_group_id)
                 VALUES (?, '2026-11', 'Salário', DATE '2026-11-05', ?, ?, ?, ?, ?)
                 """, user, amount, personId, number, count, group);
     }
 
     @Test
-    void tableExistsWithMoneyAsBigintAndNoDerivedColumns() {
-        String type = jdbc.queryForObject("""
-                SELECT data_type FROM information_schema.columns
-                WHERE LOWER(table_name) = 'income' AND LOWER(column_name) = 'amount_cents'""", String.class);
-        assertThat(type).isEqualToIgnoringCase("BIGINT");
+    void tableExistsWithMoneyAsDecimalInReaisAndNoDerivedColumns() {
+        // D-2: DECIMAL(12,2) in reais (the back-end converts to cents)
+        java.util.Map<String, Object> column = jdbc.queryForMap("""
+                SELECT data_type, numeric_precision, numeric_scale FROM information_schema.columns
+                WHERE LOWER(table_name) = 'income' AND LOWER(column_name) = 'amount'""");
+        assertThat(String.valueOf(column.get("data_type"))).isIn("DECIMAL", "NUMERIC", "decimal", "numeric");
+        assertThat(((Number) column.get("numeric_precision")).intValue()).isEqualTo(12);
+        assertThat(((Number) column.get("numeric_scale")).intValue()).isEqualTo(2);
         assertThat(jdbc.queryForList("""
                 SELECT column_name FROM information_schema.columns
                 WHERE LOWER(table_name) = 'income'

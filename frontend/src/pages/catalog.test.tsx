@@ -178,6 +178,148 @@ describe('categories screen (REQ-011, REQ-012)', () => {
   })
 })
 
+describe('category limit (TASK-068: REQ-051)', () => {
+  it('sets an optional monthly limit, shows it, and keeps it when deactivating', async () => {
+    const replies: Replies = {
+      ...baseReplies(),
+      'GET /api/years/2026/categories': { body: [category(1, 'Mercado')] },
+      'PUT /api/categories/1': { body: { ...category(1, 'Mercado'), monthlyLimitCents: 100_000 } },
+    }
+    const calls = stubApi(replies)
+    renderApp('/categories', { signedIn: true })
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar Mercado' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Editar categoria' })
+
+    const limit = within(dialog).getByLabelText('Limite por mês (R$, opcional)')
+    await userEvent.type(limit, '0')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }))
+    expect(within(dialog).getByText('Informe um valor maior que zero ou deixe em branco.')).toBeInTheDocument()
+
+    await userEvent.clear(limit)
+    await userEvent.type(limit, '1.000,00')
+    replies['GET /api/years/2026/categories'] = { body: [{ ...category(1, 'Mercado'), monthlyLimitCents: 100_000 }] }
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }))
+
+    await waitFor(() => expect(calls.filter((c) => c.key === 'PUT /api/categories/1')).toHaveLength(1))
+    expect(calls.find((c) => c.key === 'PUT /api/categories/1')?.body).toMatchObject({ monthlyLimitCents: 100_000 })
+    expect(await screen.findByText(/Limite por mês:/)).toHaveTextContent('R$ 1.000,00')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Desativar Mercado' }))
+    await waitFor(() => expect(calls.filter((c) => c.key === 'PUT /api/categories/1')).toHaveLength(2))
+    expect(calls.filter((c) => c.key === 'PUT /api/categories/1')[1].body).toMatchObject({ active: false, monthlyLimitCents: 100_000 })
+  })
+
+  it('an empty limit sends no limit', async () => {
+    const replies: Replies = {
+      ...baseReplies(),
+      'GET /api/years/2026/categories': { body: [{ ...category(1, 'Mercado'), monthlyLimitCents: 100_000 }] },
+      'PUT /api/categories/1': { body: category(1, 'Mercado') },
+    }
+    const calls = stubApi(replies)
+    renderApp('/categories', { signedIn: true })
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar Mercado' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Editar categoria' })
+    await userEvent.clear(within(dialog).getByLabelText('Limite por mês (R$, opcional)'))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }))
+
+    await waitFor(() => expect(calls.filter((c) => c.key === 'PUT /api/categories/1')).toHaveLength(1))
+    expect(calls.find((c) => c.key === 'PUT /api/categories/1')?.body).not.toHaveProperty('monthlyLimitCents')
+  })
+})
+
+describe('colors and card logos (TASK-069: REQ-052)', () => {
+  const card = (id: number, name: string, hasLogo = false) => ({ id, year: 2026, name, dueDay: 10, active: true, hasLogo })
+  const png = (size: number) => new File([new Uint8Array(size)], 'logo.png', { type: 'image/png' })
+
+  it('a category gets a color of the palette, shown as a dot', async () => {
+    const replies: Replies = {
+      ...baseReplies(),
+      'GET /api/years/2026/categories': { body: [category(1, 'Mercado')] },
+      'PUT /api/categories/1': { body: { ...category(1, 'Mercado'), color: 'teal' } },
+    }
+    const calls = stubApi(replies)
+    renderApp('/categories', { signedIn: true })
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar Mercado' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Editar categoria' })
+    const palette = within(dialog).getByRole('group', { name: 'Cor' })
+    expect(within(palette).getByRole('radio', { name: 'Sem cor' })).toBeChecked()
+    await userEvent.click(within(palette).getByRole('radio', { name: 'Verde-água' }))
+    replies['GET /api/years/2026/categories'] = { body: [{ ...category(1, 'Mercado'), color: 'teal' }] }
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }))
+
+    await waitFor(() => expect(calls.find((c) => c.key === 'PUT /api/categories/1')?.body).toMatchObject({ color: 'teal' }))
+    await waitFor(() => expect(document.querySelector('[data-color="teal"]')).not.toBeNull())
+  })
+
+  it('a person gets a color too', async () => {
+    const replies: Replies = {
+      ...baseReplies(),
+      'GET /api/years/2026/people': { body: [] },
+      'POST /api/years/2026/people': { status: 201, body: { id: 7, year: 2026, name: 'Mainha', active: true, color: 'pink' } },
+    }
+    const calls = stubApi(replies)
+    renderApp('/people', { signedIn: true })
+    await userEvent.click(await screen.findByRole('button', { name: 'Nova pessoa' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Nova pessoa' })
+    await userEvent.type(within(dialog).getByLabelText('Nome'), 'Mainha')
+    await userEvent.click(within(dialog).getByRole('radio', { name: 'Rosa' }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }))
+    await waitFor(() => expect(calls.find((c) => c.key === 'POST /api/years/2026/people')?.body).toEqual({ name: 'Mainha', color: 'pink' }))
+  })
+
+  it('a card without a logo shows its initial; with one, the image', async () => {
+    stubApi({
+      ...baseReplies(),
+      'GET /api/years/2026/cards': { body: [card(1, 'nubank'), card(2, 'Inter', true)] },
+      'GET /api/cards/2/logo': { raw: new Blob([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], { type: 'image/png' }) },
+    })
+    renderApp('/cards', { signedIn: true })
+    const nubank = (await screen.findByText('nubank')).closest('li') as HTMLElement
+    expect(nubank).toHaveTextContent('N')
+    const inter = screen.getByText('Inter').closest('li') as HTMLElement
+    await waitFor(() => expect(inter.querySelector('img')?.getAttribute('src')).toMatch(/^data:image\/png;base64,/))
+  })
+
+  it('sends the chosen image after saving the card, refusing other types and big files first', async () => {
+    const replies: Replies = {
+      ...baseReplies(),
+      'GET /api/years/2026/cards': { body: [card(1, 'Nubank')] },
+      'PUT /api/cards/1': { body: card(1, 'Nubank') },
+      'PUT /api/cards/1/logo': { status: 204 },
+    }
+    const calls = stubApi(replies)
+    renderApp('/cards', { signedIn: true })
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar Nubank' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Editar cartão' })
+    const input = within(dialog).getByLabelText('Logotipo do cartão (opcional)')
+
+    await userEvent.upload(input, new File(['<svg/>'], 'x.svg', { type: 'image/svg+xml' }), { applyAccept: false })
+    expect(within(dialog).getByText('Escolha uma imagem PNG, JPG ou WebP.')).toBeInTheDocument()
+    await userEvent.upload(input, png(200 * 1024 + 1))
+    expect(within(dialog).getByText('A imagem pode ter no máximo 200 KB.')).toBeInTheDocument()
+
+    await userEvent.upload(input, png(1000))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }))
+    await waitFor(() => expect(calls.find((c) => c.key === 'PUT /api/cards/1/logo')?.body).toEqual({ type: 'image/png', size: 1000 }))
+  })
+
+  it('removes the logo when asked', async () => {
+    const calls = stubApi({
+      ...baseReplies(),
+      'GET /api/years/2026/cards': { body: [card(1, 'Nubank', true)] },
+      'GET /api/cards/1/logo': { raw: new Blob([new Uint8Array([1])], { type: 'image/png' }) },
+      'PUT /api/cards/1': { body: card(1, 'Nubank', true) },
+      'DELETE /api/cards/1/logo': { status: 204 },
+    })
+    renderApp('/cards', { signedIn: true })
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar Nubank' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Editar cartão' })
+    await userEvent.click(within(dialog).getByRole('checkbox', { name: 'Remover logotipo' }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }))
+    await waitFor(() => expect(calls.some((c) => c.key === 'DELETE /api/cards/1/logo')).toBe(true))
+  })
+})
+
 describe('cards screen (REQ-013)', () => {
   const card = (id: number, name: string, dueDay: number, active = true) => ({ id, year: 2026, name, dueDay, active })
 
@@ -224,6 +366,40 @@ describe('cards screen (REQ-013)', () => {
 
     expect(await screen.findByText('Vence todo dia 10')).toBeInTheDocument()
     expect(calls.find((c) => c.key === 'POST /api/years/2026/cards')?.body).toEqual({ name: 'Nubank', dueDay: 10 })
+  })
+
+  it('deletes an unused card after confirming (TASK-063)', async () => {
+    const replies: Replies = {
+      ...baseReplies(),
+      'GET /api/years/2026/cards': { body: [card(1, 'Nubank', 10)] },
+      'DELETE /api/cards/1': { status: 204 },
+    }
+    const calls = stubApi(replies)
+    renderApp('/cards', { signedIn: true })
+    await userEvent.click(await screen.findByRole('button', { name: 'Excluir Nubank' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Excluir cartão' })
+    expect(dialog).toHaveTextContent('Excluir o cartão "Nubank"?')
+    replies['GET /api/years/2026/cards'] = { body: [] }
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Excluir' }))
+
+    await waitFor(() => expect(screen.queryByText('Nubank')).not.toBeInTheDocument())
+    expect(calls.some((c) => c.key === 'DELETE /api/cards/1')).toBe(true)
+  })
+
+  it('keeps a card in use and says that is the reason (TASK-063)', async () => {
+    stubApi({
+      ...baseReplies(),
+      'GET /api/years/2026/cards': { body: [card(1, 'Nubank', 10)] },
+      'DELETE /api/cards/1': { status: 409, body: { code: 'CARD_IN_USE', fields: {}, count: 4 } },
+    })
+    renderApp('/cards', { signedIn: true })
+    await userEvent.click(await screen.findByRole('button', { name: 'Excluir Nubank' }))
+    await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Excluir' }))
+
+    const dialog = await screen.findByRole('dialog', { name: 'Cartão em uso' })
+    expect(dialog).toHaveTextContent('é usado em 4 lançamentos e por isso não pode ser excluído')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }))
+    expect(screen.getByText('Nubank')).toBeInTheDocument()
   })
 })
 

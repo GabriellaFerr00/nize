@@ -1,6 +1,9 @@
 package br.com.nize.api;
 
+import static br.com.nize.domain.MoneyColumnConverter.MAX_CENTS;
+
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
@@ -10,7 +13,7 @@ import java.time.LocalDate;
 /** Full replacement of the editable fields (REQ-023); the month and the installment data cannot change. */
 public record UpdateIncomeRequest(
         @NotBlank @Size(max = 120) String name,
-        @NotNull @Positive Long amountCents,
+        @NotNull @Positive @Max(MAX_CENTS) Long amountCents,
         @NotNull LocalDate date,
         Long personId) {
 

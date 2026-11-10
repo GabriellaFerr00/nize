@@ -17,14 +17,27 @@ export type MonthTotals = {
  * What is left (positive) or missing (negative) in one interval between closings, from `fromDay` to `toDay`; each
  * interval counts only its own days and the last one ends on the month's last day (REQ-030).
  */
-export type Position = { fromDay: number; toDay: number; balanceCents: number }
+/** Sum of the expenses from fromDay to toDay (REQ-030). */
+export type Position = { fromDay: number; toDay: number; totalExpensesCents: number }
 
 /** `cardId` null is the "no card" group (REQ-037). */
-export type CardEntry = { cardId: number | null; cardName: string | null; amountCents: number }
+/** Only cards: there is no "Sem cartão" group (REQ-037, 2026-11-09). */
+/** How the month's spending of a category stands against its limit (REQ-051), as the API computed it. */
+export type LimitStatus = 'UNDER' | 'NEAR' | 'OVER'
+
+export type CardEntry = { cardId: number; cardName: string | null; amountCents: number }
 
 export type MonthSummaries = {
   /** `percent` is the share of the total expenses with 2 decimals (e.g. 23.86), computed by the API. */
-  byCategory: { categoryId: number; categoryName: string | null; amountCents: number; percent: number }[]
+  /** limitCents and limitStatus only for a category with a monthly limit (REQ-051). */
+  byCategory: {
+    categoryId: number
+    categoryName: string | null
+    amountCents: number
+    percent: number
+    limitCents?: number
+    limitStatus?: LimitStatus
+  }[]
   byPayment: { pixCents: number; creditCents: number }
   byCard: CardEntry[]
   byPerson: { personId: number; personName: string | null; amountCents: number; byCard: CardEntry[] }[]

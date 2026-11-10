@@ -64,7 +64,7 @@ Só dados sintéticos (`*@example.test`, senhas geradas por execução). Nada ro
 - **Autenticação**: e-mail inexistente e senha errada dão a mesma resposta e levam o mesmo tempo (BCrypt contra hash fictício); recuperação responde 202 sempre, token de uso único com expiração; BCrypt com custo ≥ 10; JWT `alg: none`, adulterado, de outro emissor, sem `exp` ou expirado → 401; o app não sobe sem `NIZE_JWT_SECRET` de 32+ bytes.
 - **Limite de tentativas (REQ-047)**: 6ª falha de login no mesmo e-mail → 429 `TOO_MANY_ATTEMPTS`, igual para e-mail existente ou não; limites por IP no login, cadastro e recuperação.
 - **Isolamento**: `IsolationCoverageTest` falha se um controller de dados não tiver teste que estenda `IsolationTestBase`; ArchUnit proíbe `userId` em DTO de entrada, exige `userId` nos métodos dos repositórios de dados e proíbe `findById` puro nos repositórios de categoria, cartão, pessoa e lançamento; o DAST confirma 404 entre usuárias.
-- **Dados**: colunas de dinheiro `BIGINT`, senha e token só como hash, nenhuma coluna de CPF/cartão (`check-schema.sql`); usuário da aplicação sem `CREATE/ALTER/DROP/TRUNCATE/GRANT`; TLS obrigatório na URL do banco em `prod` (`DatabaseTlsGuard`); senhas, tokens e segredos fora de logs e respostas.
+- **Dados**: colunas de dinheiro `DECIMAL(12,2)` em reais (D-2), senha e token só como hash, nenhuma coluna de CPF/cartão (`check-schema.sql`); usuário da aplicação sem `CREATE/ALTER/DROP/TRUNCATE/GRANT`; TLS obrigatório na URL do banco em `prod` (`DatabaseTlsGuard`); senhas, tokens e segredos fora de logs e respostas.
 - **Sem papéis administrativos** no escopo atual: não há teste de escalonamento de privilégio.
 
 ## 4. Segredos e variáveis

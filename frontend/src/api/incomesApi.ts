@@ -1,4 +1,5 @@
 import { apiRequest } from './client'
+import type { DeleteScope } from './expensesApi'
 
 /** What the API accepts to create an income; with a person it is a reimbursement (REQ-024..026). */
 export type NewIncome = {
@@ -33,4 +34,5 @@ export const createIncome = (month: string, income: NewIncome) =>
 export const updateIncome = (id: number, income: IncomeEdit) =>
   apiRequest<Income>(`/incomes/${id}`, { method: 'PUT', body: income })
 
-export const deleteIncome = (id: number) => apiRequest(`/incomes/${id}`, { method: 'DELETE' })
+export const deleteIncome = (id: number, scope: DeleteScope = 'this') =>
+  apiRequest(scope === 'following' ? `/incomes/${id}?scope=following` : `/incomes/${id}`, { method: 'DELETE' })

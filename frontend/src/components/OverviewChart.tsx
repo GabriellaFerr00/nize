@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { formatCents, formatCompactCents } from '../lib/money'
+import { HIDDEN_DIGITS, useValuesHidden } from '../lib/privacy'
 
 export type OverviewChartRow = {
   month: string
@@ -30,7 +31,9 @@ function MonthTick({ x = 0, y = 0, payload, rows, currentMonth }: TickProps) {
  */
 export default function OverviewChart({ rows, currentMonth, onOpenMonth }: Props) {
   const { t, i18n } = useTranslation()
-  const money = (value: unknown) => formatCents(Number(value), i18n.language)
+  const hidden = useValuesHidden()
+  // REQ-049: with the values hidden, the axis and the tooltip show dots instead of amounts
+  const money = (value: unknown) => (hidden ? HIDDEN_DIGITS : formatCents(Number(value), i18n.language))
   const open = (_: unknown, index: number) => onOpenMonth(rows[index].month)
   return (
     <ResponsiveContainer width="100%" height={280} initialDimension={{ width: 320, height: 280 }}>
@@ -53,7 +56,7 @@ export default function OverviewChart({ rows, currentMonth, onOpenMonth }: Props
           axisLine={false}
           tick={{ fill: 'var(--nz-ink-soft)' }}
           fontSize={11}
-          tickFormatter={(value: number) => formatCompactCents(value, i18n.language)}
+          tickFormatter={(value: number) => (hidden ? HIDDEN_DIGITS : formatCompactCents(value, i18n.language))}
         />
         <Tooltip
           formatter={money}

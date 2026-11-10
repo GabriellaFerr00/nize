@@ -3,7 +3,10 @@ import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { CardEntry, MonthView } from '../api/monthApi'
 import { formatPercent } from '../lib/format'
+import type { YearCatalogs } from '../lib/useMonth'
+import { CardBadge } from './CardBadge'
 import { Money } from './Money'
+import { TagDot } from './TagDot'
 
 function Block({ title, empty, children }: { title: string; empty?: string; children: ReactNode }) {
   return (
@@ -14,18 +17,31 @@ function Block({ title, empty, children }: { title: string; empty?: string; chil
   )
 }
 
-type LineProps = { label: string; cents: number; extra?: string; sub?: boolean; percent?: number }
+type LineProps = {
+  label: string
+  cents: number
+  extra?: string
+  sub?: boolean
+  percent?: number
+  limit?: ReactNode
+  /** Color dot or card image before the name (REQ-052). */
+  lead?: ReactNode
+}
 
-function Line({ label, cents, extra, sub = false, percent }: LineProps) {
+function Line({ label, cents, extra, sub = false, percent, limit, lead }: LineProps) {
   return (
     <li className={`flex flex-col gap-1 text-sm ${sub ? 'pl-3 text-ink-soft' : 'text-ink'}`}>
       <span className="flex items-baseline justify-between gap-2">
-        <span className="min-w-0 break-words">{label}</span>
+        <span className="flex min-w-0 items-center gap-2 break-words">
+          {lead}
+          {label}
+        </span>
         <span className="flex shrink-0 items-baseline gap-2">
           {extra && <span className="text-xs text-ink-soft tabular-nums">{extra}</span>}
           <Money cents={cents} className={sub ? '' : 'font-medium'} />
         </span>
       </span>
+      {limit}
       {percent !== undefined && (
         // as long as the percentage the API computed (display only)
         <span className="h-1.5 rounded-full bg-line" aria-hidden>
@@ -38,14 +54,14 @@ function Line({ label, cents, extra, sub = false, percent }: LineProps) {
 
 /**
  * Summaries of the month (REQ-035..038) and the own balance (REQ-034), exactly as the API computed them:
- * category with percentage, payment method, card (with "no card") and third parties by person and card.
+ * category with percentage (and "used of limit", REQ-051), payment method, card and third parties by person and card.
  * Collapsible on phones; always open from 768px up (NFR-006).
  */
-export function SummaryPanel({ view }: { view: MonthView }) {
+export function SummaryPanel({ view, catalogs }: { view: MonthView; catalogs?: YearCatalogs }) {
   const { t, i18n } = useTranslation()
   const [open, setOpen] = useState(false)
   const { totals, summaries } = view
-  const cardName = (c: CardEntry) => c.cardName ?? t('expense.noCard')
+  const cardName = (c: CardEntry) => c.cardName ?? ''
   const noExpenses = summaries.byCategory.length === 0 ? t('month.summary.noExpenses') : undefined
 
   return (
@@ -83,9 +99,20 @@ export function SummaryPanel({ view }: { view: MonthView }) {
             <Line
               key={c.categoryId}
               label={c.categoryName ?? '—'}
+              lead={<TagDot color={catalogs?.categories.find((x) => x.id === c.categoryId)?.color} />}
               cents={c.amountCents}
               extra={formatPercent(c.percent, i18n.language)}
               percent={c.percent}
+              limit={
+                c.limitCents !== undefined && (
+                  // "used of limit" (REQ-051); the warning word comes from the API status, never recomputed here
+                  <span className={`text-xs ${c.limitStatus === 'OVER' || c.limitStatus === 'NEAR' ? 'font-medium text-warning' : 'text-ink-soft'}`}>
+                    <Money cents={c.amountCents} /> {t('month.limits.of')} <Money cents={c.limitCents} />
+                    {c.limitStatus === 'OVER' && ` · ${t('month.limits.over')}`}
+                    {c.limitStatus === 'NEAR' && ` · ${t('month.limits.near')}`}
+                  </span>
+                )
+              }
             />
           ))}
         </Block>
@@ -97,7 +124,12 @@ export function SummaryPanel({ view }: { view: MonthView }) {
 
         <Block title={t('month.summary.byCard')} empty={summaries.byCard.length === 0 ? t('month.summary.noCredit') : undefined}>
           {summaries.byCard.map((c) => (
-            <Line key={c.cardId ?? 'none'} label={cardName(c)} cents={c.amountCents} />
+            <Line
+              key={c.cardId}
+              label={cardName(c)}
+              cents={c.amountCents}
+              lead={<CardBadge id={c.cardId} name={cardName(c)} size="sm" hasLogo={catalogs?.cards.find((x) => x.id === c.cardId)?.hasLogo} />}
+            />
           ))}
         </Block>
 
@@ -108,9 +140,13 @@ export function SummaryPanel({ view }: { view: MonthView }) {
           {summaries.byPerson.map((p) => (
             <li key={p.personId} className="flex flex-col gap-1">
               <ul className="flex flex-col gap-1">
-                <Line label={p.personName ?? '—'} cents={p.amountCents} />
+                <Line
+                  label={p.personName ?? '—'}
+                  cents={p.amountCents}
+                  lead={<TagDot color={catalogs?.people.find((x) => x.id === p.personId)?.color} />}
+                />
                 {p.byCard.map((c) => (
-                  <Line sub key={c.cardId ?? 'none'} label={cardName(c)} cents={c.amountCents} />
+                  <Line sub key={c.cardId} label={cardName(c)} cents={c.amountCents} />
                 ))}
               </ul>
             </li>

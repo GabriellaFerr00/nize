@@ -1,5 +1,5 @@
 # design.md
-> Nize — Version 0.2.9 (MVP web) — 2026-11-05
+> Nize — Version 0.3.0 (MVP web) — 2026-11-09
 
 ## Architecture Overview
 Monorepo com dois módulos independentes: `backend` (API REST) e `frontend` (SPA). **Toda regra de cálculo vive só no back-end** (totais, saldo, posição nos fechamentos, parcelas, carga do mês, saldo próprio, porcentagens). O front apenas exibe o que a API devolve e nunca recalcula valores. Como back (Java) e front (TypeScript) não compartilham código, o "pacote de regras compartilhado" do PDF vira o pacote Java `br.com.nize.rules`, puro (sem Spring, sem JPA), testado antes do código.
@@ -38,7 +38,7 @@ Monorepo com dois módulos independentes: `backend` (API REST) e `frontend` (SPA
 | # | Decisão | Motivo |
 |---|---|---|
 | D-1 | Regras só no back; front só exibe | PDF + confirmação da usuária |
-| D-2 | Dinheiro em `BIGINT` centavos; sem `double`/`BigDecimal` | NFR-001 |
+| D-2 | Dinheiro em centavos (`long`) nas regras, serviços, API e front; sem `double`/`float`. No banco, `DECIMAL(12,2)` em reais (colunas `amount`), convertido por `MoneyColumnConverter` (JPA) na leitura e na gravação; `BigDecimal` só dentro desse conversor (2026-11-09, pedido da usuária) | NFR-001 |
 | D-3 | Mês como `CHAR(7)` `AAAA-MM` | PDF |
 | D-4 | Totais, saldos e % calculados na leitura, nunca persistidos | NFR-002 |
 | D-5 | Autenticação própria: e-mail+senha (BCrypt) e JWT de curta duração | "Autenticação gerenciada pelo backend" |
@@ -56,6 +56,7 @@ Monorepo com dois módulos independentes: `backend` (API REST) e `frontend` (SPA
 | D-18 | Healthcheck por Spring Boot Actuator, expondo só `GET /actuator/health` (sem detalhes, sem autenticação) | Smoke test e `HEALTHCHECK` do Docker |
 | D-19 | `GET /api/years/{year}/overview` faz a carga do mês (`MonthLoadService.open`, idempotente) de cada mês do ano até o mês vigente, em ordem (janeiro primeiro, para cada mês copiar do anterior); ano passado → os 12 meses; ano futuro → nenhum. Meses depois do vigente só mostram o que já existe. Cada mês devolvido bate com `GET /api/months/{m}` (mesmos totais e saldo) | Decisão da usuária, 2026-11-04 |
 | D-20 | Identidade visual "Verde Nize" (substitui a verde-azulada): paleta, tokens e regras da skill `design-nize` (`.claude/skills/design-nize`). Cores só como tokens semânticos em `src/styles/index.css` (`page`, `sidebar`, `card`, `soft`, `line`, `line-strong`, `ink`, `ink-soft`, `brand`, `on-brand`, `brand-text`, `positive`, `negative`, `on-negative`, `warning`, `focus`, `backdrop`, `chart-*`), com valores para claro e escuro; as cores padrão do Tailwind ficam desligadas. O Verde Nize `#B8F45A` só é preenchimento no modo claro (texto verde usa `brand-text`). Tema: só Claro e Escuro; o seletor grava `nize.theme` (`light`/`dark`) no `localStorage` e o `<html>` sempre recebe `data-theme` (`lib/theme.ts`); sem escolha gravada, o tema inicial vem de `prefers-color-scheme` (decisão da usuária 2026-11-05: sem opção "Sistema"). Logotipo: o padrão de `public/logoPadrao/` (`nize-logo-n-bloco-verde-*`: bloco verde arredondado com o "N" + "ize"), mostrado por `components/Logo.tsx`; no modo escuro usa a variante `nize-logo-n-bloco-verde-fundo-escuro-*` (só a palavra "ize" em off-white `#F2F5EC`, gerada a partir do original) por meio da variante `dark:` do Tailwind, que acompanha o mesmo tema dos tokens. Ícones quadrados em `public/logotipo/` (favicon, `apple-touch-icon`, `site.webmanifest`). Fonte do sistema (a CSP não permite fonte externa). Menu lateral continua a partir de 768px (REQ-043), não 1024px como na skill | REQ-045, decisão da usuária 2026-11-05 |
+| D-21 | Cores e logotipos (REQ-052, 2026-11-09): categoria e pessoa guardam a **chave** de uma paleta fixa (`green`, `teal`, `blue`, `purple`, `pink`, `red`, `orange`, `brown`; NULL = neutra); o front mapeia a chave para tokens `--nz-tag-*` com valor claro e escuro (≥ 4:1 contra card e soft nos dois temas, conferido com `contraste.py`) e mostra uma bolinha ao lado do nome (nunca como cor de texto). O logotipo do cartão é uma imagem enviada pela usuária (PNG, JPEG ou WebP conferidos pelos primeiros bytes, ≤ 200 KB; SVG recusado por poder conter script), guardada na tabela `card_logo` e servida pela API; o front a mostra como `data:` URL (a CSP já permite `img-src data:`). Sem logotipo, a inicial do nome. O Nize não traz logotipos de bancos | REQ-052 |
 | D-9 | Posição por quinzena usa "data efetiva" (pela forma de pagamento, não pelo tipo): Pix = `data`; crédito com cartão = dia de vencimento do cartão dentro do mês do lançamento; crédito sem cartão = `data` (confirmado 2026-11-01) | REQ-032 |
 
 ## Nomenclatura em inglês
@@ -72,7 +73,7 @@ As seções de modelo de dados, regras e API abaixo foram escritas em português
 | lancamento (tipo `fixo`, `cartao`) | `expense` (type `FIXED`, `CARD`) |
 | entrada | `income` |
 | forma_pagamento (`pix`, `credito`) | `payment_method` (`PIX`, `CREDIT`) |
-| valor_centavos | `amount_cents` |
+| valor | `amount` (`DECIMAL(12,2)`, reais; até 0.2.10 era `amount_cents BIGINT`) |
 | dia_vencimento | `due_day` |
 | pago / ativa / ativo | `paid` / `active` |
 | parcela_atual / parcelas_total / grupo_parcela_id | `installment_number` / `installment_count` / `installment_group_id` |
@@ -141,6 +142,8 @@ Convenções: todas as tabelas têm `usuario_id BIGINT NOT NULL` (FK `usuario.id
 | nome | VARCHAR(80) | NOT NULL | UNIQUE (usuario_id, ano, nome) |
 | descricao | VARCHAR(255) | NULL | |
 | ativa | BOOLEAN | NOT NULL, default true | |
+| cor | VARCHAR(16) | NULL, CHECK na paleta (D-21) | REQ-052; coluna `color` (V9) |
+| limite_mensal | DECIMAL(12,2) | NULL, CHECK > 0 | REQ-051; coluna `limit_amount` (V8), `monthlyLimitCents` na API; NULL = sem limite; copiado com a categoria para o ano novo |
 
 ### cartao
 | Field | Type | Constraints | Notes |
@@ -160,6 +163,16 @@ Convenções: todas as tabelas têm `usuario_id BIGINT NOT NULL` (FK `usuario.id
 | ano | SMALLINT | NOT NULL | |
 | nome | VARCHAR(80) | NOT NULL | UNIQUE (usuario_id, ano, nome) |
 | ativa | BOOLEAN | NOT NULL, default true | |
+| cor | VARCHAR(16) | NULL, CHECK na paleta (D-21) | REQ-052; coluna `color` (V9) |
+
+### logotipo_cartao
+Tabela `card_logo` (V9), uma linha por cartão que tem imagem (REQ-052, D-21).
+| Field | Type | Constraints | Notes |
+|---|---|---|---|
+| cartao_id | BIGINT | PK, FK cartao | `card_id`; excluído junto com o cartão |
+| usuario_id | BIGINT | NOT NULL, FK | `user_id`; toda consulta filtra por ele |
+| tipo | VARCHAR(16) | NOT NULL, CHECK em `image/png`, `image/jpeg`, `image/webp` | `content_type`, do conteúdo, não do cabeçalho |
+| imagem | MEDIUMBLOB | NOT NULL | `data`, até 200 KB |
 
 ### lancamento
 | Field | Type | Constraints | Notes |
@@ -169,10 +182,10 @@ Convenções: todas as tabelas têm `usuario_id BIGINT NOT NULL` (FK `usuario.id
 | mes | CHAR(7) | NOT NULL | `AAAA-MM` |
 | nome | VARCHAR(120) | NOT NULL | |
 | categoria_id | BIGINT | NOT NULL, FK categoria | |
-| valor_centavos | BIGINT | NOT NULL, CHECK > 0 | |
+| valor | DECIMAL(12,2) | NOT NULL, CHECK > 0 | |
 | tipo | VARCHAR(10) | NOT NULL, CHECK in ('fixo','cartao') | |
 | forma_pagamento | VARCHAR(10) | NOT NULL, CHECK in ('pix','credito') | independente do tipo: fixo pode ser pix ou crédito (ex.: assinatura no cartão); cartao é sempre crédito |
-| cartao_id | BIGINT | NULL, FK cartao | só crédito; NULL = "Sem cartão" |
+| cartao_id | BIGINT | NULL, FK cartao | só crédito; obrigatório no crédito desde 2026-11-09 (validado no serviço, `CARD_REQUIRED`); NULL só em linhas antigas |
 | pessoa_id | BIGINT | NULL, FK pessoa | NOT NULL = gasto de terceiro (REQ-017) |
 | pago | BOOLEAN | NOT NULL, default false | só controle (REQ-033) |
 | data | DATE | NOT NULL | obrigatória (PDF); deve estar em `mes` |
@@ -184,7 +197,7 @@ Restrições: UNIQUE (`grupo_parcela_id`, `parcela_atual`) onde não nulos; `par
 
 Regras de consistência do lançamento (validadas no serviço; as CHECK do banco cobrem as simples):
 - `tipo = cartao` ⇒ `forma_pagamento = credito`. `tipo = fixo` ⇒ `forma_pagamento` pix **ou** crédito.
-- `cartao_id` só com `forma_pagamento = credito`; crédito sem `cartao_id` é "Sem cartão".
+- `cartao_id` só com `forma_pagamento = credito`, e obrigatório nele (novo ou editado; 400 `CARD_REQUIRED`). Linhas antigas de crédito sem `cartao_id` continuam válidas e contam nos totais, mas não entram no resumo por cartão (não há "Sem cartão").
 - Parcelas (`parcela_atual`/`parcelas_total`/`grupo_parcela_id`) só em `tipo = cartao`.
 - Um fixo no crédito continua na lista de Fixos e entra em `totalFixos`; também entra em "total de crédito" e no resumo por cartão.
 
@@ -196,7 +209,7 @@ Regras de consistência do lançamento (validadas no serviço; as CHECK do banco
 | mes | CHAR(7) | NOT NULL | |
 | nome | VARCHAR(120) | NOT NULL | |
 | data | DATE | NOT NULL | define dia 15/30 |
-| valor_centavos | BIGINT | NOT NULL, CHECK > 0 | |
+| valor | DECIMAL(12,2) | NOT NULL, CHECK > 0 | |
 | pessoa_id | BIGINT | NULL, FK pessoa | NOT NULL = reembolso de terceiro |
 | parcela_atual | SMALLINT | NULL | ex.: 1/3 |
 | parcelas_total | SMALLINT | NULL | |
@@ -241,12 +254,13 @@ Semeadas em `category` para cada ano novo (REQ-010). A usuária pode renomear, d
 | totalFixos | Σ valor de lancamento tipo fixo | REQ-028 |
 | saldo | Σ entradas − totalGastos | REQ-029 |
 | dataEfetiva | Pix: `data`; crédito com cartão: dia `min(dia_vencimento, último dia do mês)` do `mes` do lançamento; crédito sem cartão: `data` | REQ-032 |
-| posições(dias) | limites = `min(d, último dia do mês)` de cada dia de fechamento, em ordem crescente e sem repetir (30 e 31 em fevereiro dão um só). Intervalos: `[1, L1]`, `[L1+1, L2]`, …, e o último vai até o último dia do mês (`[Ln-1+1, fim]`, mesmo que Ln seja antes do fim). Cada posição `{fromDay, toDay, balanceCents}` = Σ entradas com `data.dia` no intervalo − Σ gastos com `dataEfetiva.dia` no intervalo; não acumula os intervalos anteriores. Fechamentos desligados ou sem dias → nenhuma posição | REQ-030/031/048 |
+| posições(dias) | limites = `min(d, último dia do mês)` de cada dia de fechamento, em ordem crescente e sem repetir (30 e 31 em fevereiro dão um só). Intervalos: `[1, L1]`, `[L1+1, L2]`, …, e o último vai até o último dia do mês (`[Ln-1+1, fim]`, mesmo que Ln seja antes do fim). Cada posição `{fromDay, toDay, totalExpensesCents}` = Σ gastos com `dataEfetiva.dia` no intervalo (entradas não entram; nunca negativo); não acumula os intervalos anteriores. Fechamentos desligados ou sem dias → nenhuma posição | REQ-030/031/048 |
 | saldoPróprio | saldo + Σ gastos com pessoa_id − Σ entradas com pessoa_id | REQ-034 |
 | dividirParcelas(total, n) | base = total ÷ n (inteira); n−1 parcelas = base; última = total − base×(n−1) | REQ-020 |
 | parcelasPorValor(valor, n) | n parcelas iguais | REQ-018 |
 | resumoPorCategoria | Σ por categoria; % = valor ÷ totalGastos (2 casas, HALF_UP só na exibição; aritmética decimal exata, nunca float; na API é um número com 2 casas, ex.: `23.86`) | REQ-035 |
-| resumoPorForma / PorCartão | Σ por forma de pagamento; Σ por cartão com grupo "Sem cartão" | REQ-036/037 |
+| limiteDaCategoria | `CategoryLimit.of(gasto, limite)`: sem limite → `NONE`; gasto > limite → `OVER`; gasto ≥ 80% do limite (`gasto × 100 ≥ limite × 80`, inteiros) → `NEAR`; senão `UNDER`. Na API, cada item de `byCategory` traz `limitCents` e `limitStatus` (só com limite). A tela do mês mostra uma faixa com as categorias `NEAR`/`OVER` e "usado de limite" no resumo; nada bloqueia o lançamento | REQ-051 |
+| resumoPorForma / PorCartão | Σ por forma de pagamento; Σ por cartão, só cartões (sem grupo "Sem cartão"; linha antiga sem cartão fica só no total de crédito) | REQ-036/037 |
 | resumoPorPessoa | Σ gastos com pessoa_id, por pessoa e por cartão | REQ-038 |
 | cargaDoMês(mesAnterior, mês) | copia os fixos (pago=false; gastos avulsos não são copiados); para cada parcela N/M do mês anterior com N < M cria a parcela N+1, **se a permissão de parcelas automáticas está ligada**, e se `(grupo, N+1)` ainda não existe (vale também para parcelas lançadas à mão, que recebem grupo próprio ao serem criadas); idem entradas parceladas; só se o mês não está em `loaded_month`. Referências (categoria, cartão, pessoa) trocam de ano pelo nome; item cuja categoria não existe no ano novo é ignorado | REQ-022 |
 
@@ -268,20 +282,24 @@ REST JSON sob `/api`. Todos os endpoints exceto `/api/auth/**` exigem `Authoriza
 | GET | /api/anos | sim | REQ-008 | anos existentes |
 | POST | /api/anos/{ano} | sim | REQ-007 | cria ano copiando estrutura do anterior |
 | GET | /api/anos/{ano}/categorias | sim | REQ-010 | lista |
-| POST | /api/anos/{ano}/categorias | sim | REQ-011 | cria |
+| POST | /api/anos/{ano}/categorias | sim | REQ-011, REQ-051 | cria; `monthlyLimitCents` opcional (> 0, ≤ 999999999999) também no PUT (ausente/null = sem limite) |
 | PUT | /api/categorias/{id} | sim | REQ-011 | renomeia, descreve, ativa/desativa |
 | DELETE | /api/categorias/{id} | sim | REQ-012 | exclui; 409 com contagem se houver lançamentos |
 | GET/POST | /api/anos/{ano}/cartoes | sim | REQ-013 | lista / cria |
 | PUT | /api/cartoes/{id} | sim | REQ-013 | edita |
+| PUT | /api/cartoes/{id}/logotipo | sim | REQ-052 | `PUT /api/cards/{id}/logo`, corpo = bytes da imagem; 204; não é PNG/JPEG/WebP → 400 `INVALID_IMAGE`; > 200 KB → 400 `IMAGE_TOO_LARGE`; cartão de outra usuária → 404 |
+| GET | /api/cartoes/{id}/logotipo | sim | REQ-052 | bytes com o `Content-Type` guardado, `nosniff`, `Cache-Control: private, no-cache`; sem imagem → 404. `CardResponse.hasLogo` diz se existe |
+| DELETE | /api/cartoes/{id}/logotipo | sim | REQ-052 | remove a imagem; 204 |
+| DELETE | /api/cartoes/{id} | sim | REQ-013 | `DELETE /api/cards/{id}`: exclui; 409 `CARD_IN_USE` com `count` se houver lançamentos com o cartão (de qualquer mês do ano) |
 | GET/POST | /api/anos/{ano}/pessoas | sim | REQ-014 | lista / cria |
 | PUT | /api/pessoas/{id} | sim | REQ-014 | edita |
-| GET | /api/meses/{aaaa-mm} | sim | REQ-022, REQ-027..041 | abre o mês (dispara carga na 1ª vez) e devolve listas, totais, posições (`positions: [{fromDay, toDay, balanceCents}]`, uma por intervalo), resumos e saldo próprio |
+| GET | /api/meses/{aaaa-mm} | sim | REQ-022, REQ-027..041 | abre o mês (dispara carga na 1ª vez) e devolve listas, totais, posições (`positions: [{fromDay, toDay, totalExpensesCents}]`, uma por intervalo), resumos e saldo próprio |
 | POST | /api/meses/{aaaa-mm}/lancamentos | sim | REQ-015..020 | cria gasto; gera parcelas se `gerarParcelas` e permissão ligada |
 | PUT | /api/lancamentos/{id} | sim | REQ-023 | edita |
 | PATCH | /api/lancamentos/{id}/pago | sim | REQ-015, REQ-033 | marca/desmarca pago |
-| DELETE | /api/lancamentos/{id} | sim | REQ-023 | exclui |
+| DELETE | /api/lancamentos/{id} | sim | REQ-023, REQ-050 | exclui (204). Parcela: `?scope=this` (padrão) só ela; `?scope=following` ela e as de número maior do mesmo `installment_group_id` (meses seguintes). Com `this`, se a parcela seguinte ainda não existe e o mês seguinte ainda não foi carregado (parcelas automáticas ligadas), ela é criada na hora no mês seguinte, para a carga não perder a sequência |
 | POST | /api/meses/{aaaa-mm}/entradas | sim | REQ-024..026 | cria entrada (parcelada ou reembolso) |
-| PUT/DELETE | /api/entradas/{id} | sim | REQ-023 | edita / exclui |
+| PUT/DELETE | /api/entradas/{id} | sim | REQ-023, REQ-050 | edita / exclui; `scope` como em lançamentos |
 | GET | /api/anos/{ano}/panorama | sim | REQ-039 | `GET /api/years/{year}/overview` → `{year, months: [{month, totalExpensesCents, totalIncomeCents, balanceCents}]}` (12 meses, janeiro primeiro; mesma regra `MonthTotals` do mês); faz a carga dos meses até o vigente (D-19); ano que a usuária não tem → 404 |
 | GET | /actuator/health | não | D-18 | `{"status":"UP"}`; usado pelo Docker e pelo smoke test |
 
@@ -300,7 +318,7 @@ Limite de tentativas (REQ-047): os quatro `POST /api/auth/**` devolvem 429 `{cod
 
 Navegação: menu lateral (≥ 768px) e barra inferior (< 768px) — REQ-043. Mês padrão (`/`, menu "Mês" e "Panorama"): o mês do calendário dentro do ano vigente da usuária (nov/2026 com ano vigente 2027 → `2027-11`; `lib/month.defaultMonth`) — REQ-006, decisão da usuária 2026-11-04. Identidade visual própria "Verde Nize", modo claro/escuro com seletor de tema ao lado do idioma (D-20) — REQ-045. Link "Pular para o conteúdo" no topo; ações com área de toque ≥ 44px.
 
-Layout da tela do mês (REQ-041, D-20; aprovado pela usuária em 2026-11-05): uma faixa de topo com o saldo do mês primeiro e maior, os outros totais numa linha logo abaixo (entradas, gastos, fixos) e, com os fechamentos ligados, uma lista simples com o total de cada intervalo ("Do dia A ao B" e "Sobram/Faltam R$ X"), sem barra nem marca de hoje (decisão da usuária 2026-11-05). Com os fechamentos desligados a lista não aparece. As listas (Fixos, Cartão, Entradas) ficam numa só superfície, em estilo de livro-caixa: o dia do lançamento em destaque à esquerda de cada linha. Os resumos ficam numa superfície verde suave, com uma barra fina por categoria do tamanho da porcentagem que a API devolveu. Só os tokens de cor existentes; fonte do sistema.
+Layout da tela do mês (REQ-041, D-20; aprovado pela usuária em 2026-11-05): uma faixa de topo com o saldo do mês primeiro e maior, os outros totais numa linha logo abaixo (entradas, gastos, fixos) e, com os fechamentos ligados, uma lista simples com o total de cada intervalo ("Do dia A ao B" e "Gastos R$ X"), sem barra nem marca de hoje (decisão da usuária 2026-11-05). Com os fechamentos desligados a lista não aparece. As listas (Fixos, Cartão, Entradas) ficam numa só superfície, em estilo de livro-caixa: o dia do lançamento em destaque à esquerda de cada linha. Os resumos ficam numa superfície verde suave, com uma barra fina por categoria do tamanho da porcentagem que a API devolveu. Só os tokens de cor existentes; fonte do sistema.
 
 Layout das demais telas (D-20; aprovado pela usuária em 2026-11-05), no mesmo estilo da tela do mês (título grande, uma superfície por bloco, linhas de livro-caixa, só os tokens de cor, fonte do sistema):
 - **Base comum**: classes de botão (primário, secundário, perigo, ícone) e de campo em `lib/ui.ts`, usadas por todas as telas.
@@ -416,6 +434,8 @@ GitHub Actions (detalhes em `docs/ci-cd.md`; NFR-010). **Um workflow por tema**,
 | 0.1.7 | 2026-11-01 | Fixo pode ser no crédito (tipo e forma de pagamento independentes); regras de consistência do lançamento; Open Questions da Phase 3 resolvidas |
 | 0.1.8 | 2026-11-01 | `month` reservado no H2: coluna `month_ref`; data do lançamento `expense_date` |
 | 0.1.9 | 2026-11-01 | Carga do mês: continua parcelas à mão (grupo próprio) e respeita a permissão de parcelas automáticas |
+| 0.3.0 | 2026-11-09 | D-21: cores de categoria/pessoa (paleta fixa) e logotipo do cartão (V9 `color`, `card_logo`, `/api/cards/{id}/logo`; REQ-052). Limite mensal opcional por categoria (V8 `category.limit_amount`, regra `CategoryLimit`, `limitCents`/`limitStatus` no resumo; REQ-051). Cartão obrigatório no crédito (`CARD_REQUIRED`) e fim do "Sem cartão" nos resumos (REQ-015/016/037). Front: `lib/privacy.ts` + `ValuesToggle` (REQ-049, olho ao lado do tema), ícone sol/lua no `ThemeSwitcher` (REQ-045). Dinheiro em `DECIMAL(12,2)` no banco (V7: `expense.amount`, `income.amount`), `MoneyColumnConverter`; centavos no resto (D-2, NFR-001). `DELETE /api/cards/{id}` (REQ-013). Pedidos da usuária |
+| 0.2.10 | 2026-11-09 | Posição = só a soma dos gastos do intervalo (sem entradas); JSON `{fromDay, toDay, totalExpensesCents}`; tela "Gastos R$ X" sem sobra/falta (REQ-030 0.1.9, decisão da usuária) |
 | 0.2.9 | 2026-11-05 | Layout das demais telas (menu, cadastros, configurações, panorama, janelas, entrar) no estilo da tela do mês; tema por botão que alterna; `lib/ui.ts` (aprovado pela usuária) |
 | 0.2.8 | 2026-11-05 | Layout da tela do mês: saldo em destaque com totais numa linha, lista simples com o total de cada fechamento (a régua proposta foi descartada pela usuária), listas em estilo livro-caixa, resumos com barra por categoria (aprovado pela usuária) |
 | 0.2.7 | 2026-11-05 | D-20: identidade Verde Nize (tokens claro/escuro, logotipo de `logoPadrao` com variante para fundo escuro, seletor de tema Claro/Escuro); arquivos novos na File Structure |

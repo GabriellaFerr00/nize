@@ -38,6 +38,31 @@ public abstract class IsolationTestBase {
     protected TestUser userA;
     protected TestUser userB;
 
+    private final java.util.Map<String, Long> testCards = new java.util.HashMap<>();
+
+    /**
+     * Since 2026-11-09 every credit expense needs a card (REQ-015/016). Tests that are not about cards call this on
+     * their JSON: a credit expense without {@code cardId} gets the user's test card of that year (due on the 31st,
+     * so it never moves an expense to an earlier closing interval).
+     */
+    protected String withCard(TestUser user, Object month, String json) throws Exception {
+        boolean credit = json.contains("\"type\":\"CARD\"") || json.contains("\"paymentMethod\":\"CREDIT\"");
+        if (!credit || json.contains("\"cardId\"")) {
+            return json;
+        }
+        int year = Integer.parseInt(month.toString().substring(0, 4));
+        String key = user.id() + "/" + year;
+        Long card = testCards.get(key);
+        if (card == null) {
+            String body = as(user, post("/api/years/" + year + "/cards").contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"name\":\"Cartão de teste\",\"dueDay\":31}"))
+                    .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+            card = ((Number) JsonPath.read(body, "$.id")).longValue();
+            testCards.put(key, card);
+        }
+        return json.replaceFirst("\\{", "{\"cardId\":" + card + ",");
+    }
+
     @BeforeEach
     void createTwoUsers() throws Exception {
         userA = createUser("Ana", "user.a@example.com");

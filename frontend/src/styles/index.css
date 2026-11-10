@@ -34,6 +34,15 @@
   --nz-chart-expense: #c4432f; /* 5.0:1 on card */
   --nz-chart-grid: #cfdccb;
   --nz-chart-glow: none;
+  /* category/person colors (REQ-052, D-21): dots only, ≥ 4:1 on card and soft */
+  --nz-tag-green: #2f7d32;
+  --nz-tag-teal: #00796b;
+  --nz-tag-blue: #1f5fbf;
+  --nz-tag-purple: #7b3fb5;
+  --nz-tag-pink: #b8336a;
+  --nz-tag-red: #c0392b;
+  --nz-tag-orange: #b35900;
+  --nz-tag-brown: #7a5230;
 }
 
 /* ---------- Dark from the device, before the app sets data-theme (first paint only) ---------- */
@@ -64,6 +73,15 @@
     --nz-chart-expense: #ff7a6b;
     --nz-chart-grid: #2c4536;
     --nz-chart-glow: drop-shadow(0 0 6px rgb(184 244 90 / 0.35));
+    /* category/person colors (REQ-052, D-21): dots only, ≥ 4:1 on card and soft */
+    --nz-tag-green: #7bd88f;
+    --nz-tag-teal: #4fd1c5;
+    --nz-tag-blue: #7ab3ff;
+    --nz-tag-purple: #c39bff;
+    --nz-tag-pink: #ff8cc6;
+    --nz-tag-red: #ff8a7a;
+    --nz-tag-orange: #ffb366;
+    --nz-tag-brown: #d9b08c;
   }
 }
 
@@ -94,6 +112,15 @@
   --nz-chart-expense: #ff7a6b;
   --nz-chart-grid: #2c4536;
   --nz-chart-glow: drop-shadow(0 0 6px rgb(184 244 90 / 0.35));
+  /* category/person colors (REQ-052, D-21): dots only, ≥ 4:1 on card and soft */
+  --nz-tag-green: #7bd88f;
+  --nz-tag-teal: #4fd1c5;
+  --nz-tag-blue: #7ab3ff;
+  --nz-tag-purple: #c39bff;
+  --nz-tag-pink: #ff8cc6;
+  --nz-tag-red: #ff8a7a;
+  --nz-tag-orange: #ffb366;
+  --nz-tag-brown: #d9b08c;
 }
 
 /* Only the semantic colors exist: Tailwind's default palette (white, gray-500...) is switched off. */
@@ -115,6 +142,14 @@
   --color-negative: var(--nz-negative);
   --color-on-negative: var(--nz-on-negative);
   --color-warning: var(--nz-warning);
+  --color-tag-green: var(--nz-tag-green);
+  --color-tag-teal: var(--nz-tag-teal);
+  --color-tag-blue: var(--nz-tag-blue);
+  --color-tag-purple: var(--nz-tag-purple);
+  --color-tag-pink: var(--nz-tag-pink);
+  --color-tag-red: var(--nz-tag-red);
+  --color-tag-orange: var(--nz-tag-orange);
+  --color-tag-brown: var(--nz-tag-brown);
   --color-focus: var(--nz-focus);
   --color-backdrop: var(--nz-backdrop);
   --shadow-card: var(--nz-shadow);

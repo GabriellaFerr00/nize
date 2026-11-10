@@ -21,7 +21,8 @@ export function renderApp(path: string, options: { signedIn?: boolean } = {}) {
   return router
 }
 
-type Reply = { status?: number; body?: unknown }
+/** `raw` answers with bytes (e.g. a card logo) instead of JSON. */
+type Reply = { status?: number; body?: unknown; raw?: Blob }
 
 /** Replaces fetch with a stub that answers by "METHOD /path"; returns the recorded calls. */
 export function stubApi(replies: Record<string, Reply>) {
@@ -30,10 +31,17 @@ export function stubApi(replies: Record<string, Reply>) {
     const key = `${init?.method ?? 'GET'} ${url}`
     calls.push({
       key,
-      body: init?.body ? JSON.parse(String(init.body)) : undefined,
+      // an uploaded file is recorded by its type and size; anything else is the JSON sent
+      body:
+        init?.body instanceof Blob
+          ? { type: init.body.type, size: init.body.size }
+          : init?.body
+            ? JSON.parse(String(init.body))
+            : undefined,
       headers: (init?.headers ?? {}) as Record<string, string>,
     })
     const reply = replies[key] ?? { status: 404, body: { code: 'NOT_STUBBED' } }
+    if (reply.raw) return new Response(reply.raw, { status: reply.status ?? 200, headers: { 'Content-Type': reply.raw.type } })
     const text = reply.body === undefined ? '' : JSON.stringify(reply.body)
     // 204 (and other null-body statuses) must not carry a body, not even an empty string
     return new Response(text || null, { status: reply.status ?? 200 })

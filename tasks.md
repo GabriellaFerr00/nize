@@ -151,6 +151,7 @@ Nomes em inglês: ver "Nomenclatura em inglês" em `design.md` (os termos em por
   - _Output_: testes dos cenários "Posição por quinzena" e "Pix e crédito" (com os dias padrão 15 e 31) e dos fechamentos configuráveis.
   - _Verify_: sobra 180000; −30000; Pix 12/04 até o 15; crédito com vencimento 10 até o 15; "pago" não altera; dias 5/10/20 → três posições; 30 e 31 em fevereiro → uma posição no 28/29; sem dias → nenhuma.
   - _Revisão 2026-11-04 (usuária)_: posição por intervalo entre fechamentos, sem acumular; último intervalo até o fim do mês; JSON `{fromDay, toDay, balanceCents}`; tela "Do dia A ao B" (REQ-030 0.1.7, design 0.2.6). Testes: `ClosingPositionsTest`, `MonthApiTest`, `PdfScenariosTest`, `month.test.tsx`.
+  - _Revisão 2026-11-09 (usuária)_: cada posição é só a soma dos gastos do intervalo (entradas fora, sem sobra/falta); JSON `{fromDay, toDay, totalExpensesCents}`; tela "Gastos R$ X" (REQ-030 0.1.9, design 0.2.10).
 - [x] **TASK-032** [REQ-034, NFR-003]: **Teste primeiro**, depois `regras.SaldoProprio`.
   - _Output_: teste e classe.
   - _Verify_: 50000, 20000, 19000 → 51000.
@@ -243,6 +244,31 @@ Nomes em inglês: ver "Nomenclatura em inglês" em `design.md` (os termos em por
 - [ ] **TASK-050** [NFR-005, NFR-006]: Subir o MVP na hospedagem de teste (D-13) usando o pipeline da Phase 3.5.
   - _Output_: URLs de teste; Dockerfile e `docs/ci-cd.md` já vêm da Phase 3.5.
   - _Verify_: cadastro → lançamento → resumo funcionando na URL de teste.
+
+## Phase 9: Melhorias pedidas pela usuária (2026-11-09)
+*Goal*: Itens 3, 4, 6, 8, 9, 11 e 14 da lista da usuária (os itens 5 e 10 foram descartados por ela; o 12, exportar planilha, fica para a fase 2). Branch `feat/improvements-nov`, um PR só.
+
+- [x] **TASK-063** [REQ-013]: Excluir cartão: `DELETE /api/cards/{id}` (204; 409 `CARD_IN_USE` com `count`); botão na tela Cartões com aviso do motivo.
+  - _Verify_: teste de API (sem uso → 204; com lançamentos → 409 com a contagem; outra usuária → 404) e teste de tela.
+  - _Feito_: `CardService.delete` + `CardInUseException`, `CardDeleteTest` (5 testes); `CatalogManager` genérico (`deleteItem(kind)`, textos por tipo em `catalog.categories|cards.*`), 2 testes de tela.
+- [x] **TASK-064** [REQ-045]: Botão de tema com sol (no escuro) e lua (no claro).
+  - _Verify_: teste do `ThemeSwitcher`.
+  - _Feito_: `ThemeSwitcher` troca `Moon`/`Sun` (lucide) conforme o tema; teste em `AppLayout.test.tsx`.
+- [x] **TASK-065** [REQ-049]: Ocultar valores (olho), lembrado no navegador, em todas as telas.
+  - _Verify_: testes de `Money` e do botão; nenhum valor legível com os valores ocultos.
+  - _Feito_: `lib/privacy.ts` (localStorage `nize.hideValues`, evento para todos os controles), `ValuesToggle` (olho / olho riscado) no menu lateral e no cabeçalho do celular, `Money` mostra "R$ ••••" (leitor de tela: "valor oculto"), eixo e dica do gráfico com "••••"; 2 testes em `month.test.tsx`.
+- [x] **TASK-066** [REQ-050]: Excluir parcela: "só esta" ou "esta e as próximas" (gastos e entradas); a carga não recria as excluídas.
+  - _Verify_: testes de regra/serviço e de API (4/10 → apaga 4..10 e a carga de meses seguintes não cria 5..10) e de tela.
+  - _Feito_: `DELETE /api/expenses|incomes/{id}?scope=this|following` (`DeleteScope`); "só esta" com o mês seguinte ainda não aberto cria a próxima parcela na hora (`MonthLoadService.keepInstallmentsComing`), para a sequência lançada à mão continuar; não cria ano novo. `ExpenseInstallmentDeleteTest` (13 testes); janela com a escolha na tela do mês (2 testes).
+- [x] **TASK-067** [REQ-015, REQ-016, REQ-037]: Cartão obrigatório no crédito (novo e editado), criar cartão no formulário de lançamento e fim do "Sem cartão" (pedido da usuária durante a tarefa).
+  - _Verify_: testes de API (crédito sem cartão → 400 `CARD_REQUIRED`; linha antiga sem cartão conta no total de crédito e não aparece por cartão) e de tela.
+  - _Feito_: `ExpenseService` (`CARD_REQUIRED`), `PaymentSummary`/`ThirdPartySummary` sem grupo nulo (testes de regra antes); `withCard` em `IsolationTestBase` para os testes que não são sobre cartão; formulário com "Escolha um cartão…" e "+ Novo cartão" (nome e vencimento, já selecionado ao criar); linha antiga mostra "Cartão a definir". 386 testes back, 152 front.
+- [x] **TASK-068** [REQ-051]: Limite mensal opcional por categoria, aviso a 80% e acima de 100% sem bloquear; "usado de limite" no resumo.
+  - _Verify_: teste de regra antes do código (80%, 100%, sem limite), API e tela.
+  - _Feito_: V8 `category.limit_amount DECIMAL(12,2)`; regra `CategoryLimit` (`CategoryLimitTest`, 7 testes, escrito antes); `monthlyLimitCents` na categoria (criar/editar/copiar para o ano novo); `limitCents`/`limitStatus` em `byCategory` (`CategoryLimitApiTest`, 7 testes). Tela: campo "Limite por mês (R$, opcional)" em Categorias, faixa "Limites de gasto" no topo do mês (`LimitAlerts`) e "usado de limite" no resumo; 4 testes de tela.
+- [x] **TASK-069** [REQ-052]: Cor de categoria e pessoa (paleta fixa) e imagem própria do cartão (PNG/JPG/WebP ≤ 200 KB), exibidas nas telas.
+  - _Verify_: testes de API (formatos, tamanho, isolamento da imagem), contraste da paleta nos dois temas e testes de tela.
+  - _Feito_: V9 (`category.color`, `person.color`, tabela `card_logo` MEDIUMBLOB); regra `ImageFormat` (bytes iniciais; SVG recusado; teste antes); `PUT/GET/DELETE /api/cards/{id}/logo` (corpo lido só até 200 KB + 1), `hasLogo` na lista, logotipo e cores copiados para o ano novo, logotipo apagado com o cartão (`CardLogoTest` 9, `CategoryAndPersonColorTest` 5). Paleta de 8 cores, ≥ 4:1 contra card e soft nos dois temas (`contraste.py`). Tela: seletor de cor (Categorias, Pessoas), bolinha de cor nas listas, lançamentos e resumos; logotipo no formulário do cartão (tipo e tamanho conferidos antes de enviar) e `CardBadge` (imagem como `data:` ou inicial) em Cartões e no resumo por cartão; 5 testes de tela. Validado num MySQL 8.4 (Docker): V1–V9, schema, envio/leitura de 200 KB, `check-schema.sql` limpo. 417 testes back (verify com JaCoCo ok), 161 front (97,6% linhas).
 
 ---
 

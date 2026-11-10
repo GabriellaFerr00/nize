@@ -6,6 +6,7 @@ import type { Income } from '../api/incomesApi'
 import { formatDay } from '../lib/format'
 import type { YearCatalogs } from '../lib/useMonth'
 import { Money } from './Money'
+import { TagDot } from './TagDot'
 
 type ListProps = { title: string; empty: string; totalCents?: number; children: ReactNode[] }
 
@@ -37,11 +38,13 @@ type RowProps = {
   cents: number
   tone?: boolean
   leading?: ReactNode
+  /** Color of the category (REQ-052). */
+  color?: string
   onEdit: () => void
   onDelete: () => void
 }
 
-function Row({ name, date, details, installmentLabel, cents, tone = false, leading, onEdit, onDelete }: RowProps) {
+function Row({ name, date, details, installmentLabel, cents, tone = false, leading, color, onEdit, onDelete }: RowProps) {
   const { t, i18n } = useTranslation()
   return (
     <li className="flex items-start gap-3 py-3">
@@ -54,6 +57,7 @@ function Row({ name, date, details, installmentLabel, cents, tone = false, leadi
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <div className="flex min-w-0 items-baseline justify-between gap-2">
           <p className="flex min-w-0 items-center gap-2">
+            <TagDot color={color} />
             <span className="truncate font-medium text-ink">{name}</span>
             {installmentLabel && (
               <span
@@ -120,7 +124,8 @@ export function ExpenseList({ kind, expenses, catalogs, totalCents, onTogglePaid
       totalCents={totalCents}
     >
       {expenses.map((e) => {
-        const card = e.paymentMethod === 'CREDIT' ? (catalogs.name('cards', e.cardId) ?? t('expense.noCard')) : undefined
+        // an old credit row without a card asks for one (there is no "Sem cartão" anymore, REQ-016)
+        const card = e.paymentMethod === 'CREDIT' ? (catalogs.name('cards', e.cardId) ?? t('expense.cardMissing')) : undefined
         const person = catalogs.name('people', e.personId)
         return (
           <Row
@@ -129,6 +134,7 @@ export function ExpenseList({ kind, expenses, catalogs, totalCents, onTogglePaid
             installmentLabel={e.installmentLabel}
             cents={e.amountCents}
             date={e.date}
+            color={catalogs.categories.find((c) => c.id === e.categoryId)?.color}
             details={[
               catalogs.name('categories', e.categoryId),
               fixed ? t(`expense.payment.${e.paymentMethod}`) : undefined,

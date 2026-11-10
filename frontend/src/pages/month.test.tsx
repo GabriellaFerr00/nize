@@ -23,8 +23,8 @@ const november = (): MonthView => ({
   },
   closingsEnabled: true,
   positions: [
-    { fromDay: 1, toDay: 15, balanceCents: 180_000 },
-    { fromDay: 16, toDay: 30, balanceCents: -30_000 },
+    { fromDay: 1, toDay: 15, totalExpensesCents: 120_000 },
+    { fromDay: 16, toDay: 30, totalExpensesCents: 30_000 },
   ],
   summaries: {
     byCategory: [
@@ -34,7 +34,7 @@ const november = (): MonthView => ({
     byPayment: { pixCents: 99_399, creditCents: 494_889 },
     byCard: [
       { cardId: 5, cardName: 'Nubank', amountCents: 447_389 },
-      { cardId: null, cardName: null, amountCents: 47_500 },
+      { cardId: 6, cardName: 'Inter', amountCents: 47_500 },
     ],
     byPerson: [
       {
@@ -43,7 +43,7 @@ const november = (): MonthView => ({
         amountCents: 20_000,
         byCard: [
           { cardId: 5, cardName: 'Nubank', amountCents: 15_000 },
-          { cardId: null, cardName: null, amountCents: 5_000 },
+          { cardId: 6, cardName: 'Inter', amountCents: 5_000 },
         ],
       },
     ],
@@ -118,8 +118,8 @@ describe('month screen header and navigation (TASK-039: REQ-041, REQ-040)', () =
     expect(within(header).getByText('Saldo do mês').nextSibling).toHaveTextContent('R$ 680,70')
 
     const positions = section('Fechamentos')
-    expect(within(positions).getByText('Do dia 1 ao 15').closest('li')).toHaveTextContent('Sobram R$ 1.800,00')
-    expect(within(positions).getByText('Do dia 16 ao 30').closest('li')).toHaveTextContent('Faltam R$ 300,00')
+    expect(within(positions).getByText('Do dia 1 ao 15').closest('li')).toHaveTextContent('Gastos R$ 1.200,00')
+    expect(within(positions).getByText('Do dia 16 ao 30').closest('li')).toHaveTextContent('Gastos R$ 300,00')
   })
 
   it('shows no positions when the closings are turned off (REQ-048)', async () => {
@@ -196,6 +196,67 @@ describe('month screen header and navigation (TASK-039: REQ-041, REQ-040)', () =
   })
 })
 
+describe('category limits (TASK-068: REQ-051)', () => {
+  it('warns about categories near or over the limit, as the API marked them', async () => {
+    const view = november()
+    view.summaries.byCategory = [
+      { categoryId: 9, categoryName: 'Despesas eventuais', amountCents: 141_814, percent: 23.86, limitCents: 140_000, limitStatus: 'OVER' },
+      { categoryId: 1, categoryName: 'Mercado', amountCents: 452_474, percent: 76.14, limitCents: 500_000, limitStatus: 'NEAR' },
+    ]
+    await openMonth(baseReplies(view))
+
+    const alerts = screen.getByRole('status', { name: 'Limites de gasto' })
+    expect(alerts).toHaveTextContent('Despesas eventuais passou do limite (R$ 1.418,14 de R$ 1.400,00)')
+    expect(alerts).toHaveTextContent('Mercado está perto do limite (R$ 4.524,74 de R$ 5.000,00)')
+    const byCategory = section('Por categoria')
+    expect(within(byCategory).getByText('Mercado').closest('li')).toHaveTextContent('R$ 4.524,74 de R$ 5.000,00 · está perto do limite')
+  })
+
+  it('shows no warning under the limit or without one', async () => {
+    const view = november()
+    view.summaries.byCategory = [
+      { categoryId: 9, categoryName: 'Despesas eventuais', amountCents: 141_814, percent: 23.86, limitCents: 900_000, limitStatus: 'UNDER' },
+      { categoryId: 1, categoryName: 'Mercado', amountCents: 452_474, percent: 76.14 },
+    ]
+    await openMonth(baseReplies(view))
+    expect(screen.queryByRole('status', { name: 'Limites de gasto' })).not.toBeInTheDocument()
+    expect(within(section('Por categoria')).getByText('Despesas eventuais').closest('li')).toHaveTextContent('R$ 1.418,14 de R$ 9.000,00')
+  })
+})
+
+describe('hide values (TASK-065: REQ-049)', () => {
+  it('the eye hides every amount, is remembered, and shows them again', async () => {
+    await openMonth()
+    const header = screen.getByText('Total de gastos').closest('dl') as HTMLElement
+    const balance = () => within(header).getByText('Saldo do mês').nextSibling
+    const eye = screen.getAllByRole('button', { name: 'Ocultar valores' })[0]
+    expect(eye).toHaveAttribute('aria-pressed', 'false')
+    expect(balance()).toHaveTextContent('R$ 680,70')
+
+    await userEvent.click(eye)
+
+    expect(eye).toHaveAttribute('aria-pressed', 'true')
+    // every control on screen follows the same choice
+    expect(screen.getAllByRole('button', { name: 'Ocultar valores' })[1]).toHaveAttribute('aria-pressed', 'true')
+    expect(localStorage.getItem('nize.hideValues')).toBe('true')
+    const main = document.body.textContent ?? ''
+    for (const amount of ['680,70', '5.942,88', '993,99', '6.623,58', '1.200,00']) expect(main).not.toContain(amount)
+    expect(balance()).toHaveTextContent('R$ ••••')
+    expect(balance()).toHaveTextContent('valor oculto')
+
+    await userEvent.click(eye)
+    expect(balance()).toHaveTextContent('R$ 680,70')
+    expect(localStorage.getItem('nize.hideValues')).toBe('false')
+  })
+
+  it('opens with the values hidden when that was the last choice', async () => {
+    localStorage.setItem('nize.hideValues', 'true')
+    await openMonth()
+    expect(screen.getByText('Total de gastos').nextSibling).toHaveTextContent('R$ ••••')
+    expect(document.body.textContent).not.toContain('5.942,88')
+  })
+})
+
 describe('month lists (TASK-040: REQ-015, REQ-016, REQ-021, REQ-023, REQ-024)', () => {
   it('splits fixed, card and income entries, with names of category, card and person and the N/M indicator', async () => {
     await openMonth()
@@ -210,7 +271,8 @@ describe('month lists (TASK-040: REQ-015, REQ-016, REQ-021, REQ-023, REQ-024)', 
     expect(within(card).queryByText('Aluguel')).not.toBeInTheDocument()
     expect(within(card).getByText('7/12')).toBeInTheDocument()
     expect(within(card).getByText(/^Despesas eventuais · Nubank/)).toBeInTheDocument()
-    expect(within(card).getByText(/Mercado · Sem cartão · gasto de Mainha/)).toBeInTheDocument()
+    // an old credit row without a card asks for one (no "Sem cartão", REQ-016)
+    expect(within(card).getByText(/Mercado · Cartão a definir · gasto de Mainha/)).toBeInTheDocument()
 
     const incomes = section('Entradas')
     expect(within(incomes).getByText('Salário')).toBeInTheDocument()
@@ -240,7 +302,7 @@ describe('month lists (TASK-040: REQ-015, REQ-016, REQ-021, REQ-023, REQ-024)', 
     expect(sent(calls, 'PATCH /api/expenses/11/paid')).toEqual([{ paid: true }])
     expect(monthLoads(calls)).toBe(2)
     expect(screen.getByText('Total de gastos').nextSibling).toHaveTextContent('R$ 5.942,88')
-    expect(section('Fechamentos')).toHaveTextContent('Sobram R$ 1.800,00')
+    expect(section('Fechamentos')).toHaveTextContent('Gastos R$ 1.200,00')
   })
 
   it('reports a failure to mark paid', async () => {
@@ -318,6 +380,46 @@ describe('month lists (TASK-040: REQ-015, REQ-016, REQ-021, REQ-023, REQ-024)', 
     expect(within(dialog).getByLabelText('Reembolso de (pessoa)')).toHaveValue('8')
   })
 
+  it('an installment asks: only this one (default) or this one and the next ones (TASK-066, REQ-050)', async () => {
+    const replies = baseReplies()
+    replies['DELETE /api/expenses/12'] = { status: 204 }
+    replies['DELETE /api/expenses/12?scope=following'] = { status: 204 }
+    const { calls } = await openMonth(replies)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Excluir Sofá' }))
+    let dialog = await screen.findByRole('dialog', { name: 'Excluir' })
+    expect(within(dialog).getByRole('radio', { name: 'Só esta parcela (7/12)' })).toBeChecked()
+    expect(within(dialog).getByRole('radio', { name: 'Esta e as próximas (7/12 até 12/12)' })).not.toBeChecked()
+    // just confirming deletes only this one
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Excluir' }))
+    await waitFor(() => expect(sent(calls, 'DELETE /api/expenses/12')).toHaveLength(1))
+
+    await userEvent.click(screen.getByRole('button', { name: 'Excluir Sofá' }))
+    dialog = await screen.findByRole('dialog', { name: 'Excluir' })
+    // the choice starts over at "only this one" every time
+    expect(within(dialog).getByRole('radio', { name: 'Só esta parcela (7/12)' })).toBeChecked()
+    await userEvent.click(within(dialog).getByRole('radio', { name: 'Esta e as próximas (7/12 até 12/12)' }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Excluir' }))
+    await waitFor(() => expect(sent(calls, 'DELETE /api/expenses/12?scope=following')).toHaveLength(1))
+  })
+
+  it('an income in installments offers the same choice; a single entry does not', async () => {
+    const replies = baseReplies()
+    replies['DELETE /api/incomes/22?scope=following'] = { status: 204 }
+    const { calls } = await openMonth(replies)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Excluir Aluguel' }))
+    let dialog = await screen.findByRole('dialog', { name: 'Excluir' })
+    expect(within(dialog).queryByRole('radio')).not.toBeInTheDocument()
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }))
+
+    await userEvent.click(screen.getByRole('button', { name: 'Excluir Devolução' }))
+    dialog = await screen.findByRole('dialog', { name: 'Excluir' })
+    await userEvent.click(within(dialog).getByRole('radio', { name: 'Esta e as próximas (1/3 até 3/3)' }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Excluir' }))
+    await waitFor(() => expect(sent(calls, 'DELETE /api/incomes/22?scope=following')).toHaveLength(1))
+  })
+
   it('deletes an expense after confirming and the list updates at once', async () => {
     const replies = baseReplies()
     replies['DELETE /api/expenses/13'] = { status: 204 }
@@ -389,12 +491,13 @@ describe('summaries panel and own balance (TASK-041: REQ-034..038)', () => {
 
     const byCard = section('Por cartão')
     expect(line(byCard, 'Nubank')).toHaveTextContent('R$ 4.473,89')
-    expect(line(byCard, 'Sem cartão')).toHaveTextContent('R$ 475,00')
+    expect(line(byCard, 'Inter')).toHaveTextContent('R$ 475,00')
+    expect(byCard).not.toHaveTextContent('Sem cartão')
 
     const byPerson = section('Terceiros por pessoa e cartão')
     expect(line(byPerson, 'Mainha')).toHaveTextContent('R$ 200,00')
     expect(line(byPerson, 'Nubank')).toHaveTextContent('R$ 150,00')
-    expect(line(byPerson, 'Sem cartão')).toHaveTextContent('R$ 50,00')
+    expect(line(byPerson, 'Inter')).toHaveTextContent('R$ 50,00')
   })
 
   it('shows the own balance and its parts as the API computed them', async () => {
@@ -524,7 +627,7 @@ describe('quick entry of income (TASK-042: REQ-042, REQ-024, REQ-026)', () => {
       await openMonth(baseReplies(), '/month/2026-11', 'Fixed')
       expect(screen.getByText('Total expenses').nextSibling).toHaveTextContent('R$ 5,942.88')
       expect(within(section('By category')).getByText('23.86%')).toBeInTheDocument()
-      expect(within(section('Closings')).getByText('Day 16 to 30').closest('li')).toHaveTextContent('Missing R$ 300.00')
+      expect(within(section('Closings')).getByText('Day 16 to 30').closest('li')).toHaveTextContent('Spent R$ 300.00')
       await userEvent.click(screen.getByRole('button', { name: 'New income' }))
       expect(await screen.findByRole('dialog', { name: 'New income' })).toBeInTheDocument()
     } finally {

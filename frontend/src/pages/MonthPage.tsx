@@ -3,13 +3,14 @@ import { Plus } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
-import { deleteExpense, setExpensePaid, type Expense } from '../api/expensesApi'
+import { deleteExpense, setExpensePaid, type DeleteScope, type Expense } from '../api/expensesApi'
 import { deleteIncome, type Income } from '../api/incomesApi'
 import { Dialog } from '../components/Dialog'
 import { EntryLists, ExpenseList, IncomeList } from '../components/EntryLists'
 import { ExpenseFormDialog } from '../components/ExpenseFormDialog'
 import { FormMessage } from '../components/FormMessage'
 import { IncomeFormDialog } from '../components/IncomeFormDialog'
+import { LimitAlerts } from '../components/LimitAlerts'
 import { MonthHeader } from '../components/MonthHeader'
 import { MonthPicker } from '../components/MonthPicker'
 import { SummaryPanel } from '../components/SummaryPanel'
@@ -22,8 +23,22 @@ import { dangerButton, pageTitle, primaryButton, quietButton, secondaryButton } 
 type DialogState =
   | { kind: 'expense'; expense?: Expense }
   | { kind: 'income'; income?: Income }
-  | { kind: 'delete'; target: { type: 'expense' | 'income'; id: number; name: string } }
+  | { kind: 'delete'; target: DeleteTarget }
   | null
+
+type DeleteTarget = {
+  type: 'expense' | 'income'
+  id: number
+  name: string
+  installmentNumber?: number
+  installmentCount?: number
+}
+
+/** Only an installment that is not the last one offers "this one and the next ones" (REQ-050). */
+const hasNextInstallments = (target: DeleteTarget) =>
+  target.installmentNumber !== undefined &&
+  target.installmentCount !== undefined &&
+  target.installmentNumber < target.installmentCount
 
 /**
  * The month screen (REQ-041): header with totals and closing positions, month/year navigation (REQ-040), lists of
@@ -45,9 +60,10 @@ export function MonthPage() {
     mutationFn: (expense: Expense) => setExpensePaid(expense.id, !expense.paid),
     onSettled: refreshMonths,
   })
+  const [deleteScope, setDeleteScope] = useState<DeleteScope>('this')
   const remove = useMutation({
-    mutationFn: ({ type, id }: { type: 'expense' | 'income'; id: number }) =>
-      type === 'expense' ? deleteExpense(id) : deleteIncome(id),
+    mutationFn: ({ type, id, scope }: { type: 'expense' | 'income'; id: number; scope: DeleteScope }) =>
+      type === 'expense' ? deleteExpense(id, scope) : deleteIncome(id, scope),
     onSuccess: () => {
       close()
       void refreshMonths()
@@ -59,9 +75,22 @@ export function MonthPage() {
   }
 
   const view = month.data
-  const askDelete = (type: 'expense' | 'income', item: { id: number; name: string }) => {
+  const askDelete = (
+    type: 'expense' | 'income',
+    item: { id: number; name: string; installmentNumber?: number; installmentCount?: number },
+  ) => {
     remove.reset()
-    setDialog({ kind: 'delete', target: { type, id: item.id, name: item.name } })
+    setDeleteScope('this')
+    setDialog({
+      kind: 'delete',
+      target: {
+        type,
+        id: item.id,
+        name: item.name,
+        installmentNumber: item.installmentNumber,
+        installmentCount: item.installmentCount,
+      },
+    })
   }
 
   return (
@@ -88,6 +117,7 @@ export function MonthPage() {
 
       {view && (
         <>
+          <LimitAlerts view={view} />
           <MonthHeader view={view} />
           <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
             <EntryLists>
@@ -116,7 +146,7 @@ export function MonthPage() {
                 onDelete={(i) => askDelete('income', i)}
               />
             </EntryLists>
-            <SummaryPanel view={view} />
+            <SummaryPanel view={view} catalogs={catalogs} />
           </div>
         </>
       )}
@@ -128,6 +158,27 @@ export function MonthPage() {
           <div className="flex flex-col gap-4">
             {remove.isError && <FormMessage kind="error">{apiErrorMessage(t, remove.error)}</FormMessage>}
             <p className="text-ink">{t('month.deleteQuestion', { name: dialog.target.name })}</p>
+            {hasNextInstallments(dialog.target) && (
+              <fieldset className="flex flex-col gap-1 rounded-xl border border-line p-3">
+                <legend className="px-1 text-sm font-medium text-ink">{t('month.deleteScope.title')}</legend>
+                {(['this', 'following'] as const).map((scope) => (
+                  <label key={scope} className="flex min-h-11 cursor-pointer items-center gap-3 text-sm text-ink">
+                    <input
+                      type="radio"
+                      name="delete-scope"
+                      value={scope}
+                      checked={deleteScope === scope}
+                      onChange={() => setDeleteScope(scope)}
+                      className="size-4 accent-brand"
+                    />
+                    {t(`month.deleteScope.${scope}`, {
+                      number: dialog.target.installmentNumber,
+                      count: dialog.target.installmentCount,
+                    })}
+                  </label>
+                ))}
+              </fieldset>
+            )}
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
               <button type="button" className={quietButton} onClick={close}>
                 {t('catalog.cancel')}
@@ -135,7 +186,12 @@ export function MonthPage() {
               <button
                 type="button"
                 disabled={remove.isPending}
-                onClick={() => remove.mutate(dialog.target)}
+                onClick={() =>
+                  remove.mutate({
+                    ...dialog.target,
+                    scope: hasNextInstallments(dialog.target) ? deleteScope : 'this',
+                  })
+                }
                 className={dangerButton}
               >
                 {t('catalog.delete')}

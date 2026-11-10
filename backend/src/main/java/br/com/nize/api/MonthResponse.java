@@ -9,13 +9,13 @@ public record MonthResponse(String month, MonthService.Totals totals, boolean cl
                             List<PositionResponse> positions, MonthService.Summaries summaries,
                             List<ExpenseResponse> expenses, List<IncomeResponse> incomes) {
 
-    /** What is left (positive) or missing (negative) up to {@code day}, inclusive. */
-    public record PositionResponse(int fromDay, int toDay, long balanceCents) {
+    /** Sum of the expenses from {@code fromDay} to {@code toDay}, inclusive (REQ-030). */
+    public record PositionResponse(int fromDay, int toDay, long totalExpensesCents) {
     }
 
     static MonthResponse from(MonthService.MonthView view) {
         return new MonthResponse(view.month(), view.totals(), view.closingsEnabled(),
-                view.positions().stream().map(p -> new PositionResponse(p.fromDay(), p.toDay(), p.balanceCents())).toList(),
+                view.positions().stream().map(p -> new PositionResponse(p.fromDay(), p.toDay(), p.totalExpensesCents())).toList(),
                 view.summaries(),
                 view.expenses().stream().map(e -> ExpenseResponse.from(e, null)).toList(),
                 view.incomes().stream().map(IncomeResponse::from).toList());

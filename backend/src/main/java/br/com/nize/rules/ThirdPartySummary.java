@@ -7,8 +7,9 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Third-party expenses by person, each with a breakdown by card (null = "Sem cartão") (REQ-038). Pure rule: whole
- * cents only. Σ people = third-party total; Σ cards of a person = that person's amount.
+ * Third-party expenses by person, each with a breakdown by card (REQ-038). Pure rule: whole cents only.
+ * Σ people = third-party total. An old row without a card counts in the person's amount but has no card line
+ * (no "Sem cartão", REQ-037 2026-11-09).
  */
 public final class ThirdPartySummary {
 
@@ -33,18 +34,17 @@ public final class ThirdPartySummary {
 
     public static List<PersonEntry> of(List<Item> items) {
         Map<Long, Map<Long, Long>> byPerson = new LinkedHashMap<>();
+        Map<Long, Long> totals = new LinkedHashMap<>();
         for (Item item : items) {
-            byPerson.computeIfAbsent(item.personId(), k -> new LinkedHashMap<>())
-                    .merge(item.cardId(), item.amountCents(), Math::addExact);
+            Map<Long, Long> cards = byPerson.computeIfAbsent(item.personId(), k -> new LinkedHashMap<>());
+            if (item.cardId() != null) {
+                cards.merge(item.cardId(), item.amountCents(), Math::addExact);
+            }
+            totals.merge(item.personId(), item.amountCents(), Math::addExact);
         }
         return byPerson.entrySet().stream()
-                .map(person -> {
-                    List<CardAmount> cards = person.getValue().entrySet().stream()
-                            .map(c -> new CardAmount(c.getKey(), c.getValue()))
-                            .toList();
-                    long amount = cards.stream().mapToLong(CardAmount::amountCents).reduce(0, Math::addExact);
-                    return new PersonEntry(person.getKey(), amount, cards);
-                })
+                .map(person -> new PersonEntry(person.getKey(), totals.get(person.getKey()),
+                        person.getValue().entrySet().stream().map(c -> new CardAmount(c.getKey(), c.getValue())).toList()))
                 .sorted(Comparator.comparing(PersonEntry::amountCents, Comparator.reverseOrder()))
                 .toList();
     }

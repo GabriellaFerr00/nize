@@ -12,6 +12,8 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
 
     long countByUserIdAndCategoryId(Long userId, Long categoryId);
 
+    long countByUserIdAndCardId(Long userId, Long cardId);
+
     Optional<Expense> findByIdAndUserId(Long id, Long userId);
 
     List<Expense> findByUserIdAndMonthOrderByIdAsc(Long userId, String month);

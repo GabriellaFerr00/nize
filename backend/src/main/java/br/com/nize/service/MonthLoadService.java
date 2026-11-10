@@ -83,6 +83,61 @@ public class MonthLoadService {
         loadIncomes(userId, month, incomes.findByUserIdAndMonthOrderByIdAsc(userId, previousMonth), automaticInstallments);
     }
 
+    /**
+     * After deleting only installment N of M (REQ-050): the load continues installments from the previous month, so
+     * if N+1 does not exist yet and the next month was not opened, N+1 is created there now; otherwise the next
+     * installments would never come. Nothing happens with automatic installments off (as in the load).
+     */
+    @Transactional
+    public void keepInstallmentsComing(Long userId, Expense deleted) {
+        YearMonth next = nextMonthToFill(userId, deleted.getMonth(), deleted.getInstallmentGroupId(),
+                deleted.getInstallmentNumber(), deleted.getInstallmentCount());
+        if (next == null) {
+            return;
+        }
+        int nextNumber = deleted.getInstallmentNumber() + 1;
+        boolean exists = expenses.findByUserIdAndInstallmentGroupIdIn(userId, Set.of(deleted.getInstallmentGroupId()))
+                .stream().anyMatch(e -> Integer.valueOf(nextNumber).equals(e.getInstallmentNumber()));
+        Expense created = exists ? null : copy(userId, next, deleted, nextNumber);
+        if (created != null) {
+            expenses.save(created);
+        }
+    }
+
+    /** The same as {@link #keepInstallmentsComing(Long, Expense)}, for an income in installments. */
+    @Transactional
+    public void keepInstallmentsComing(Long userId, Income deleted) {
+        YearMonth next = nextMonthToFill(userId, deleted.getMonth(), deleted.getInstallmentGroupId(),
+                deleted.getInstallmentNumber(), deleted.getInstallmentCount());
+        if (next == null) {
+            return;
+        }
+        int nextNumber = deleted.getInstallmentNumber() + 1;
+        boolean exists = incomes.findByUserIdAndInstallmentGroupIdIn(userId, Set.of(deleted.getInstallmentGroupId()))
+                .stream().anyMatch(i -> Integer.valueOf(nextNumber).equals(i.getInstallmentNumber()));
+        Income created = exists ? null : copy(userId, next, deleted, nextNumber);
+        if (created != null) {
+            incomes.save(created);
+        }
+    }
+
+    /** The next month, when an installment that is not the last was deleted and that month was not opened yet. */
+    private YearMonth nextMonthToFill(Long userId, String monthRef, String group, Integer number, Integer count) {
+        if (group == null || number == null || count == null || number >= count) {
+            return null;
+        }
+        if (!settings.findById(userId).orElseThrow().isAutoInstallments()) {
+            return null;
+        }
+        YearMonth next = ExpenseService.parseMonth(monthRef).plusMonths(1);
+        // a year the user lacks is not created here: the references would not exist yet
+        if (loaded.existsById(new LoadedMonthId(userId, next.toString()))
+                || !years.existsById(new UserYearId(userId, next.getYear()))) {
+            return null;
+        }
+        return next;
+    }
+
     private void loadExpenses(Long userId, YearMonth month, List<Expense> previous, boolean automaticInstallments) {
         if (previous.isEmpty()) {
             return;

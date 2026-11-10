@@ -15,7 +15,7 @@ function Total({ label, cents }: { label: string; cents: number }) {
 
 /**
  * Header of the month (REQ-041): the balance first and largest (the number that matters most), the other totals on
- * one quiet line under it and, when the closings are on, the total of each interval between closings
+ * one quiet line under it and, when the closings are on, the sum of the expenses of each interval between closings
  * (REQ-030/031/048). Every number comes from the API as is.
  */
 export function MonthHeader({ view }: { view: MonthView }) {
@@ -42,8 +42,8 @@ export function MonthHeader({ view }: { view: MonthView }) {
               <li key={p.fromDay} className="flex min-w-0 flex-col">
                 <span className="text-xs text-ink-soft sm:text-sm">{t('month.positions.range', { from: p.fromDay, to: p.toDay })}</span>
                 <span className="flex flex-col text-sm text-ink-soft">
-                  {p.balanceCents < 0 ? t('month.positions.missing') : t('month.positions.left')}{' '}
-                  <Money cents={p.balanceCents} tone unsigned className="text-base font-semibold" />
+                  {t('month.positions.spent')}{' '}
+                  <Money cents={p.totalExpensesCents} className="text-base font-semibold text-ink" />
                 </span>
               </li>
             ))}

@@ -29,9 +29,13 @@ describe('app shell', () => {
     renderAt('/categories')
     const toggle = screen.getAllByRole('button', { name: 'Tema escuro' })[0]
     expect(toggle).toHaveAttribute('aria-pressed', 'false')
+    // light mode shows a moon (go dark); dark mode shows a sun (go light)
+    expect(toggle.querySelector('[data-icon="moon"]')).not.toBeNull()
     await userEvent.click(toggle)
 
     expect(toggle).toHaveAttribute('aria-pressed', 'true')
+    expect(toggle.querySelector('[data-icon="sun"]')).not.toBeNull()
+    expect(toggle.querySelector('[data-icon="moon"]')).toBeNull()
     // the phone header toggle follows the same choice
     expect(screen.getAllByRole('button', { name: 'Tema escuro' })[1]).toHaveAttribute('aria-pressed', 'true')
     expect(document.documentElement.dataset.theme).toBe('dark')

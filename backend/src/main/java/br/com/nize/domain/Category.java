@@ -1,6 +1,7 @@
 package br.com.nize.domain;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -34,6 +35,15 @@ public class Category {
     @Column(nullable = false)
     private boolean active = true;
 
+    // a key of the Nize palette (REQ-052, D-21); null = neutral
+    @Column(length = 16)
+    private String color;
+
+    // optional monthly limit (REQ-051): DECIMAL(12,2) in reais in the database, cents here (D-2); null = no limit
+    @Column(name = "limit_amount", precision = 12, scale = 2)
+    @Convert(converter = MoneyColumnConverter.class)
+    private Long monthlyLimitCents;
+
     protected Category() {
     }
 
@@ -50,6 +60,16 @@ public class Category {
         this.active = active;
     }
 
+    public void setMonthlyLimitCents(Long monthlyLimitCents) {
+        this.monthlyLimitCents = monthlyLimitCents;
+    }
+
+    public Long getMonthlyLimitCents() { return monthlyLimitCents; }
+    public void setColor(String color) {
+        this.color = color;
+    }
+
+    public String getColor() { return color; }
     public Long getId() { return id; }
     public Long getUserId() { return userId; }
     public int getYearNumber() { return yearNumber; }

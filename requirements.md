@@ -1,10 +1,10 @@
 # requirements.md
-> Nize — Version 0.1.8 (MVP web) — 2026-11-05
+> Nize — Version 0.2.0 (MVP web) — 2026-11-09
 
 Fonte: `Nize — Funcionalidades e escopo do MVP web.pdf` (1 nov 2026). Em caso de dúvida entre este arquivo e o PDF, pergunte antes de implementar.
 
 ## Overview
-O Nize é a versão web da planilha "Finanças 2026". A usuária lança gastos e entradas mês a mês e vê saldo, gastos por categoria e quanto falta ou sobra até o dia 15 e até o dia 30. Não conecta a bancos nem executa Pix: "Pix" e os nomes de cartão (Nubank, Bradesco etc.) são apenas rótulos de organização. O MVP cobre tudo o que a aba do mês da planilha faz, mais o panorama anual.
+O Nize é a versão web da planilha "Finanças 2026". A usuária lança gastos e entradas mês a mês e vê saldo, gastos por categoria e quanto gastou em cada intervalo entre os dias de fechamento. Não conecta a bancos nem executa Pix: "Pix" e os nomes de cartão (Nubank, Bradesco etc.) são apenas rótulos de organização. O MVP cobre tudo o que a aba do mês da planilha faz, mais o panorama anual.
 
 ## Actors
 - **Usuária**: pessoa autenticada que controla suas próprias finanças. Só ela enxerga seus dados.
@@ -13,7 +13,7 @@ O Nize é a versão web da planilha "Finanças 2026". A usuária lança gastos e
 ## Glossário
 - **Fixo**: gasto recorrente (tipo `fixo`), com marca "pago".
 - **Cartão**: gasto de crédito (tipo `cartao`), com cartão e parcelas.
-- **Posição**: entradas menos gastos com data até o dia 15 (ou até o dia 30) do mês.
+- **Posição**: soma dos gastos com data efetiva dentro de um intervalo entre fechamentos (as entradas não entram).
 - **Saldo próprio**: saldo do mês + gastos de terceiros − reembolsos de terceiros.
 - **Total de crédito**: soma dos gastos com forma de pagamento crédito (cartão ou fixo no crédito).
 - Valores em dinheiro: inteiros em centavos. Mês: texto `AAAA-MM`.
@@ -54,16 +54,17 @@ O Nize é a versão web da planilha "Finanças 2026". A usuária lança gastos e
   - _Acceptance_: categoria desativada não aparece no formulário de lançamento, mas lançamentos antigos continuam exibindo-a.
 - **REQ-012**: A usuária shall poder excluir categorias, respeitando a regra de lançamentos existentes.
   - _Acceptance_: categoria sem lançamentos é excluída na hora; categoria com lançamentos no mês não é excluída, e o sistema pergunta se a usuária quer alterar esses lançamentos antes (a categoria continua existindo).
-- **REQ-013**: A usuária shall poder criar, renomear e desativar cartões, cada um com dia de vencimento (1–31).
-  - _Acceptance_: dia de vencimento fora de 1–31 é rejeitado.
+- **REQ-013**: A usuária shall poder criar, renomear, desativar e excluir cartões, cada um com dia de vencimento (1–31).
+  - _Acceptance_: dia de vencimento fora de 1–31 é rejeitado. Cartão sem lançamentos é excluído na hora; cartão usado em lançamentos não é excluído e a tela avisa que é por esse motivo, com a quantidade de lançamentos (409 `CARD_IN_USE`). (Exclusão pedida pela usuária em 2026-11-09.)
 - **REQ-014**: A usuária shall poder criar, renomear e desativar pessoas (terceiros que usam seu cartão).
   - _Acceptance_: pessoa desativada não aparece no formulário, mas lançamentos antigos continuam exibindo-a.
 
 ### Lançamentos de gastos
-- **REQ-015**: A usuária shall poder lançar gasto fixo com nome, categoria, valor, forma de pagamento (Pix ou crédito, este com cartão opcional; ex.: assinatura paga no cartão), data e marca "pago".
+- **REQ-015**: A usuária shall poder lançar gasto fixo com nome, categoria, valor, forma de pagamento (Pix ou crédito, este com cartão obrigatório; ex.: assinatura paga no cartão), data e marca "pago".
   - _Acceptance_: o fixo aparece na lista de Fixos do mês e entra no total de fixos e no total de gastos. Um fixo no crédito também entra no total de crédito e no resumo por cartão.
 - **REQ-016**: A usuária shall poder lançar gasto de cartão de crédito com nome, categoria, valor, cartão, data e parcelas.
   - _Acceptance_: o gasto aparece na lista de Cartão do mês e entra no total de gastos.
+  - **Cartão obrigatório no crédito** (pedido da usuária em 2026-11-09): todo gasto no crédito, fixo ou de cartão, novo ou editado, exige um cartão do ano (sem cartão → 400 `CARD_REQUIRED`). No formulário, a usuária escolhe um cartão existente ou cria um ali mesmo, sem sair do lançamento. Não existe mais "Sem cartão". Lançamentos antigos no crédito sem cartão continuam contando nos totais (gastos e crédito) até a usuária ajustá-los à mão, mas não aparecem em nenhum cartão do resumo; ao editá-los, o cartão passa a ser exigido. A carga do mês (REQ-022) continua copiando-os como estão.
 - **REQ-017**: A usuária shall poder marcar um gasto de terceiro informando a pessoa e o cartão usado.
   - _Acceptance_: o gasto fica no total do mês e aparece no resumo por pessoa.
 - **REQ-018**: Com a permissão de parcelas automáticas ligada, a usuária shall poder lançar a compra uma vez, informando número de parcelas e valor total ou valor da parcela, e o sistema shall criar uma parcela por mês a partir do mês escolhido.
@@ -94,10 +95,10 @@ O Nize é a versão web da planilha "Finanças 2026". A usuária lança gastos e
   - _Acceptance_: o total de fixos é a soma apenas dos lançamentos de tipo `fixo`.
 - **REQ-029**: O sistema shall calcular o saldo do mês como entradas menos total de gastos.
   - _Acceptance_: entradas 662358 − gastos 594288 = 68070 centavos.
-- **REQ-030**: Com os fechamentos ligados (REQ-048), o sistema shall calcular a posição de cada intervalo entre fechamentos, sem acumular os intervalos anteriores: o primeiro vai do dia 1 até o primeiro fechamento, cada um dos seguintes vai do dia seguinte ao fechamento anterior até o seu, e o último vai até o fim do mês. Cada posição soma só as entradas e os gastos com data dentro do seu intervalo e mostra o que falta ou sobra nele.
-  - _Acceptance_: entradas 300000 e gastos 120000 do dia 1 ao 15 → sobra 180000; gastos 30000 do dia 16 ao 30 e nenhuma entrada → falta 30000 (não 150000); com fechamentos 10 e 20, os intervalos são 1–10 e 11–fim do mês.
+- **REQ-030**: Com os fechamentos ligados (REQ-048), o sistema shall calcular a posição de cada intervalo entre fechamentos, sem acumular os intervalos anteriores: o primeiro vai do dia 1 até o primeiro fechamento, cada um dos seguintes vai do dia seguinte ao fechamento anterior até o seu, e o último vai até o fim do mês. Cada posição é só a soma dos gastos com data efetiva (REQ-032) dentro do seu intervalo; as entradas não entram e não há "sobra" nem "falta".
+  - _Acceptance_: entradas 300000 e gastos 120000 do dia 1 ao 15 → 120000; gastos 30000 do dia 16 ao 30 → 30000 (não 150000); intervalo sem gastos → 0; com fechamentos 10 e 20, os intervalos são 1–10 e 11–fim do mês.
 - **REQ-031**: Um dia de fechamento além do fim do mês shall valer como o último dia do mês (o padrão 31 é sempre o último dia; 30 e 31 em fevereiro viram 28/29).
-  - _Acceptance_: entradas 350000 e gastos 380000 até o último dia → posição −30000 ("faltam R$ 300,00"); em fevereiro, o limite é o dia 28/29.
+  - _Acceptance_: com fechamentos 15 e 31 em abril, gastos 180000 no dia 30 entram no intervalo 16–30; em fevereiro, o limite é o dia 28/29.
 - **REQ-032**: O sistema shall datar gastos no Pix pela data do pagamento e gastos no crédito pelo dia de vencimento do cartão, e cada parcela shall pesar no mês em que aparece.
   - _Acceptance_: Pix de 20000 pago em 12/04 pesa até o dia 15; compra de 50000 no crédito, cartão com vencimento dia 10, lançada em abril, pesa até o dia 15 de abril e não na data da compra.
 - **REQ-033**: A marca "pago" shall ser apenas controle e não alterar totais nem posições.
@@ -110,8 +111,8 @@ O Nize é a versão web da planilha "Finanças 2026". A usuária lança gastos e
   - _Acceptance_: "Despesas eventuais" 141814 de 594288 = 23,86%; a soma por categoria é igual ao total de gastos.
 - **REQ-036**: O sistema shall exibir o resumo de gastos por forma de pagamento.
   - _Acceptance_: a soma por forma de pagamento é igual ao total de gastos.
-- **REQ-037**: O sistema shall exibir o resumo de gastos por cartão, incluindo o grupo "Sem cartão".
-  - _Acceptance_: crédito de 47500 sem cartão aparece em "Sem cartão"; a soma por cartão (com "Sem cartão") é igual ao total de crédito.
+- **REQ-037**: O sistema shall exibir o resumo de gastos por cartão.
+  - _Acceptance_: a soma por cartão é igual ao total de crédito; não há grupo "Sem cartão" (crédito sem cartão é recusado desde 2026-11-09, decisão da usuária; o PDF previa o grupo).
 - **REQ-038**: O sistema shall exibir o resumo de gastos de terceiros por pessoa e por cartão.
   - _Acceptance_: a soma por pessoa é igual ao total de gastos de terceiros do mês.
 
@@ -132,14 +133,24 @@ O Nize é a versão web da planilha "Finanças 2026". A usuária lança gastos e
   - _Acceptance_: cada tela permite as ações listadas nos REQ-009 a REQ-014.
 - **REQ-045**: O Nize shall ter identidade visual, textos e layout próprios, sem copiar o material da planilha.
   - _Acceptance_: revisão visual manual antes do primeiro deploy; nenhum texto ou imagem da planilha reaproveitado.
-  - Identidade "Verde Nize" (D-20): logotipo próprio, modo claro e escuro e contraste WCAG 2.2 AA. Um seletor com Claro e Escuro troca o tema na hora e a escolha é lembrada no próximo acesso; antes de qualquer escolha, o primeiro acesso abre no tema do aparelho. Valores e regras não mudam com o tema. (Seletor pedido pela usuária em 2026-11-05.)
+  - Identidade "Verde Nize" (D-20): logotipo próprio, modo claro e escuro e contraste WCAG 2.2 AA. Um seletor com Claro e Escuro troca o tema na hora e a escolha é lembrada no próximo acesso; antes de qualquer escolha, o primeiro acesso abre no tema do aparelho. Valores e regras não mudam com o tema. (Seletor pedido pela usuária em 2026-11-05.) O botão de tema mostra um sol no tema escuro (passar para o claro) e uma lua no tema claro (passar para o escuro) (pedido em 2026-11-09).
+
+### Melhorias (pedidas pela usuária em 2026-11-09)
+- **REQ-049**: A usuária shall poder ocultar e mostrar os valores em dinheiro com um botão de olho.
+  - _Acceptance_: com os valores ocultos, todo valor em dinheiro das telas (mês, resumos, panorama, gráfico, avisos de limite) aparece como "R$ ••••" e não pode ser lido por leitor de tela; a escolha vale para todas as telas e é lembrada neste navegador; campos de formulário em edição continuam visíveis. Nada muda nos dados nem nos cálculos.
+- **REQ-050**: Ao excluir uma parcela (gasto ou entrada parcelada), a usuária shall poder escolher entre excluir só aquela ou aquela e as dos meses seguintes da mesma compra.
+  - _Acceptance_: compra em 10 parcelas, exclusão da 4/10 em abril: "só esta" (padrão, se ela só confirmar) apaga a 4/10 e mantém as demais; "esta e as próximas" apaga da 4/10 à 10/10 e as que ainda não foram criadas não são criadas pela carga dos meses seguintes (REQ-022). As parcelas 1/10 a 3/10 continuam. Lançamento sem parcela não mostra a escolha.
+- **REQ-051**: A usuária shall poder definir, se quiser, um limite mensal de gasto por categoria, e o sistema shall avisar quando o gasto da categoria no mês chegar perto do limite ou passar dele, sem bloquear o lançamento.
+  - _Acceptance_: o limite é opcional (categoria sem limite funciona como antes), em centavos, vale para todos os meses do ano da categoria. Com limite de 100000: gastos de 80000 no mês → aviso "perto do limite" (≥ 80%); 100001 → aviso "limite passou"; o lançamento é salvo nos dois casos. O aviso aparece numa faixa no topo da tela do mês assim que o lançamento é salvo, e o resumo por categoria mostra "usado de limite". O cálculo fica no back-end. O limite é copiado com a categoria quando um ano novo é criado.
+- **REQ-052**: A usuária shall poder escolher uma cor para cada categoria e pessoa e enviar uma imagem própria (logotipo) para cada cartão; cor e imagem aparecem nas telas que mostram esses itens.
+  - _Acceptance_: a cor é escolhida de uma paleta fixa do Nize, com contraste AA nos dois temas; sem cor escolhida, vale a cor neutra. A imagem do cartão é PNG, JPG ou WebP de até 200 KB (outro formato ou maior → 400); sem imagem, o cartão mostra a inicial do nome. As imagens são da usuária: o Nize não traz logotipos de bancos.
 
 ### Idioma
 - **REQ-046**: A usuária shall poder escolher o idioma da interface entre inglês e português.
   - _Acceptance_: um seletor de idioma troca todos os textos das telas sem recarregar dados; a escolha é lembrada no próximo acesso; valores, datas e regras de cálculo não mudam com o idioma. O idioma padrão é o português. (Requisito novo, pedido pela usuária em 2026-11-01; padrão confirmado em 2026-11-01.)
 
 ## Non-Functional Requirements
-- **NFR-001**: Todo valor em dinheiro é inteiro em centavos, nunca decimal.
+- **NFR-001**: Todo valor em dinheiro é inteiro em centavos nas regras, na API e na tela, nunca ponto flutuante. No banco, os valores ficam em `DECIMAL(12,2)` (reais com duas casas, exato), convertidos para centavos na leitura e na gravação (pedido da usuária em 2026-11-09).
   - _Measurement_: nenhum `double`/`float`/`BigDecimal` em valores monetários no código; colunas `BIGINT`; revisão de código e teste de arquitetura.
 - **NFR-002**: Saldo, totais e porcentagens não são persistidos; são calculados dos lançamentos.
   - _Measurement_: nenhuma coluna de total/saldo no schema.
@@ -177,6 +188,8 @@ O Nize é a versão web da planilha "Finanças 2026". A usuária lança gastos e
 | 0.1.1 | 2026-11-01 | REQ-046 (idioma da interface en/pt) |
 | 0.1.2 | 2026-11-01 | REQ-015: fixo pode ser pago no crédito; glossário "Total de crédito" |
 | 0.1.3 | 2026-11-01 | REQ-022: carga continua parcelas à mão e respeita a permissão |
+| 0.2.0 | 2026-11-09 | NFR-001: dinheiro em `DECIMAL(12,2)` no banco, centavos no resto (pedido da usuária). Melhorias pedidas pela usuária: REQ-013 (excluir cartão), REQ-015/016 (cartão obrigatório no crédito), REQ-045 (sol/lua), REQ-049 (ocultar valores), REQ-050 (excluir parcelas seguintes), REQ-051 (limite por categoria), REQ-052 (cores e imagem do cartão). Exportar planilha continua fora (fase 2) |
+| 0.1.9 | 2026-11-09 | REQ-030/031: cada posição é só a soma dos gastos do intervalo (sem entradas, sem sobra/falta); decisão da usuária |
 | 0.1.8 | 2026-11-05 | REQ-045: identidade Verde Nize, modo claro/escuro com seletor de tema (pedido da usuária) |
 | 0.1.7 | 2026-11-04 | REQ-030: posição por intervalo entre fechamentos, sem acumular; o último intervalo vai até o fim do mês. Diverge do PDF (posição acumulada até 15/30); decisão da usuária |
 | 0.1.6 | 2026-11-04 | NFR-007 confirmada (p95 < 500 ms com 500 lançamentos) |

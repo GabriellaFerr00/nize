@@ -61,7 +61,7 @@ class ExpenseInstallmentsApiTest extends IsolationTestBase {
         StringBuilder json = new StringBuilder("{");
         f.forEach((k, v) -> json.append("\"").append(k).append("\":").append(v).append(","));
         json.setLength(json.length() - 1);
-        return as(user, post("/api/months/" + month + "/expenses").contentType(MediaType.APPLICATION_JSON).content(json + "}"));
+        return as(user, post("/api/months/" + month + "/expenses").contentType(MediaType.APPLICATION_JSON).content(withCard(user, month, json + "}")));
     }
 
     private List<Map<String, Object>> rows(TestUser user) {
@@ -70,7 +70,7 @@ class ExpenseInstallmentsApiTest extends IsolationTestBase {
     }
 
     private static long cents(Map<String, Object> row) {
-        return ((Number) row.get("AMOUNT_CENTS")).longValue();
+        return br.com.nize.DbMoney.cents(row.get("AMOUNT"));
     }
 
     // ---- the PDF scenarios ----

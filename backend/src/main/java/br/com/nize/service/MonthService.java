@@ -15,6 +15,7 @@ import br.com.nize.repository.IncomeRepository;
 import br.com.nize.repository.PersonRepository;
 import br.com.nize.repository.SettingsRepository;
 import br.com.nize.rules.CategorySummary;
+import br.com.nize.rules.CategoryLimit;
 import br.com.nize.rules.ClosingPositions;
 import br.com.nize.rules.ClosingPositions.Position;
 import br.com.nize.rules.MonthTotals;
@@ -43,7 +44,10 @@ public class MonthService {
                          long thirdPartyExpensesCents, long reimbursementsCents, long ownBalanceCents) {
     }
 
-    public record CategoryEntry(Long categoryId, String categoryName, long amountCents, BigDecimal percent) {
+    /** {@code limitCents} and {@code limitStatus} only when the category has a monthly limit (REQ-051). */
+    @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    public record CategoryEntry(Long categoryId, String categoryName, long amountCents, BigDecimal percent,
+                                Long limitCents, CategoryLimit.Status limitStatus) {
     }
 
     public record CardEntry(Long cardId, String cardName, long amountCents) {
@@ -102,7 +106,7 @@ public class MonthService {
         List<Card> yearCards = cards.findByUserIdAndYearNumberOrderByIdAsc(userId, month.getYear());
         Settings userSettings = settings.findById(userId).orElseThrow();
         List<Position> positions = userSettings.isClosingsEnabled()
-                ? positions(month, monthExpenses, monthIncomes, userSettings.getClosingDays(), yearCards)
+                ? positions(month, monthExpenses, userSettings.getClosingDays(), yearCards)
                 : List.of();
 
         return new MonthView(month.toString(), monthExpenses, monthIncomes, totals, userSettings.isClosingsEnabled(),
@@ -119,15 +123,22 @@ public class MonthService {
     }
 
     private Summaries summaries(Long userId, int year, List<Expense> monthExpenses, List<Card> yearCards) {
-        Map<Long, String> categoryNames = categories.findByUserIdAndYearNumberOrderByIdAsc(userId, year).stream()
-                .collect(Collectors.toMap(Category::getId, Category::getName));
+        List<Category> yearCategories = categories.findByUserIdAndYearNumberOrderByIdAsc(userId, year);
+        Map<Long, String> categoryNames = yearCategories.stream().collect(Collectors.toMap(Category::getId, Category::getName));
+        Map<Long, Long> limits = new java.util.HashMap<>();
+        yearCategories.stream().filter(c -> c.getMonthlyLimitCents() != null)
+                .forEach(c -> limits.put(c.getId(), c.getMonthlyLimitCents()));
         Map<Long, String> cardNames = yearCards.stream().collect(Collectors.toMap(Card::getId, Card::getName));
         Map<Long, String> personNames = people.findByUserIdAndYearNumberOrderByIdAsc(userId, year).stream()
                 .collect(Collectors.toMap(Person::getId, Person::getName));
 
         List<CategoryEntry> byCategory = CategorySummary.of(monthExpenses.stream()
                         .map(e -> new CategorySummary.Item(e.getCategoryId(), e.getAmountCents())).toList())
-                .stream().map(c -> new CategoryEntry(c.categoryId(), categoryNames.get(c.categoryId()), c.amountCents(), c.percent()))
+                .stream().map(c -> {
+                    Long limit = limits.get(c.categoryId());
+                    return new CategoryEntry(c.categoryId(), categoryNames.get(c.categoryId()), c.amountCents(), c.percent(),
+                            limit, limit == null ? null : CategoryLimit.of(c.amountCents(), limit));
+                })
                 .toList();
         PaymentSummary.Summary payments = PaymentSummary.of(monthExpenses.stream()
                 .map(e -> new PaymentSummary.Item(
@@ -145,14 +156,13 @@ public class MonthService {
         return new Summaries(byCategory, new PaymentEntry(payments.pixCents(), payments.creditCents()), byCard, byPerson);
     }
 
-    private static List<Position> positions(YearMonth month, List<Expense> monthExpenses, List<Income> monthIncomes,
-                                            List<Integer> closingDays, List<Card> yearCards) {
+    private static List<Position> positions(YearMonth month, List<Expense> monthExpenses, List<Integer> closingDays,
+                                            List<Card> yearCards) {
         Map<Long, Integer> dueDayByCard = yearCards.stream().collect(Collectors.toMap(Card::getId, Card::getDueDay));
         return ClosingPositions.of(month,
                 monthExpenses.stream().map(e -> new ClosingPositions.Expense(e.getAmountCents(),
                         e.getPaymentMethod() == PaymentMethod.CREDIT ? ClosingPositions.Payment.CREDIT : ClosingPositions.Payment.PIX,
                         e.getDate(), e.getCardId() == null ? null : dueDayByCard.get(e.getCardId()))).toList(),
-                monthIncomes.stream().map(i -> new ClosingPositions.Income(i.getAmountCents(), i.getDate())).toList(),
                 closingDays);
     }
 
