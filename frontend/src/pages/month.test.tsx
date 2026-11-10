@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import type { MonthView } from '../api/monthApi'
+import { LIMIT_NOTICE_MS } from '../components/LimitToast'
 import { renderApp, stubApi } from '../test/renderApp'
 
 type Replies = Parameters<typeof stubApi>[0]
@@ -197,31 +198,61 @@ describe('month screen header and navigation (TASK-039: REQ-041, REQ-040)', () =
 })
 
 describe('category limits (TASK-068: REQ-051)', () => {
-  it('warns about categories near or over the limit, as the API marked them', async () => {
+  const withLimits = (mercado: MonthView['summaries']['byCategory'][number]['limitStatus'], eventuais?: 'NEAR' | 'OVER' | 'UNDER') => {
     const view = november()
     view.summaries.byCategory = [
-      { categoryId: 9, categoryName: 'Despesas eventuais', amountCents: 141_814, percent: 23.86, limitCents: 140_000, limitStatus: 'OVER' },
-      { categoryId: 1, categoryName: 'Mercado', amountCents: 452_474, percent: 76.14, limitCents: 500_000, limitStatus: 'NEAR' },
+      { categoryId: 9, categoryName: 'Despesas eventuais', amountCents: 141_814, percent: 23.86, limitCents: 140_000, limitStatus: eventuais ?? 'UNDER' },
+      { categoryId: 1, categoryName: 'Mercado', amountCents: 452_474, percent: 76.14, limitCents: 500_000, limitStatus: mercado },
     ]
-    await openMonth(baseReplies(view))
+    return view
+  }
 
-    const alerts = screen.getByRole('status', { name: 'Limites de gasto' })
-    expect(alerts).toHaveTextContent('Despesas eventuais passou do limite (R$ 1.418,14 de R$ 1.400,00)')
-    expect(alerts).toHaveTextContent('Mercado está perto do limite (R$ 4.524,74 de R$ 5.000,00)')
+  /** Marks the rent as paid: the month is fetched again and the API answers with `after`. */
+  async function saveSomethingAndRefetch(replies: Replies, after: MonthView) {
+    replies['PATCH /api/expenses/11/paid'] = { body: { ...november().expenses[0], paid: true } }
+    after.expenses[0].paid = true
+    replies[NOV] = { body: after }
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Aluguel pago' }))
+  }
+
+  it('opening a month never pops a notice, and nothing stays fixed on the screen', async () => {
+    await openMonth(baseReplies(withLimits('NEAR', 'OVER')))
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    // the summary keeps "used of limit"
     const byCategory = section('Por categoria')
     expect(within(byCategory).getByText('Mercado').closest('li')).toHaveTextContent('R$ 4.524,74 de R$ 5.000,00 · está perto do limite')
+    expect(within(byCategory).getByText('Despesas eventuais').closest('li')).toHaveTextContent('passou do limite')
   })
 
-  it('shows no warning under the limit or without one', async () => {
-    const view = november()
-    view.summaries.byCategory = [
-      { categoryId: 9, categoryName: 'Despesas eventuais', amountCents: 141_814, percent: 23.86, limitCents: 900_000, limitStatus: 'UNDER' },
-      { categoryId: 1, categoryName: 'Mercado', amountCents: 452_474, percent: 76.14 },
-    ]
-    await openMonth(baseReplies(view))
-    expect(screen.queryByRole('status', { name: 'Limites de gasto' })).not.toBeInTheDocument()
-    expect(within(section('Por categoria')).getByText('Despesas eventuais').closest('li')).toHaveTextContent('R$ 1.418,14 de R$ 9.000,00')
+  it('notifies when an entry takes a category near or over its limit, and the notice can be closed', async () => {
+    const replies = baseReplies(withLimits('UNDER', 'NEAR'))
+    await openMonth(replies)
+    await saveSomethingAndRefetch(replies, withLimits('NEAR', 'OVER'))
+
+    const notices = await screen.findAllByRole('status')
+    expect(notices).toHaveLength(2)
+    expect(notices[0]).toHaveTextContent('Despesas eventuais passou do limite (R$ 1.418,14 de R$ 1.400,00)')
+    expect(notices[1]).toHaveTextContent('Mercado está perto do limite (R$ 4.524,74 de R$ 5.000,00)')
+
+    await userEvent.click(within(notices[0]).getByRole('button', { name: 'Fechar aviso' }))
+    expect(screen.getAllByRole('status')).toHaveLength(1)
   })
+
+  it('does not notify again while the status stays the same', async () => {
+    const replies = baseReplies(withLimits('NEAR'))
+    await openMonth(replies)
+    await saveSomethingAndRefetch(replies, withLimits('NEAR'))
+    await waitFor(() => expect(screen.getByRole('checkbox', { name: 'Aluguel pago' })).toBeChecked())
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+
+  it('the notice goes away on its own', async () => {
+    const replies = baseReplies(withLimits('UNDER'))
+    await openMonth(replies)
+    await saveSomethingAndRefetch(replies, withLimits('OVER'))
+    expect(await screen.findByRole('status')).toHaveTextContent('Mercado passou do limite')
+    await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument(), { timeout: LIMIT_NOTICE_MS + 2000 })
+  }, LIMIT_NOTICE_MS + 5000)
 })
 
 describe('hide values (TASK-065: REQ-049)', () => {

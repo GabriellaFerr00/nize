@@ -389,10 +389,10 @@
       "noThirdParty": "Nenhum gasto de terceiros neste mês."
     },
     "limits": {
-      "title": "Limites de gasto",
       "near": "está perto do limite",
       "over": "passou do limite",
-      "of": "de"
+      "of": "de",
+      "close": "Fechar aviso"
     }
   }
 }

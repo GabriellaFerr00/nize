@@ -389,10 +389,10 @@
       "noThirdParty": "No third-party expenses this month."
     },
     "limits": {
-      "title": "Spending limits",
       "near": "is close to its limit",
       "over": "is over its limit",
-      "of": "of"
+      "of": "of",
+      "close": "Close notice"
     }
   }
 }

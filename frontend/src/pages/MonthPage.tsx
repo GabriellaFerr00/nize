@@ -10,7 +10,7 @@ import { EntryLists, ExpenseList, IncomeList } from '../components/EntryLists'
 import { ExpenseFormDialog } from '../components/ExpenseFormDialog'
 import { FormMessage } from '../components/FormMessage'
 import { IncomeFormDialog } from '../components/IncomeFormDialog'
-import { LimitAlerts } from '../components/LimitAlerts'
+import { LimitToast } from '../components/LimitToast'
 import { MonthHeader } from '../components/MonthHeader'
 import { MonthPicker } from '../components/MonthPicker'
 import { SummaryPanel } from '../components/SummaryPanel'
@@ -117,7 +117,7 @@ export function MonthPage() {
 
       {view && (
         <>
-          <LimitAlerts view={view} />
+          <LimitToast view={view} />
           <MonthHeader view={view} />
           <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
             <EntryLists>
