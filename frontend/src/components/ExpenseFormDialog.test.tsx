@@ -125,6 +125,7 @@ describe('new expense window (REQ-016..019, REQ-042)', () => {
     await userEvent.selectOptions(within(dialog).getByLabelText('Como lançar'), 'auto')
     await userEvent.type(within(dialog).getByLabelText('Número de parcelas'), '3')
     await fillBasics(dialog, 'Notebook', '100')
+    await userEvent.selectOptions(within(dialog).getByLabelText('Cartão'), 'Nubank')
     await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar e lançar outro' }))
     await waitFor(() => expect(posted(calls)).toHaveLength(1))
 
@@ -137,6 +138,48 @@ describe('new expense window (REQ-016..019, REQ-042)', () => {
     await waitFor(() => expect(posted(calls)).toHaveLength(2))
     expect(posted(calls)[0]).toMatchObject({ amountCents: 10_000, generateInstallments: true, installmentCount: 3, amountIsTotal: true })
     expect(posted(calls)[1]).toMatchObject({ amountCents: 5_000, generateInstallments: true, installmentCount: 4, amountIsTotal: false })
+  })
+
+  it('credit needs a card: nothing is sent without one (REQ-016, 2026-11-09)', async () => {
+    const { calls, dialog } = await openForm()
+    await userEvent.selectOptions(within(dialog).getByLabelText('Tipo'), 'CARD')
+    await fillBasics(dialog, 'Tênis', '200')
+    expect(within(within(dialog).getByLabelText('Cartão')).queryByRole('option', { name: 'Sem cartão' })).not.toBeInTheDocument()
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }))
+
+    expect(within(dialog).getByText('Escolha um cartão ou crie um novo.')).toBeInTheDocument()
+    expect(posted(calls)).toHaveLength(0)
+  })
+
+  it('creates a card inside the entry and selects it', async () => {
+    const map = replies()
+    map['POST /api/years/2026/cards'] = { status: 201, body: { id: 9, year: 2026, name: 'Inter', dueDay: 20, active: true } }
+    const { calls, dialog } = await openForm(map)
+    await userEvent.selectOptions(within(dialog).getByLabelText('Tipo'), 'CARD')
+    await fillBasics(dialog, 'Tênis', '200')
+    await userEvent.selectOptions(within(dialog).getByLabelText('Cartão'), '+ Novo cartão')
+
+    const fields = within(dialog).getByRole('group', { name: 'Novo cartão' })
+    await userEvent.click(within(fields).getByRole('button', { name: 'Criar cartão' }))
+    expect(within(fields).getByText('Informe um nome.')).toBeInTheDocument()
+    expect(within(fields).getByText('Informe um dia de 1 a 31.')).toBeInTheDocument()
+
+    await userEvent.type(within(fields).getByLabelText('Nome'), 'Inter')
+    await userEvent.type(within(fields).getByLabelText('Dia de vencimento (1 a 31)'), '20')
+    map['GET /api/years/2026/cards'] = {
+      body: [
+        { id: 5, year: 2026, name: 'Nubank', dueDay: 10, active: true },
+        { id: 9, year: 2026, name: 'Inter', dueDay: 20, active: true },
+      ],
+    }
+    await userEvent.click(within(fields).getByRole('button', { name: 'Criar cartão' }))
+
+    await waitFor(() => expect(within(dialog).getByLabelText('Cartão')).toHaveValue('9'))
+    expect(within(dialog).queryByRole('group', { name: 'Novo cartão' })).not.toBeInTheDocument()
+    expect(calls.find((c) => c.key === 'POST /api/years/2026/cards')?.body).toEqual({ name: 'Inter', dueDay: 20 })
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }))
+    await waitFor(() => expect(posted(calls)).toHaveLength(1))
+    expect(posted(calls)[0]).toMatchObject({ type: 'CARD', paymentMethod: 'CREDIT', cardId: 9 })
   })
 
   it('does not offer automatic installments when the permission is off', async () => {
@@ -154,6 +197,7 @@ describe('new expense window (REQ-016..019, REQ-042)', () => {
     await userEvent.type(within(dialog).getByLabelText('Parcela atual'), '7')
     await userEvent.type(within(dialog).getByLabelText('Total de parcelas'), '12')
     await fillBasics(dialog, 'Sofá', '300')
+    await userEvent.selectOptions(within(dialog).getByLabelText('Cartão'), 'Nubank')
     await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }))
 
     await waitFor(() => expect(posted(calls)).toHaveLength(1))

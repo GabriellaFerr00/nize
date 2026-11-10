@@ -42,7 +42,7 @@ class MonthLoadServiceTest extends IsolationTestBase {
     }
 
     private long add(TestUser user, String month, String json) throws Exception {
-        String body = as(user, post("/api/months/" + month + "/expenses").contentType(MediaType.APPLICATION_JSON).content(json))
+        String body = as(user, post("/api/months/" + month + "/expenses").contentType(MediaType.APPLICATION_JSON).content(withCard(user, month, json)))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         return ((Number) JsonPath.read(body, "$.id")).longValue();
     }

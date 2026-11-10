@@ -34,7 +34,7 @@ const november = (): MonthView => ({
     byPayment: { pixCents: 99_399, creditCents: 494_889 },
     byCard: [
       { cardId: 5, cardName: 'Nubank', amountCents: 447_389 },
-      { cardId: null, cardName: null, amountCents: 47_500 },
+      { cardId: 6, cardName: 'Inter', amountCents: 47_500 },
     ],
     byPerson: [
       {
@@ -43,7 +43,7 @@ const november = (): MonthView => ({
         amountCents: 20_000,
         byCard: [
           { cardId: 5, cardName: 'Nubank', amountCents: 15_000 },
-          { cardId: null, cardName: null, amountCents: 5_000 },
+          { cardId: 6, cardName: 'Inter', amountCents: 5_000 },
         ],
       },
     ],
@@ -243,7 +243,8 @@ describe('month lists (TASK-040: REQ-015, REQ-016, REQ-021, REQ-023, REQ-024)', 
     expect(within(card).queryByText('Aluguel')).not.toBeInTheDocument()
     expect(within(card).getByText('7/12')).toBeInTheDocument()
     expect(within(card).getByText(/^Despesas eventuais · Nubank/)).toBeInTheDocument()
-    expect(within(card).getByText(/Mercado · Sem cartão · gasto de Mainha/)).toBeInTheDocument()
+    // an old credit row without a card asks for one (no "Sem cartão", REQ-016)
+    expect(within(card).getByText(/Mercado · Cartão a definir · gasto de Mainha/)).toBeInTheDocument()
 
     const incomes = section('Entradas')
     expect(within(incomes).getByText('Salário')).toBeInTheDocument()
@@ -462,12 +463,13 @@ describe('summaries panel and own balance (TASK-041: REQ-034..038)', () => {
 
     const byCard = section('Por cartão')
     expect(line(byCard, 'Nubank')).toHaveTextContent('R$ 4.473,89')
-    expect(line(byCard, 'Sem cartão')).toHaveTextContent('R$ 475,00')
+    expect(line(byCard, 'Inter')).toHaveTextContent('R$ 475,00')
+    expect(byCard).not.toHaveTextContent('Sem cartão')
 
     const byPerson = section('Terceiros por pessoa e cartão')
     expect(line(byPerson, 'Mainha')).toHaveTextContent('R$ 200,00')
     expect(line(byPerson, 'Nubank')).toHaveTextContent('R$ 150,00')
-    expect(line(byPerson, 'Sem cartão')).toHaveTextContent('R$ 50,00')
+    expect(line(byPerson, 'Inter')).toHaveTextContent('R$ 50,00')
   })
 
   it('shows the own balance and its parts as the API computed them', async () => {

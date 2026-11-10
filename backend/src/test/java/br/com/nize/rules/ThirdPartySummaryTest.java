@@ -23,10 +23,10 @@ class ThirdPartySummaryTest {
 
         assertThat(summary).containsExactly(
                 new PersonEntry(10L, 20_000, List.of(new CardAmount(1L, 15_000), new CardAmount(2L, 5_000))),
-                new PersonEntry(20L, 9_500, List.of(new CardAmount(1L, 8_000), new CardAmount(null, 1_500))));
+                // an old row without a card still counts for the person, but no "Sem cartão" line (REQ-037, 2026-11-09)
+                new PersonEntry(20L, 9_500, List.of(new CardAmount(1L, 8_000))));
         assertThat(summary.stream().mapToLong(PersonEntry::amountCents).sum()).isEqualTo(29_500);
-        assertThat(summary).allSatisfy(person ->
-                assertThat(person.byCard().stream().mapToLong(CardAmount::amountCents).sum()).isEqualTo(person.amountCents()));
+        assertThat(summary.get(0).byCard().stream().mapToLong(CardAmount::amountCents).sum()).isEqualTo(20_000);
     }
 
     @Test

@@ -44,7 +44,7 @@ class ExpenseEditApiTest extends IsolationTestBase {
     private long create(TestUser user, String type, String extra) throws Exception {
         String json = "{\"name\":\"Aluguel\",\"categoryId\":%d,\"amountCents\":150000,\"type\":\"%s\",\"date\":\"%s\"%s}"
                 .formatted(categoryId(user, "Aluguel"), type, MONTH.atDay(5), extra);
-        String body = as(user, post("/api/months/" + MONTH + "/expenses").contentType(MediaType.APPLICATION_JSON).content(json))
+        String body = as(user, post("/api/months/" + MONTH + "/expenses").contentType(MediaType.APPLICATION_JSON).content(withCard(user, MONTH, json)))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         return ((Number) JsonPath.read(body, "$.id")).longValue();
     }
@@ -55,7 +55,7 @@ class ExpenseEditApiTest extends IsolationTestBase {
     }
 
     private ResultActions update(TestUser user, long id, String json) throws Exception {
-        return as(user, put("/api/expenses/" + id).contentType(MediaType.APPLICATION_JSON).content(json));
+        return as(user, put("/api/expenses/" + id).contentType(MediaType.APPLICATION_JSON).content(withCard(user, MONTH, json)));
     }
 
     private Map<String, Object> row(long id) {
@@ -109,9 +109,13 @@ class ExpenseEditApiTest extends IsolationTestBase {
                 .andExpect(jsonPath("$.fields.amountCents").exists());
         update(userA, id, "{\"name\":\"x\",\"categoryId\":%d,\"amountCents\":100,\"type\":\"FIXED\",\"date\":\"%s\"}".formatted(category, date))
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fields.paid").exists());
-        // a fixed expense may be moved to credit, e.g. a subscription put on the card
+        // a fixed expense may be moved to credit, e.g. a subscription put on the card...
         update(userA, id, edit(category, 100, "FIXED", date, false, ",\"paymentMethod\":\"CREDIT\"")).andExpect(status().isOk())
                 .andExpect(jsonPath("$.paymentMethod").value("CREDIT"));
+        // ...but never without a card (REQ-016, 2026-11-09)
+        as(userA, put("/api/expenses/" + id).contentType(MediaType.APPLICATION_JSON)
+                .content(edit(category, 100, "FIXED", date, false, ",\"paymentMethod\":\"CREDIT\"")))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("CARD_REQUIRED"));
     }
 
     @Test
@@ -222,6 +226,7 @@ class ExpenseEditApiTest extends IsolationTestBase {
     @Test
     void editCannotPointToAnotherUsersCardOrPerson() throws Exception {
         long id = create(userA, "CARD", "");
+        Object cardBefore = row(id).get("CARD_ID");
         long category = categoryId(userA, "Aluguel");
         String cardOfB = as(userB, post("/api/years/" + YEAR + "/cards").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Nubank\",\"dueDay\":10}")).andReturn().getResponse().getContentAsString();
@@ -235,7 +240,7 @@ class ExpenseEditApiTest extends IsolationTestBase {
                 .andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("NOT_FOUND"));
 
         Map<String, Object> row = row(id);
-        assertThat(row.get("CARD_ID")).isNull();
+        assertThat(row.get("CARD_ID")).isEqualTo(cardBefore);
         assertThat(row.get("PERSON_ID")).isNull();
         assertThat(cents(row.get("AMOUNT"))).isEqualTo(150000L);
     }

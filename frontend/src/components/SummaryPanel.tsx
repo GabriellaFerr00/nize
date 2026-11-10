@@ -45,7 +45,7 @@ export function SummaryPanel({ view }: { view: MonthView }) {
   const { t, i18n } = useTranslation()
   const [open, setOpen] = useState(false)
   const { totals, summaries } = view
-  const cardName = (c: CardEntry) => c.cardName ?? t('expense.noCard')
+  const cardName = (c: CardEntry) => c.cardName ?? ''
   const noExpenses = summaries.byCategory.length === 0 ? t('month.summary.noExpenses') : undefined
 
   return (
@@ -97,7 +97,7 @@ export function SummaryPanel({ view }: { view: MonthView }) {
 
         <Block title={t('month.summary.byCard')} empty={summaries.byCard.length === 0 ? t('month.summary.noCredit') : undefined}>
           {summaries.byCard.map((c) => (
-            <Line key={c.cardId ?? 'none'} label={cardName(c)} cents={c.amountCents} />
+            <Line key={c.cardId} label={cardName(c)} cents={c.amountCents} />
           ))}
         </Block>
 
@@ -110,7 +110,7 @@ export function SummaryPanel({ view }: { view: MonthView }) {
               <ul className="flex flex-col gap-1">
                 <Line label={p.personName ?? '—'} cents={p.amountCents} />
                 {p.byCard.map((c) => (
-                  <Line sub key={c.cardId ?? 'none'} label={cardName(c)} cents={c.amountCents} />
+                  <Line sub key={c.cardId} label={cardName(c)} cents={c.amountCents} />
                 ))}
               </ul>
             </li>

@@ -68,6 +68,7 @@
     "PERSON_NAME_TAKEN": "Já existe uma pessoa com esse nome neste ano.",
     "CATEGORY_IN_USE": "Esta categoria ainda tem lançamentos.",
     "CARD_IN_USE": "Este cartão ainda é usado em lançamentos.",
+    "CARD_REQUIRED": "Escolha um cartão: no crédito ele é obrigatório.",
     "YEAR_ALREADY_EXISTS": "Esse ano já existe na sua conta.",
     "INVALID_YEAR": "Informe um ano entre 2000 e 2100.",
     "NOT_FOUND": "Não encontramos esse item. Atualize a página.",
@@ -222,7 +223,13 @@
     "saved": "Lançamento salvo.",
     "saveAndAnother": "Salvar e lançar outro",
     "choose": "Escolha…",
-    "noCard": "Sem cartão",
+    "chooseCard": "Escolha um cartão…",
+    "cardMissing": "Cartão a definir",
+    "newCard": {
+      "option": "+ Novo cartão",
+      "title": "Novo cartão",
+      "create": "Criar cartão"
+    },
     "nobody": "Ninguém (gasto meu)",
     "fields": {
       "name": "Nome",
@@ -263,7 +270,8 @@
       "date": "Escolha uma data dentro do mês {{month}}.",
       "autoCount": "Informe de 2 a 120 parcelas.",
       "manualCount": "Informe o total de parcelas, de 2 a 120.",
-      "manualNumber": "A parcela atual deve estar entre 1 e o total."
+      "manualNumber": "A parcela atual deve estar entre 1 e o total.",
+      "card": "Escolha um cartão ou crie um novo."
     },
     "editTitle": "Editar lançamento",
     "installmentFixed": "Parcela {{label}}: o tipo e as parcelas não mudam na edição."

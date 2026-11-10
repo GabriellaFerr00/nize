@@ -201,6 +201,10 @@ public class ExpenseService {
         if (in.cardId() != null && payment != PaymentMethod.CREDIT) {
             throw new InvalidExpenseException("INVALID_EXPENSE");
         }
+        // REQ-015/016 (2026-11-09): credit always needs a card, on create and on edit; old rows without one stay valid
+        if (payment == PaymentMethod.CREDIT && in.cardId() == null) {
+            throw new InvalidExpenseException("CARD_REQUIRED");
+        }
         if (in.personId() != null && in.type() != ExpenseType.CARD) {
             throw new InvalidExpenseException("INVALID_EXPENSE");
         }

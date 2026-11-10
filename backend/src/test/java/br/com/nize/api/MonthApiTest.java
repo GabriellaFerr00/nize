@@ -46,8 +46,8 @@ class MonthApiTest extends IsolationTestBase {
 
     private long expense(TestUser user, long cents, String type, int day, String extra) throws Exception {
         return idOf(as(user, post("/api/months/" + APRIL + "/expenses").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"name\":\"Gasto\",\"categoryId\":%d,\"amountCents\":%d,\"type\":\"%s\",\"date\":\"%s\"%s}"
-                        .formatted(categoryId(user), cents, type, APRIL.atDay(day), extra))));
+                .content(withCard(user, APRIL, "{\"name\":\"Gasto\",\"categoryId\":%d,\"amountCents\":%d,\"type\":\"%s\",\"date\":\"%s\"%s}"
+                        .formatted(categoryId(user), cents, type, APRIL.atDay(day), extra)))));
     }
 
     private long income(TestUser user, long cents, int day, String extra) throws Exception {
@@ -187,8 +187,8 @@ class MonthApiTest extends IsolationTestBase {
 
     private void expenseIn(TestUser user, String category, long cents, String type, String extra) throws Exception {
         idOf(as(user, post("/api/months/" + APRIL + "/expenses").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"name\":\"Gasto\",\"categoryId\":%d,\"amountCents\":%d,\"type\":\"%s\",\"date\":\"%s\"%s}"
-                        .formatted(categoryNamed(user, category), cents, type, APRIL.atDay(9), extra))));
+                .content(withCard(user, APRIL, "{\"name\":\"Gasto\",\"categoryId\":%d,\"amountCents\":%d,\"type\":\"%s\",\"date\":\"%s\"%s}"
+                        .formatted(categoryNamed(user, category), cents, type, APRIL.atDay(9), extra)))));
     }
 
     @Test
@@ -219,8 +219,8 @@ class MonthApiTest extends IsolationTestBase {
         assertThat(credit).isEqualTo(236_904);
         List<Number> byCard = JsonPath.read(body, "$.summaries.byCard[*].amountCents");
         assertThat(byCard.stream().mapToLong(Number::longValue).sum()).isEqualTo(credit);
-        assertThat((Object) JsonPath.read(body, "$.summaries.byCard[-1].cardId")).isNull();
-        assertThat(((Number) JsonPath.read(body, "$.summaries.byCard[-1].amountCents")).longValue()).isEqualTo(47_500);
+        List<Object> noCard = JsonPath.read(body, "$.summaries.byCard[?(@.cardId == null)]");
+        assertThat(noCard).isEmpty();                                           // no "Sem cartão" (REQ-037)
         assertThat((String) JsonPath.read(body, "$.summaries.byCard[0].cardName")).isEqualTo("Nubank");
 
         List<Number> byPerson = JsonPath.read(body, "$.summaries.byPerson[*].amountCents");

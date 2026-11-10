@@ -172,7 +172,7 @@ Convenções: todas as tabelas têm `usuario_id BIGINT NOT NULL` (FK `usuario.id
 | valor | DECIMAL(12,2) | NOT NULL, CHECK > 0 | |
 | tipo | VARCHAR(10) | NOT NULL, CHECK in ('fixo','cartao') | |
 | forma_pagamento | VARCHAR(10) | NOT NULL, CHECK in ('pix','credito') | independente do tipo: fixo pode ser pix ou crédito (ex.: assinatura no cartão); cartao é sempre crédito |
-| cartao_id | BIGINT | NULL, FK cartao | só crédito; NULL = "Sem cartão" |
+| cartao_id | BIGINT | NULL, FK cartao | só crédito; obrigatório no crédito desde 2026-11-09 (validado no serviço, `CARD_REQUIRED`); NULL só em linhas antigas |
 | pessoa_id | BIGINT | NULL, FK pessoa | NOT NULL = gasto de terceiro (REQ-017) |
 | pago | BOOLEAN | NOT NULL, default false | só controle (REQ-033) |
 | data | DATE | NOT NULL | obrigatória (PDF); deve estar em `mes` |
@@ -184,7 +184,7 @@ Restrições: UNIQUE (`grupo_parcela_id`, `parcela_atual`) onde não nulos; `par
 
 Regras de consistência do lançamento (validadas no serviço; as CHECK do banco cobrem as simples):
 - `tipo = cartao` ⇒ `forma_pagamento = credito`. `tipo = fixo` ⇒ `forma_pagamento` pix **ou** crédito.
-- `cartao_id` só com `forma_pagamento = credito`; crédito sem `cartao_id` é "Sem cartão".
+- `cartao_id` só com `forma_pagamento = credito`, e obrigatório nele (novo ou editado; 400 `CARD_REQUIRED`). Linhas antigas de crédito sem `cartao_id` continuam válidas e contam nos totais, mas não entram no resumo por cartão (não há "Sem cartão").
 - Parcelas (`parcela_atual`/`parcelas_total`/`grupo_parcela_id`) só em `tipo = cartao`.
 - Um fixo no crédito continua na lista de Fixos e entra em `totalFixos`; também entra em "total de crédito" e no resumo por cartão.
 
@@ -246,7 +246,7 @@ Semeadas em `category` para cada ano novo (REQ-010). A usuária pode renomear, d
 | dividirParcelas(total, n) | base = total ÷ n (inteira); n−1 parcelas = base; última = total − base×(n−1) | REQ-020 |
 | parcelasPorValor(valor, n) | n parcelas iguais | REQ-018 |
 | resumoPorCategoria | Σ por categoria; % = valor ÷ totalGastos (2 casas, HALF_UP só na exibição; aritmética decimal exata, nunca float; na API é um número com 2 casas, ex.: `23.86`) | REQ-035 |
-| resumoPorForma / PorCartão | Σ por forma de pagamento; Σ por cartão com grupo "Sem cartão" | REQ-036/037 |
+| resumoPorForma / PorCartão | Σ por forma de pagamento; Σ por cartão, só cartões (sem grupo "Sem cartão"; linha antiga sem cartão fica só no total de crédito) | REQ-036/037 |
 | resumoPorPessoa | Σ gastos com pessoa_id, por pessoa e por cartão | REQ-038 |
 | cargaDoMês(mesAnterior, mês) | copia os fixos (pago=false; gastos avulsos não são copiados); para cada parcela N/M do mês anterior com N < M cria a parcela N+1, **se a permissão de parcelas automáticas está ligada**, e se `(grupo, N+1)` ainda não existe (vale também para parcelas lançadas à mão, que recebem grupo próprio ao serem criadas); idem entradas parceladas; só se o mês não está em `loaded_month`. Referências (categoria, cartão, pessoa) trocam de ano pelo nome; item cuja categoria não existe no ano novo é ignorado | REQ-022 |
 
@@ -417,7 +417,7 @@ GitHub Actions (detalhes em `docs/ci-cd.md`; NFR-010). **Um workflow por tema**,
 | 0.1.7 | 2026-11-01 | Fixo pode ser no crédito (tipo e forma de pagamento independentes); regras de consistência do lançamento; Open Questions da Phase 3 resolvidas |
 | 0.1.8 | 2026-11-01 | `month` reservado no H2: coluna `month_ref`; data do lançamento `expense_date` |
 | 0.1.9 | 2026-11-01 | Carga do mês: continua parcelas à mão (grupo próprio) e respeita a permissão de parcelas automáticas |
-| 0.3.0 | 2026-11-09 | Front: `lib/privacy.ts` + `ValuesToggle` (REQ-049, olho ao lado do tema), ícone sol/lua no `ThemeSwitcher` (REQ-045). Dinheiro em `DECIMAL(12,2)` no banco (V7: `expense.amount`, `income.amount`), `MoneyColumnConverter`; centavos no resto (D-2, NFR-001). `DELETE /api/cards/{id}` (REQ-013). Pedidos da usuária |
+| 0.3.0 | 2026-11-09 | Cartão obrigatório no crédito (`CARD_REQUIRED`) e fim do "Sem cartão" nos resumos (REQ-015/016/037). Front: `lib/privacy.ts` + `ValuesToggle` (REQ-049, olho ao lado do tema), ícone sol/lua no `ThemeSwitcher` (REQ-045). Dinheiro em `DECIMAL(12,2)` no banco (V7: `expense.amount`, `income.amount`), `MoneyColumnConverter`; centavos no resto (D-2, NFR-001). `DELETE /api/cards/{id}` (REQ-013). Pedidos da usuária |
 | 0.2.10 | 2026-11-09 | Posição = só a soma dos gastos do intervalo (sem entradas); JSON `{fromDay, toDay, totalExpensesCents}`; tela "Gastos R$ X" sem sobra/falta (REQ-030 0.1.9, decisão da usuária) |
 | 0.2.9 | 2026-11-05 | Layout das demais telas (menu, cadastros, configurações, panorama, janelas, entrar) no estilo da tela do mês; tema por botão que alterna; `lib/ui.ts` (aprovado pela usuária) |
 | 0.2.8 | 2026-11-05 | Layout da tela do mês: saldo em destaque com totais numa linha, lista simples com o total de cada fechamento (a régua proposta foi descartada pela usuária), listas em estilo livro-caixa, resumos com barra por categoria (aprovado pela usuária) |

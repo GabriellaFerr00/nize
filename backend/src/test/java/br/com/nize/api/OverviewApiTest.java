@@ -47,8 +47,8 @@ class OverviewApiTest extends IsolationTestBase {
 
     private void expense(TestUser user, YearMonth month, long cents, String type) throws Exception {
         as(user, post("/api/months/" + month + "/expenses").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"name\":\"Gasto\",\"categoryId\":%d,\"amountCents\":%d,\"type\":\"%s\",\"date\":\"%s\"}"
-                        .formatted(categoryId(user, month.getYear()), cents, type, month.atDay(5))))
+                .content(withCard(user, month, "{\"name\":\"Gasto\",\"categoryId\":%d,\"amountCents\":%d,\"type\":\"%s\",\"date\":\"%s\"}"
+                        .formatted(categoryId(user, month.getYear()), cents, type, month.atDay(5)))))
                 .andExpect(status().isCreated());
     }
 

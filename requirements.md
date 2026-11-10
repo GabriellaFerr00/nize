@@ -64,7 +64,7 @@ O Nize é a versão web da planilha "Finanças 2026". A usuária lança gastos e
   - _Acceptance_: o fixo aparece na lista de Fixos do mês e entra no total de fixos e no total de gastos. Um fixo no crédito também entra no total de crédito e no resumo por cartão.
 - **REQ-016**: A usuária shall poder lançar gasto de cartão de crédito com nome, categoria, valor, cartão, data e parcelas.
   - _Acceptance_: o gasto aparece na lista de Cartão do mês e entra no total de gastos.
-  - **Cartão obrigatório no crédito** (pedido da usuária em 2026-11-09): todo gasto no crédito, fixo ou de cartão, novo ou editado, exige um cartão do ano (sem cartão → 400 `VALIDATION_ERROR` no campo `cardId`). No formulário, a usuária escolhe um cartão existente ou cria um ali mesmo, sem sair do lançamento. Lançamentos antigos no crédito sem cartão continuam válidos e aparecem em "Sem cartão" (REQ-037) até a usuária ajustá-los à mão; ao editá-los, o cartão passa a ser exigido. A carga do mês (REQ-022) continua copiando-os como estão.
+  - **Cartão obrigatório no crédito** (pedido da usuária em 2026-11-09): todo gasto no crédito, fixo ou de cartão, novo ou editado, exige um cartão do ano (sem cartão → 400 `CARD_REQUIRED`). No formulário, a usuária escolhe um cartão existente ou cria um ali mesmo, sem sair do lançamento. Não existe mais "Sem cartão". Lançamentos antigos no crédito sem cartão continuam contando nos totais (gastos e crédito) até a usuária ajustá-los à mão, mas não aparecem em nenhum cartão do resumo; ao editá-los, o cartão passa a ser exigido. A carga do mês (REQ-022) continua copiando-os como estão.
 - **REQ-017**: A usuária shall poder marcar um gasto de terceiro informando a pessoa e o cartão usado.
   - _Acceptance_: o gasto fica no total do mês e aparece no resumo por pessoa.
 - **REQ-018**: Com a permissão de parcelas automáticas ligada, a usuária shall poder lançar a compra uma vez, informando número de parcelas e valor total ou valor da parcela, e o sistema shall criar uma parcela por mês a partir do mês escolhido.
@@ -111,8 +111,8 @@ O Nize é a versão web da planilha "Finanças 2026". A usuária lança gastos e
   - _Acceptance_: "Despesas eventuais" 141814 de 594288 = 23,86%; a soma por categoria é igual ao total de gastos.
 - **REQ-036**: O sistema shall exibir o resumo de gastos por forma de pagamento.
   - _Acceptance_: a soma por forma de pagamento é igual ao total de gastos.
-- **REQ-037**: O sistema shall exibir o resumo de gastos por cartão, incluindo o grupo "Sem cartão".
-  - _Acceptance_: crédito de 47500 sem cartão aparece em "Sem cartão"; a soma por cartão (com "Sem cartão") é igual ao total de crédito.
+- **REQ-037**: O sistema shall exibir o resumo de gastos por cartão.
+  - _Acceptance_: a soma por cartão é igual ao total de crédito; não há grupo "Sem cartão" (crédito sem cartão é recusado desde 2026-11-09, decisão da usuária; o PDF previa o grupo).
 - **REQ-038**: O sistema shall exibir o resumo de gastos de terceiros por pessoa e por cartão.
   - _Acceptance_: a soma por pessoa é igual ao total de gastos de terceiros do mês.
 

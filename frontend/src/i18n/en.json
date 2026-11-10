@@ -68,6 +68,7 @@
     "PERSON_NAME_TAKEN": "A person with this name already exists this year.",
     "CATEGORY_IN_USE": "This category still has expenses.",
     "CARD_IN_USE": "This card is still used by expenses.",
+    "CARD_REQUIRED": "Choose a card: it is required for credit.",
     "YEAR_ALREADY_EXISTS": "That year already exists in your account.",
     "INVALID_YEAR": "Enter a year between 2000 and 2100.",
     "NOT_FOUND": "We could not find this item. Refresh the page.",
@@ -222,7 +223,13 @@
     "saved": "Expense saved.",
     "saveAndAnother": "Save and add another",
     "choose": "Choose…",
-    "noCard": "No card",
+    "chooseCard": "Choose a card…",
+    "cardMissing": "Card to be set",
+    "newCard": {
+      "option": "+ New card",
+      "title": "New card",
+      "create": "Create card"
+    },
     "nobody": "Nobody (my expense)",
     "fields": {
       "name": "Name",
@@ -263,7 +270,8 @@
       "date": "Pick a date inside {{month}}.",
       "autoCount": "Enter 2 to 120 installments.",
       "manualCount": "Enter the total installments, from 2 to 120.",
-      "manualNumber": "The current installment must be between 1 and the total."
+      "manualNumber": "The current installment must be between 1 and the total.",
+      "card": "Choose a card or create a new one."
     },
     "editTitle": "Edit expense",
     "installmentFixed": "Installment {{label}}: the type and the installments do not change when editing."

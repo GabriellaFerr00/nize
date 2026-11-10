@@ -21,7 +21,8 @@ export type MonthTotals = {
 export type Position = { fromDay: number; toDay: number; totalExpensesCents: number }
 
 /** `cardId` null is the "no card" group (REQ-037). */
-export type CardEntry = { cardId: number | null; cardName: string | null; amountCents: number }
+/** Only cards: there is no "Sem cartão" group (REQ-037, 2026-11-09). */
+export type CardEntry = { cardId: number; cardName: string | null; amountCents: number }
 
 export type MonthSummaries = {
   /** `percent` is the share of the total expenses with 2 decimals (e.g. 23.86), computed by the API. */

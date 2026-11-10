@@ -71,7 +71,7 @@ class ExpenseCreateApiTest extends IsolationTestBase {
     }
 
     private ResultActions create(TestUser user, Map<String, String> fields) throws Exception {
-        return as(user, post(URL).contentType(MediaType.APPLICATION_JSON).content(json(fields)));
+        return as(user, post(URL).contentType(MediaType.APPLICATION_JSON).content(withCard(user, MONTH, json(fields))));
     }
 
     private List<Map<String, Object>> rows(TestUser user) {
@@ -103,7 +103,7 @@ class ExpenseCreateApiTest extends IsolationTestBase {
     }
 
     @Test
-    void aFixedExpenseMayBePaidOnCreditWithOrWithoutACard() throws Exception {
+    void aFixedExpenseMayBePaidOnCreditButAlwaysWithACard() throws Exception {
         long category = categoryId(userA, "Assinaturas");
         long card = createCard(userA, "Nubank", 10);
 
@@ -115,9 +115,16 @@ class ExpenseCreateApiTest extends IsolationTestBase {
                 .andExpect(jsonPath("$.type").value("FIXED")).andExpect(jsonPath("$.paymentMethod").value("CREDIT"))
                 .andExpect(jsonPath("$.cardId").value(card));
 
+        // credit without a card is refused (REQ-015/016, 2026-11-09), fixed or card type
         Map<String, String> noCard = base(category);
         noCard.put("paymentMethod", "\"CREDIT\"");
-        create(userA, noCard).andExpect(status().isCreated()).andExpect(jsonPath("$.cardId").doesNotExist());
+        as(userA, post(URL).contentType(MediaType.APPLICATION_JSON).content(json(noCard)))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("CARD_REQUIRED"));
+        Map<String, String> cardType = base(category);
+        cardType.put("type", "\"CARD\"");
+        as(userA, post(URL).contentType(MediaType.APPLICATION_JSON).content(json(cardType)))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("CARD_REQUIRED"));
+        assertThat(rows(userA)).hasSize(1);
     }
 
     @Test

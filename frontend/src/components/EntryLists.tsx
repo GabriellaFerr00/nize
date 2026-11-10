@@ -120,7 +120,8 @@ export function ExpenseList({ kind, expenses, catalogs, totalCents, onTogglePaid
       totalCents={totalCents}
     >
       {expenses.map((e) => {
-        const card = e.paymentMethod === 'CREDIT' ? (catalogs.name('cards', e.cardId) ?? t('expense.noCard')) : undefined
+        // an old credit row without a card asks for one (there is no "Sem cartão" anymore, REQ-016)
+        const card = e.paymentMethod === 'CREDIT' ? (catalogs.name('cards', e.cardId) ?? t('expense.cardMissing')) : undefined
         const person = catalogs.name('people', e.personId)
         return (
           <Row

@@ -31,22 +31,29 @@ class PaymentSummaryTest {
     }
 
     @Test
-    void aCreditWithoutACardDoesNotVanishFromTheCardSummary() {
-        // Dado um lançamento de crédito de 47500 centavos sem cartão
+    void thereIsNoSemCartaoGroup() {
+        // Adapted (REQ-037, user decision 2026-11-09): credit always has a card; an old credit row without one still
+        // counts in the credit total, but no "Sem cartão" group is listed
         Summary summary = PaymentSummary.of(MONTH);
 
-        // Então a soma por cartão, incluindo "Sem cartão", é igual ao total de crédito
-        assertThat(summary.byCard()).contains(new CardEntry(null, 47_500));
+        assertThat(summary.byCard()).containsExactly(new CardEntry(1L, 375_500), new CardEntry(2L, 71_990));
+        assertThat(summary.byCard()).noneMatch(c -> c.cardId() == null);
+        assertThat(summary.creditCents()).isEqualTo(494_990);
+    }
+
+    @Test
+    void withEveryCreditOnACardTheCardsAddUpToTheCreditTotal() {
+        Summary summary = PaymentSummary.of(MONTH.stream().filter(i -> i.payment() == Payment.PIX || i.cardId() != null).toList());
+
         assertThat(summary.byCard().stream().mapToLong(CardEntry::amountCents).sum()).isEqualTo(summary.creditCents());
     }
 
     @Test
-    void cardsComeFromTheLargestAmountWithNoCardLast() {
+    void cardsComeFromTheLargestAmount() {
         Summary summary = PaymentSummary.of(List.of(
                 new Item(Payment.CREDIT, null, 900_000), new Item(Payment.CREDIT, 2L, 100), new Item(Payment.CREDIT, 1L, 5_000)));
 
-        assertThat(summary.byCard()).containsExactly(
-                new CardEntry(1L, 5_000), new CardEntry(2L, 100), new CardEntry(null, 900_000));
+        assertThat(summary.byCard()).containsExactly(new CardEntry(1L, 5_000), new CardEntry(2L, 100));
     }
 
     @Test

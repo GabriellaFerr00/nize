@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -10,6 +10,7 @@ import {
   type NewExpense,
   type PaymentMethod,
 } from '../api/expensesApi'
+import { createItem } from '../api/catalogApi'
 import { getSettings } from '../api/yearsApi'
 import { apiErrorMessage } from '../lib/apiErrorMessage'
 import { centsToInput, parseCents } from '../lib/money'
@@ -24,6 +25,8 @@ import { field, primaryButton, quietButton, secondaryButton } from '../lib/ui'
 type Props = { month: string; expense?: Expense; onClose: () => void }
 type Parceling = 'none' | 'auto' | 'manual'
 
+/** Value of the card list option that opens the "new card" fields (REQ-016, 2026-11-09). */
+const NEW_CARD = 'new'
 
 /** The "Novo lançamento" window (REQ-016..019, REQ-042): one expense, optionally in installments. */
 export function ExpenseFormDialog({ month, expense, onClose }: Props) {
@@ -71,6 +74,8 @@ export function ExpenseFormDialog({ month, expense, onClose }: Props) {
     if (!name.trim()) next.name = t('expense.errors.name')
     if (cents === null) next.amount = t('expense.errors.amount')
     if (!categoryId) next.category = t('expense.errors.category')
+    // credit always has a card (REQ-015/016, 2026-11-09)
+    if (usesCredit && (!cardId || cardId === NEW_CARD)) next.card = t('expense.errors.card')
     if (!date || !date.startsWith(`${month}-`)) next.date = t('expense.errors.date', { month })
     let installments: Partial<NewExpense> = {}
     if (parcelingChoice === 'auto') {
@@ -92,7 +97,7 @@ export function ExpenseFormDialog({ month, expense, onClose }: Props) {
       amountCents: cents,
       type,
       paymentMethod: effectivePayment,
-      ...(usesCredit && cardId && { cardId: Number(cardId) }),
+      ...(usesCredit && { cardId: Number(cardId) }),
       ...(isCard && personId && { personId: Number(personId) }),
       // editing replaces every field, so a card expense keeps the mark it had
       ...(type === 'FIXED' ? { paid } : editing && { paid: expense.paid }),
@@ -195,17 +200,33 @@ export function ExpenseFormDialog({ month, expense, onClose }: Props) {
         </div>
 
         {usesCredit && (
-          <label className="flex flex-col gap-1 text-sm font-medium text-ink">
-            {t('expense.fields.card')}
-            <select className={field} value={cardId} onChange={(e) => setCardId(e.target.value)}>
-              <option value="">{t('expense.noCard')}</option>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="expense-card" className="text-sm font-medium text-ink">
+              {t('expense.fields.card')}
+            </label>
+            <select
+              id="expense-card"
+              className={field}
+              value={cardId}
+              aria-invalid={errors.card ? true : undefined}
+              aria-describedby={errors.card ? 'expense-card-error' : undefined}
+              onChange={(e) => setCardId(e.target.value)}
+            >
+              <option value="">{t('expense.chooseCard')}</option>
               {selectable(catalogs.cards, expense?.cardId).map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
                 </option>
               ))}
+              <option value={NEW_CARD}>{t('expense.newCard.option')}</option>
             </select>
-          </label>
+            {errors.card && (
+              <p id="expense-card-error" className="text-sm text-negative">
+                {errors.card}
+              </p>
+            )}
+            {cardId === NEW_CARD && <NewCardFields year={year} onCreated={(id) => setCardId(String(id))} />}
+          </div>
         )}
 
         {isCard && (
@@ -321,5 +342,54 @@ export function ExpenseFormDialog({ month, expense, onClose }: Props) {
         </div>
       </form>
     </Dialog>
+  )
+}
+
+/**
+ * Creates a card without leaving the entry (REQ-016, 2026-11-09): name and due day, the same rules as the Cards
+ * screen. The new card is selected right away.
+ */
+function NewCardFields({ year, onCreated }: { year: number; onCreated: (id: number) => void }) {
+  const { t } = useTranslation()
+  const queryClient = useQueryClient()
+  const [name, setName] = useState('')
+  const [dueDay, setDueDay] = useState('')
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const create = useMutation({
+    mutationFn: () => createItem('cards', year, { name: name.trim(), dueDay: Number(dueDay) }),
+    onSuccess: async (card) => {
+      await queryClient.invalidateQueries({ queryKey: ['catalog', 'cards'] })
+      onCreated(card.id)
+    },
+  })
+
+  function submit() {
+    const next: Record<string, string> = {}
+    const day = Number(dueDay)
+    if (!name.trim()) next.name = t('catalog.errors.nameRequired')
+    if (!Number.isInteger(day) || day < 1 || day > 31) next.dueDay = t('catalog.errors.dueDay')
+    setErrors(next)
+    if (Object.keys(next).length === 0) create.mutate()
+  }
+
+  return (
+    <fieldset className="mt-2 flex flex-col gap-3 rounded-xl border border-line p-3">
+      <legend className="px-1 text-sm font-medium text-ink">{t('expense.newCard.title')}</legend>
+      {create.isError && <FormMessage kind="error">{apiErrorMessage(t, create.error)}</FormMessage>}
+      <TextField label={t('catalog.fields.name')} value={name} onChange={(e) => setName(e.target.value)} error={errors.name} />
+      <TextField
+        label={t('catalog.fields.dueDay')}
+        type="number"
+        inputMode="numeric"
+        min={1}
+        max={31}
+        value={dueDay}
+        onChange={(e) => setDueDay(e.target.value)}
+        error={errors.dueDay}
+      />
+      <button type="button" className={secondaryButton} disabled={create.isPending} onClick={submit}>
+        {t('expense.newCard.create')}
+      </button>
+    </fieldset>
   )
 }
