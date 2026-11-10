@@ -129,13 +129,7 @@ export function SummaryPanel({ view, catalogs }: { view: MonthView; catalogs?: Y
               label={cardName(c)}
               cents={c.amountCents}
               lead={
-                <CardBadge
-                  id={c.cardId}
-                  name={cardName(c)}
-                  size="sm"
-                  hasLogo={catalogs?.cards.find((x) => x.id === c.cardId)?.hasLogo}
-                  brand={catalogs?.cards.find((x) => x.id === c.cardId)?.brand}
-                />
+                <CardBadge name={cardName(c)} size="sm" brand={catalogs?.cards.find((x) => x.id === c.cardId)?.brand} />
               }
             />
           ))}

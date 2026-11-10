@@ -73,7 +73,6 @@ linha de A (e vice-versa), listas e o mês só mostram linhas da própria usuár
 | POST /api/years/{year}/cards | CardController | `CardApiTest#theSameNameIsFineForAnotherUserAndAnotherYear` |
 | PUT /api/cards/{id} | CardController | `CardApiTest#onlyTheOwnerCanUpdateACardAndOthersGet404`, `#anotherUsersChangeNeverTouchesMyCard` |
 | DELETE /api/cards/{id} | CardController | `CardDeleteTest#onlyTheOwnerCanDeleteACardAndOthersGet404`, `#anotherUserCannotDeleteMyCard`, `#anotherUsersExpensesDoNotCount` (2026-11-09) |
-| PUT/GET/DELETE /api/cards/{id}/logo | CardController | `CardLogoTest#onlyTheOwnerCanSendSeeOrRemoveTheImage` (`assertOnlyOwnerCanAccess`), `#anImageNeedsASignedInUser` (2026-11-09) |
 | GET /api/years/{year}/people | PersonController | `PersonApiTest` (teste de criação: B lista 0 pessoas) |
 | POST /api/years/{year}/people | PersonController | `PersonApiTest#theSameNameIsFineForAnotherUserAndAnotherYear` |
 | PUT /api/people/{id} | PersonController | `PersonApiTest#onlyTheOwnerCanUpdateAPersonAndOthersGet404`, `#anotherUsersChangeNeverTouchesMyPerson` |
@@ -87,7 +86,7 @@ linha de A (e vice-versa), listas e o mês só mostram linhas da própria usuár
 | DELETE /api/incomes/{id} | IncomeController | `IncomeApiTest#onlyTheOwnerCanDeleteAnIncome`; `?scope=following`: `ExpenseInstallmentDeleteTest#anotherUserCannotDeleteMyIncomeInstallments` (2026-11-09) |
 | GET /api/years/{year}/overview | `OverviewApiTest#onlyTheOwnerCanReadTheOverviewOfHerYear`, `#anotherUsersMovementsNeverShowUp` | ok (TASK-044) |
 
-**Resultado**: 25 de 25 endpoints de dados cobertos (100%), incluindo o panorama (TASK-044). Em 2026-11-09 entraram mais 4 (excluir cartão e o logotipo do cartão: enviar, ver e remover), todos cobertos: 29 de 29. Cores (`color`) e limite (`monthlyLimitCents`) usam os endpoints de categoria/pessoa já cobertos; `CategoryLimitApiTest#anotherUserCannotSetMyLimit` e `CategoryAndPersonColorTest#anotherUserCannotColorMyCategory` conferem. Faltavam dois casos de referência de outra
+**Resultado**: 25 de 25 endpoints de dados cobertos (100%), incluindo o panorama (TASK-044). Em 2026-11-09 entrou mais 1 (excluir cartão), coberto: 26 de 26 (o logotipo enviado pela usuária existiu por algumas horas e foi retirado). Cores (`color`) e limite (`monthlyLimitCents`) usam os endpoints de categoria/pessoa já cobertos; `CategoryLimitApiTest#anotherUserCannotSetMyLimit` e `CategoryAndPersonColorTest#anotherUserCannotColorMyCategory` conferem. Faltavam dois casos de referência de outra
 usuária na edição (cartão/pessoa no `PUT /api/expenses/{id}` e pessoa no `PUT /api/incomes/{id}`); os testes foram
 acrescentados e passam (o código já devolvia 404). TASK-047 fica aberta só pelo endpoint do panorama.
 

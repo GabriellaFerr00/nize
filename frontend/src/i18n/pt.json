@@ -77,9 +77,7 @@
     "INVALID_MONTH": "Mês inválido.",
     "DATE_OUT_OF_MONTH": "A data precisa estar dentro do mês.",
     "INACTIVE_REFERENCE": "A categoria, o cartão ou a pessoa escolhida está desativada.",
-    "REFERENCE_UNAVAILABLE": "As parcelas passam para um ano em que a categoria, o cartão ou a pessoa não existe mais. Ajuste os cadastros desse ano.",
-    "INVALID_IMAGE": "A imagem precisa ser PNG, JPG ou WebP.",
-    "IMAGE_TOO_LARGE": "A imagem pode ter no máximo 200 KB."
+    "REFERENCE_UNAVAILABLE": "As parcelas passam para um ano em que a categoria, o cartão ou a pessoa não existe mais. Ajuste os cadastros desse ano."
   },
   "auth": {
     "fields": {
@@ -153,17 +151,14 @@
       "description": "Descrição (opcional)",
       "dueDay": "Dia de vencimento (1 a 31)",
       "monthlyLimit": "Limite por mês (R$, opcional)",
-      "color": "Cor",
-      "logo": "Logotipo do cartão (opcional)"
+      "color": "Cor"
     },
     "errors": {
       "nameRequired": "Informe um nome.",
       "nameTooLong": "O nome pode ter no máximo 80 caracteres.",
       "descriptionTooLong": "A descrição pode ter no máximo 255 caracteres.",
       "dueDay": "Informe um dia de 1 a 31.",
-      "limit": "Informe um valor maior que zero ou deixe em branco.",
-      "logoType": "Escolha uma imagem PNG, JPG ou WebP.",
-      "logoSize": "A imagem pode ter no máximo 200 KB."
+      "limit": "Informe um valor maior que zero ou deixe em branco."
     },
     "categories": {
       "new": "Nova categoria",
@@ -202,8 +197,6 @@
     "activateItem": "Reativar {{name}}",
     "deleteItem": "Excluir {{name}}",
     "limitPerMonth": "Limite por mês:",
-    "logoHelp": "PNG, JPG ou WebP, até 200 KB. Use uma imagem sua.",
-    "removeLogo": "Remover logotipo",
     "colors": {
       "none": "Sem cor",
       "green": "Verde",

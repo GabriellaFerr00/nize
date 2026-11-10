@@ -5,11 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import {
   createItem,
-  deleteCardLogo,
   deleteItem,
-  LOGO_TYPES,
-  MAX_LOGO_BYTES,
-  uploadCardLogo,
   listItems,
   updateItem,
   type CatalogInput,
@@ -35,7 +31,7 @@ import { dangerButton, iconButton, pageTitle, primaryButton, quietButton } from 
 type Props = {
   kind: CatalogKind
   /** Which extra fields the form shows besides the name. */
-  fields: { description?: boolean; dueDay?: boolean; monthlyLimit?: boolean; color?: boolean; logo?: boolean }
+  fields: { description?: boolean; dueDay?: boolean; monthlyLimit?: boolean; color?: boolean; brand?: boolean }
   canDelete?: boolean
 }
 
@@ -200,7 +196,7 @@ function CatalogRow({ item, canDelete, busy, onEdit, onToggle, onDelete }: RowPr
           <span className="sr-only">{t('catalog.dueOn', { day: item.dueDay })}</span>
         </span>
       )}
-      {item.hasLogo !== undefined && <CardBadge id={item.id} name={name} hasLogo={item.hasLogo} brand={item.brand} />}
+      {item.dueDay !== undefined && <CardBadge name={name} brand={item.brand} />}
       <div className="flex min-w-0 flex-1 flex-col pt-px">
         <span className={`flex items-center gap-2 leading-6 font-medium break-words ${item.active ? 'text-ink' : 'text-ink-soft'}`}>
           <TagDot color={item.color} />
@@ -260,38 +256,13 @@ function ItemFormDialog({ kind, year, fields, item, onClose, onSaved }: FormProp
   const [limit, setLimit] = useState(item?.monthlyLimitCents !== undefined ? centsToInput(item.monthlyLimitCents) : '')
   const [color, setColor] = useState(item?.color ?? '')
   const [brand, setBrand] = useState(item?.brand ?? '')
-  const [logoFile, setLogoFile] = useState<File | null>(null)
-  const [removeLogo, setRemoveLogo] = useState(false)
-  const [errors, setErrors] = useState<{ name?: string; description?: string; dueDay?: string; limit?: string; logo?: string }>({})
-  const queryClient = useQueryClient()
+  const [errors, setErrors] = useState<{ name?: string; description?: string; dueDay?: string; limit?: string }>({})
 
   const save = useMutation({
-    mutationFn: async (input: CatalogInput) => {
-      const saved = item ? await updateItem(kind, item.id, { ...input, active: item.active }) : await createItem(kind, year, input)
-      // the card's own image goes after the card exists (REQ-052)
-      if (fields.logo && logoFile) await uploadCardLogo(saved.id, logoFile)
-      else if (fields.logo && removeLogo && item?.hasLogo) await deleteCardLogo(saved.id)
-      if (fields.logo && (logoFile || removeLogo)) await queryClient.invalidateQueries({ queryKey: ['cardLogo', saved.id] })
-      return saved
-    },
+    mutationFn: (input: CatalogInput) =>
+      item ? updateItem(kind, item.id, { ...input, active: item.active }) : createItem(kind, year, input),
     onSuccess: onSaved,
   })
-
-  function pickLogo(file: File | null) {
-    setRemoveLogo(false)
-    if (file && !LOGO_TYPES.includes(file.type)) {
-      setErrors((e) => ({ ...e, logo: t('catalog.errors.logoType') }))
-      setLogoFile(null)
-      return
-    }
-    if (file && file.size > MAX_LOGO_BYTES) {
-      setErrors((e) => ({ ...e, logo: t('catalog.errors.logoSize') }))
-      setLogoFile(null)
-      return
-    }
-    setErrors((e) => ({ ...e, logo: undefined }))
-    setLogoFile(file)
-  }
 
   function onSubmit(event: FormEvent) {
     event.preventDefault()
@@ -307,14 +278,14 @@ function ItemFormDialog({ kind, year, fields, item, onClose, onSaved }: FormProp
       limit: fields.monthlyLimit && limitCents === undefined ? t('catalog.errors.limit') : undefined,
     }
     setErrors(next)
-    if (next.name || next.description || next.dueDay || next.limit || errors.logo) return
+    if (next.name || next.description || next.dueDay || next.limit) return
     save.mutate({
       name: name.trim(),
       ...(fields.description && { description: description.trim() }),
       ...(fields.dueDay && { dueDay: day }),
       ...(fields.monthlyLimit && limitCents !== null && limitCents !== undefined && { monthlyLimitCents: limitCents }),
       ...(fields.color && color && { color }),
-      ...(fields.logo && brand && { brand }),
+      ...(fields.brand && brand && { brand }),
     })
   }
 
@@ -341,7 +312,7 @@ function ItemFormDialog({ kind, year, fields, item, onClose, onSaved }: FormProp
           />
         )}
         {fields.color && <ColorPicker value={color} onChange={setColor} />}
-        {fields.logo && (
+        {fields.brand && (
           <BrandPicker
             value={brand}
             onChange={(picked) => {
@@ -350,37 +321,6 @@ function ItemFormDialog({ kind, year, fields, item, onClose, onSaved }: FormProp
               if (picked && !name.trim()) setName(picked.name)
             }}
           />
-        )}
-        {fields.logo && (
-          <div className="flex flex-col gap-2">
-            <label htmlFor="card-logo" className="text-sm font-medium text-ink">
-              {t('catalog.fields.logo')}
-            </label>
-            <div className="flex items-center gap-3">
-              {item && !logoFile && !removeLogo && <CardBadge id={item.id} name={item.name} hasLogo={item.hasLogo} brand={brand} />}
-              <input
-                id="card-logo"
-                type="file"
-                accept={LOGO_TYPES.join(',')}
-                aria-invalid={errors.logo ? true : undefined}
-                aria-describedby={errors.logo ? 'card-logo-error' : 'card-logo-help'}
-                onChange={(e) => pickLogo(e.target.files?.[0] ?? null)}
-                className="min-w-0 text-sm text-ink file:mr-3 file:min-h-11 file:rounded-xl file:border file:border-line-strong file:bg-card file:px-3 file:font-medium file:text-ink"
-              />
-            </div>
-            <p id="card-logo-help" className="text-xs text-ink-soft">{t('catalog.logoHelp')}</p>
-            {errors.logo && (
-              <p id="card-logo-error" className="text-sm text-negative">
-                {errors.logo}
-              </p>
-            )}
-            {item?.hasLogo && !logoFile && (
-              <label className="flex min-h-11 items-center gap-2 text-sm text-ink">
-                <input type="checkbox" checked={removeLogo} onChange={(e) => setRemoveLogo(e.target.checked)} className="size-4 accent-brand" />
-                {t('catalog.removeLogo')}
-              </label>
-            )}
-          </div>
         )}
         {fields.dueDay && (
           <TextField

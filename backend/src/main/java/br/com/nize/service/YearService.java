@@ -1,12 +1,10 @@
 package br.com.nize.service;
 
 import br.com.nize.domain.Card;
-import br.com.nize.domain.CardLogo;
 import br.com.nize.domain.Category;
 import br.com.nize.domain.Person;
 import br.com.nize.domain.UserYear;
 import br.com.nize.domain.UserYearId;
-import br.com.nize.repository.CardLogoRepository;
 import br.com.nize.repository.CardRepository;
 import br.com.nize.repository.CategoryRepository;
 import br.com.nize.repository.PersonRepository;
@@ -33,17 +31,15 @@ public class YearService {
     private final CardRepository cards;
     private final PersonRepository people;
     private final CategorySeeder categorySeeder;
-    private final CardLogoRepository logos;
 
     public YearService(UserYearRepository years, SettingsRepository settings, CategoryRepository categories,
-                       CardRepository cards, PersonRepository people, CategorySeeder categorySeeder, CardLogoRepository logos) {
+                       CardRepository cards, PersonRepository people, CategorySeeder categorySeeder) {
         this.years = years;
         this.settings = settings;
         this.categories = categories;
         this.cards = cards;
         this.people = people;
         this.categorySeeder = categorySeeder;
-        this.logos = logos;
     }
 
     @Transactional(readOnly = true)
@@ -78,19 +74,12 @@ public class YearService {
             copy.setColor(c.getColor());
             return copy;
         }).toList());
-        List<Card> sourceCards = cards.findByUserIdAndYearNumberOrderByIdAsc(userId, source);
-        List<Card> copiedCards = cards.saveAll(sourceCards.stream().map(c -> {
+        cards.saveAll(cards.findByUserIdAndYearNumberOrderByIdAsc(userId, source).stream().map(c -> {
             Card copy = new Card(userId, year, c.getName(), c.getDueDay());
             copy.update(c.getName(), c.getDueDay(), c.isActive());
             copy.setBrand(c.getBrand());
             return copy;
         }).toList());
-        // the card's own image goes with it (REQ-052)
-        for (int i = 0; i < sourceCards.size(); i++) {
-            Long newId = copiedCards.get(i).getId();
-            logos.findByCardIdAndUserId(sourceCards.get(i).getId(), userId)
-                    .ifPresent(logo -> logos.save(new CardLogo(newId, userId, logo.getContentType(), logo.getData())));
-        }
         people.saveAll(people.findByUserIdAndYearNumberOrderByIdAsc(userId, source).stream().map(p -> {
             Person copy = new Person(userId, year, p.getName());
             copy.update(p.getName(), p.isActive());

@@ -227,10 +227,7 @@ describe('category limit (TASK-068: REQ-051)', () => {
   })
 })
 
-describe('colors and card logos (TASK-069: REQ-052)', () => {
-  const card = (id: number, name: string, hasLogo = false) => ({ id, year: 2026, name, dueDay: 10, active: true, hasLogo })
-  const png = (size: number) => new File([new Uint8Array(size)], 'logo.png', { type: 'image/png' })
-
+describe('colors (TASK-069: REQ-052)', () => {
   it('a category gets a color of the palette, shown as a dot', async () => {
     const replies: Replies = {
       ...baseReplies(),
@@ -267,57 +264,6 @@ describe('colors and card logos (TASK-069: REQ-052)', () => {
     await waitFor(() => expect(calls.find((c) => c.key === 'POST /api/years/2026/people')?.body).toEqual({ name: 'Mainha', color: 'pink' }))
   })
 
-  it('a card without a logo shows its initial; with one, the image', async () => {
-    stubApi({
-      ...baseReplies(),
-      'GET /api/years/2026/cards': { body: [card(1, 'nubank'), card(2, 'Inter', true)] },
-      'GET /api/cards/2/logo': { raw: new Blob([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], { type: 'image/png' }) },
-    })
-    renderApp('/cards', { signedIn: true })
-    const nubank = (await screen.findByText('nubank')).closest('li') as HTMLElement
-    expect(nubank).toHaveTextContent('N')
-    const inter = screen.getByText('Inter').closest('li') as HTMLElement
-    await waitFor(() => expect(inter.querySelector('img')?.getAttribute('src')).toMatch(/^data:image\/png;base64,/))
-  })
-
-  it('sends the chosen image after saving the card, refusing other types and big files first', async () => {
-    const replies: Replies = {
-      ...baseReplies(),
-      'GET /api/years/2026/cards': { body: [card(1, 'Nubank')] },
-      'PUT /api/cards/1': { body: card(1, 'Nubank') },
-      'PUT /api/cards/1/logo': { status: 204 },
-    }
-    const calls = stubApi(replies)
-    renderApp('/cards', { signedIn: true })
-    await userEvent.click(await screen.findByRole('button', { name: 'Editar Nubank' }))
-    const dialog = await screen.findByRole('dialog', { name: 'Editar cartão' })
-    const input = within(dialog).getByLabelText('Logotipo do cartão (opcional)')
-
-    await userEvent.upload(input, new File(['<svg/>'], 'x.svg', { type: 'image/svg+xml' }), { applyAccept: false })
-    expect(within(dialog).getByText('Escolha uma imagem PNG, JPG ou WebP.')).toBeInTheDocument()
-    await userEvent.upload(input, png(200 * 1024 + 1))
-    expect(within(dialog).getByText('A imagem pode ter no máximo 200 KB.')).toBeInTheDocument()
-
-    await userEvent.upload(input, png(1000))
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }))
-    await waitFor(() => expect(calls.find((c) => c.key === 'PUT /api/cards/1/logo')?.body).toEqual({ type: 'image/png', size: 1000 }))
-  })
-
-  it('removes the logo when asked', async () => {
-    const calls = stubApi({
-      ...baseReplies(),
-      'GET /api/years/2026/cards': { body: [card(1, 'Nubank', true)] },
-      'GET /api/cards/1/logo': { raw: new Blob([new Uint8Array([1])], { type: 'image/png' }) },
-      'PUT /api/cards/1': { body: card(1, 'Nubank', true) },
-      'DELETE /api/cards/1/logo': { status: 204 },
-    })
-    renderApp('/cards', { signedIn: true })
-    await userEvent.click(await screen.findByRole('button', { name: 'Editar Nubank' }))
-    const dialog = await screen.findByRole('dialog', { name: 'Editar cartão' })
-    await userEvent.click(within(dialog).getByRole('checkbox', { name: 'Remover logotipo' }))
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }))
-    await waitFor(() => expect(calls.some((c) => c.key === 'DELETE /api/cards/1/logo')).toBe(true))
-  })
 })
 
 describe('card brands and free colors (TASK-070/071: REQ-052)', () => {
@@ -325,7 +271,7 @@ describe('card brands and free colors (TASK-070/071: REQ-052)', () => {
     const replies: Replies = {
       ...baseReplies(),
       'GET /api/years/2026/cards': { body: [] },
-      'POST /api/years/2026/cards': { status: 201, body: { id: 3, year: 2026, name: 'Itaú', dueDay: 8, active: true, hasLogo: false, brand: 'itau' } },
+      'POST /api/years/2026/cards': { status: 201, body: { id: 3, year: 2026, name: 'Itaú', dueDay: 8, active: true, brand: 'itau' } },
     }
     const calls = stubApi(replies)
     renderApp('/cards', { signedIn: true })
@@ -341,31 +287,37 @@ describe('card brands and free colors (TASK-070/071: REQ-052)', () => {
     expect(within(dialog).getByLabelText('Nome')).toHaveValue('Itaú')
 
     await userEvent.type(within(dialog).getByLabelText('Dia de vencimento (1 a 31)'), '8')
-    replies['GET /api/years/2026/cards'] = { body: [{ id: 3, year: 2026, name: 'Itaú', dueDay: 8, active: true, hasLogo: false, brand: 'itau' }] }
+    replies['GET /api/years/2026/cards'] = { body: [{ id: 3, year: 2026, name: 'Itaú', dueDay: 8, active: true, brand: 'itau' }] }
     await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }))
     await waitFor(() => expect(calls.find((c) => c.key === 'POST /api/years/2026/cards')?.body).toEqual({ name: 'Itaú', dueDay: 8, brand: 'itau' }))
-    // no free logo for Itaú: its initials on the brand color
     const row = (await screen.findByText('Itaú')).closest('li') as HTMLElement
-    expect(row.querySelector('[data-brand="itau"]')).toHaveTextContent('It')
+    expect(row.querySelector('[data-brand="itau"] img')).toHaveAttribute('src', '/card-brands/itau.svg')
   })
 
-  it('a brand with a free logo shows it; the user\'s own image wins over the brand', async () => {
+  it('shows the saved logo of a brand, the initials of one without a logo, and no upload field', async () => {
     stubApi({
       ...baseReplies(),
       'GET /api/years/2026/cards': {
         body: [
-          { id: 1, year: 2026, name: 'Roxinho', dueDay: 10, active: true, hasLogo: false, brand: 'nubank' },
-          { id: 2, year: 2026, name: 'Meu', dueDay: 10, active: true, hasLogo: true, brand: 'nubank' },
+          { id: 1, year: 2026, name: 'Roxinho', dueDay: 10, active: true, brand: 'nubank' },
+          { id: 2, year: 2026, name: 'Laranjinha', dueDay: 10, active: true, brand: 'itau' },
+          { id: 3, year: 2026, name: 'Loja', dueDay: 10, active: true, brand: null },
         ],
       },
-      'GET /api/cards/2/logo': { raw: new Blob([new Uint8Array([0x89, 0x50])], { type: 'image/png' }) },
     })
     renderApp('/cards', { signedIn: true })
     const roxinho = (await screen.findByText('Roxinho')).closest('li') as HTMLElement
     expect(roxinho.querySelector('[data-brand="nubank"] img')).toHaveAttribute('src', '/card-brands/nubank.svg')
-    const meu = screen.getByText('Meu').closest('li') as HTMLElement
-    await waitFor(() => expect(meu.querySelector('img')?.getAttribute('src')).toMatch(/^data:image\/png/))
-    expect(meu.querySelector('[data-brand]')).toBeNull()
+    // Itaú: the institution's full-color logo on a white tile
+    const itau = screen.getByText('Laranjinha').closest('li') as HTMLElement
+    expect(itau.querySelector('[data-brand="itau"]')).toHaveClass('bg-white')
+    expect(itau.querySelector('[data-brand="itau"] img')).toHaveAttribute('src', '/card-brands/itau.svg')
+    expect(screen.getByText('Loja').closest('li')).toHaveTextContent('L')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Editar Loja' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Editar cartão' })
+    expect(within(dialog).queryByLabelText(/Logotipo/)).not.toBeInTheDocument()
+    expect(dialog.querySelector('input[type="file"]')).toBeNull()
   })
 
   it('a category takes any color from the palette of tones or the device picker', async () => {

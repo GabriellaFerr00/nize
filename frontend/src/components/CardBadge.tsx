@@ -1,26 +1,22 @@
-import { useQuery } from '@tanstack/react-query'
-import { cardLogoDataUrl } from '../api/catalogApi'
 import { cardBrand } from '../lib/cardBrands'
 
-type Props = { id?: number; name: string; hasLogo?: boolean; brand?: string | null; size?: 'sm' | 'md' }
+type Props = { name: string; brand?: string | null; size?: 'sm' | 'md' }
 
 /**
- * How a card is recognised (REQ-052, D-21): the user's own image first, then the chosen Brazilian brand (its CC0 logo
- * or its initials on the brand color), then the first letter of the name. Decoration beside the name, so it is
- * hidden from screen readers.
+ * How a card is recognised (REQ-052, D-21): the brand chosen from the list (its saved logo, or its initials on the
+ * brand color), or the first letter of the name. Decoration beside the name, so it is hidden from screen readers.
  */
-export function CardBadge({ id, name, hasLogo = false, brand, size = 'md' }: Props) {
-  const logo = useQuery({
-    queryKey: ['cardLogo', id],
-    queryFn: () => cardLogoDataUrl(id as number),
-    enabled: hasLogo && id !== undefined,
-    staleTime: Infinity,
-  })
+export function CardBadge({ name, brand, size = 'md' }: Props) {
   const box = size === 'sm' ? 'size-5 text-[9px]' : 'size-8 text-xs'
-  if (hasLogo && logo.data) {
-    return <img src={logo.data} alt="" aria-hidden className={`${box} shrink-0 rounded-md border border-line bg-card object-contain`} />
-  }
   const known = cardBrand(brand)
+  if (known?.icon && known.fullColor) {
+    // the institution's own full-color logo reads on white in both themes
+    return (
+      <span aria-hidden data-brand={known.key} className={`${box} grid shrink-0 place-items-center rounded-md border border-line bg-white p-0.5`}>
+        <img src={`/card-brands/${known.key}.svg`} alt="" className="size-full object-contain" />
+      </span>
+    )
+  }
   if (known) {
     return (
       <span

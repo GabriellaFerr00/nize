@@ -277,6 +277,9 @@ Nomes em inglês: ver "Nomenclatura em inglês" em `design.md` (os termos em por
   - _Verify_: testes de API (`#rrggbb` aceito, outros formatos recusados) e de tela.
   - _Feito_: `ColorPicker` com 8 cores rápidas, "Mais cores e tons" (12 matizes × 6 tons) e seletor do aparelho; cor `#rrggbb` validada na API (V10 tira o CHECK); `TagDot` com contorno. Testes de API e de tela; 425 testes back, 169 front.
 
+- [x] **TASK-072** [REQ-052]: Logotipos dos 9 bancos pedidos (Itaú, Bradesco, Santander, BB, Caixa, Inter, C6, PicPay, Mercado Pago) e fim do envio de imagem própria (pedido da usuária).
+  - _Feito_: SVGs do Open Finance Brasil (`logos-bancos-br` 0.8.6) conferidos e salvos em `public/card-brands/` com origem no README; `fullColor` em `cardBrands.ts` (quadrado branco). Removidos `card_logo` (V11), `CardLogo`, `ImageFormat`, `/api/cards/{id}/logo`, `hasLogo`, o campo de imagem e os testes de envio.
+
 ---
 
 ## Completed Tasks Archive

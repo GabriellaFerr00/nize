@@ -1,22 +1,32 @@
 /**
  * Card brands used in Brazil, offered when a card is created or edited (REQ-052, D-21). The key is what the API
  * stores (`card.brand`); the same keys live in the back-end `CardBrand` (a test keeps both lists equal).
- * `icon`: the brand has a freely licensed (CC0, Simple Icons) logo in /card-brands/<key>.svg; otherwise the badge
- * shows `initials`. `text` is white or near-black so the tile reads at ≥ 4:1 (contraste.py).
+ * `icon`: the brand has a logo saved in /card-brands/<key>.svg (a one-color CC0 icon from Simple Icons, or with
+ * `fullColor` the institution's own logo from Open Finance Brasil; see public/card-brands/README.md); otherwise the
+ * badge shows `initials`. `text` is white or near-black so the tile reads at ≥ 4:1 (contraste.py).
  */
-export type CardBrand = { key: string; name: string; color: string; text: string; icon: boolean; initials: string }
+export type CardBrand = {
+  key: string
+  name: string
+  color: string
+  text: string
+  icon: boolean
+  /** The icon is the institution's own full-color logo (Open Finance Brasil), shown on a white tile. */
+  fullColor?: boolean
+  initials: string
+}
 
 export const CARD_BRANDS: CardBrand[] = [
   { key: 'nubank', name: 'Nubank', color: '#820ad1', text: '#ffffff', icon: true, initials: 'Nu' },
-  { key: 'itau', name: 'Itaú', color: '#ec7000', text: '#111111', icon: false, initials: 'It' },
-  { key: 'bradesco', name: 'Bradesco', color: '#cc092f', text: '#ffffff', icon: false, initials: 'Br' },
-  { key: 'santander', name: 'Santander', color: '#ec0000', text: '#ffffff', icon: false, initials: 'Sa' },
-  { key: 'bb', name: 'Banco do Brasil', color: '#fcfc30', text: '#111111', icon: false, initials: 'BB' },
-  { key: 'caixa', name: 'Caixa', color: '#005ca9', text: '#ffffff', icon: false, initials: 'Cx' },
-  { key: 'inter', name: 'Inter', color: '#ff7a00', text: '#111111', icon: false, initials: 'In' },
-  { key: 'c6', name: 'C6 Bank', color: '#242424', text: '#ffffff', icon: false, initials: 'C6' },
-  { key: 'mercadopago', name: 'Mercado Pago', color: '#00b1ea', text: '#111111', icon: true, initials: 'MP' },
-  { key: 'picpay', name: 'PicPay', color: '#21c25e', text: '#111111', icon: true, initials: 'PP' },
+  { key: 'itau', name: 'Itaú', color: '#ec7000', text: '#111111', icon: true, fullColor: true, initials: 'It' },
+  { key: 'bradesco', name: 'Bradesco', color: '#cc092f', text: '#ffffff', icon: true, fullColor: true, initials: 'Br' },
+  { key: 'santander', name: 'Santander', color: '#ec0000', text: '#ffffff', icon: true, fullColor: true, initials: 'Sa' },
+  { key: 'bb', name: 'Banco do Brasil', color: '#fcfc30', text: '#111111', icon: true, fullColor: true, initials: 'BB' },
+  { key: 'caixa', name: 'Caixa', color: '#005ca9', text: '#ffffff', icon: true, fullColor: true, initials: 'Cx' },
+  { key: 'inter', name: 'Inter', color: '#ff7a00', text: '#111111', icon: true, fullColor: true, initials: 'In' },
+  { key: 'c6', name: 'C6 Bank', color: '#242424', text: '#ffffff', icon: true, fullColor: true, initials: 'C6' },
+  { key: 'mercadopago', name: 'Mercado Pago', color: '#00b1ea', text: '#111111', icon: true, fullColor: true, initials: 'MP' },
+  { key: 'picpay', name: 'PicPay', color: '#21c25e', text: '#111111', icon: true, fullColor: true, initials: 'PP' },
   { key: 'pagbank', name: 'PagBank', color: '#ffc801', text: '#111111', icon: true, initials: 'PB' },
   { key: 'neon', name: 'Neon', color: '#00a5e3', text: '#111111', icon: false, initials: 'Ne' },
   { key: 'will', name: 'Will Bank', color: '#ffe000', text: '#111111', icon: false, initials: 'W' },
