@@ -50,11 +50,18 @@ class CardBrandApiTest extends IsolationTestBase {
 
     @Test
     void aBrandOutsideTheListIsRefused() throws Exception {
-        for (String bad : List.of("\"Nubank\"", "\"banco-x\"", "\"\"", "\"<script>\"")) {
+        for (String bad : List.of("\"Nubank\"", "\"banco-x\"", "\"will\"", "\"\"", "\"<script>\"")) {
             as(userA, post(LIST).contentType(MediaType.APPLICATION_JSON)
                     .content("{\"name\":\"X\",\"dueDay\":10,\"brand\":%s}".formatted(bad)))
                     .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
         }
+    }
+
+    @Test
+    void theAmazonCardIsInTheList() throws Exception {
+        create(userA, "{\"name\":\"Amazon\",\"dueDay\":12,\"brand\":\"amazon\"}");
+
+        as(userA, get(LIST)).andExpect(jsonPath("$[0].brand").value("amazon"));
     }
 
     @Test

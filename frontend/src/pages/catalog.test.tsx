@@ -260,7 +260,7 @@ describe('colors (TASK-069: REQ-052)', () => {
 })
 
 describe('card brands and free colors (TASK-070/071: REQ-052)', () => {
-  it('lists Brazilian cards; picking one fills the name and stores the brand', async () => {
+  it('"Selecionar cartão" lists Brazilian cards with logos; picking one names the card and stores the brand', async () => {
     const replies: Replies = {
       ...baseReplies(),
       'GET /api/cards': { body: [] },
@@ -270,14 +270,23 @@ describe('card brands and free colors (TASK-070/071: REQ-052)', () => {
     renderApp('/cards', { signedIn: true })
     await userEvent.click(await screen.findByRole('button', { name: 'Novo cartão' }))
     const dialog = await screen.findByRole('dialog', { name: 'Novo cartão' })
-    const brands = within(dialog).getByRole('radiogroup', { name: 'Banco ou cartão' })
-    expect(within(brands).getByRole('radio', { name: 'Nubank' })).toBeInTheDocument()
-    expect(within(brands).getByRole('radio', { name: 'Nenhuma' })).toBeChecked()
+    // no separate name field: the card is chosen first
+    expect(within(dialog).queryByLabelText('Nome')).not.toBeInTheDocument()
+    await userEvent.click(within(dialog).getByRole('button', { name: /Selecionar cartão/ }))
+    const brands = within(dialog).getByRole('list', { name: 'Selecionar cartão' })
+    expect(within(brands).getByRole('button', { name: 'Nubank' })).toBeInTheDocument()
+    expect(within(brands).getByRole('button', { name: 'Amazon' })).toBeInTheDocument()
+    expect(within(brands).queryByRole('button', { name: 'Will Bank' })).not.toBeInTheDocument()
+    expect(within(brands).getByRole('button', { name: 'Adicionar um novo cartão' })).toBeInTheDocument()
 
     await userEvent.type(within(dialog).getByRole('searchbox', { name: 'Buscar banco ou cartão' }), 'itau')
-    expect(within(brands).queryByRole('radio', { name: 'Nubank' })).not.toBeInTheDocument()
-    await userEvent.click(within(brands).getByRole('radio', { name: 'Itaú' }))
-    expect(within(dialog).getByLabelText('Nome')).toHaveValue('Itaú')
+    expect(within(brands).queryByRole('button', { name: 'Nubank' })).not.toBeInTheDocument()
+    await userEvent.click(within(brands).getByRole('button', { name: 'Itaú' }))
+    expect(within(dialog).queryByRole('list', { name: 'Selecionar cartão' })).not.toBeInTheDocument()
+    const picker = within(dialog).getByRole('button', { name: /Selecionar cartão/ })
+    expect(picker).toHaveAccessibleName('Selecionar cartão Itaú')
+    expect(picker.querySelector('[data-brand="itau"] img')).toHaveAttribute('src', '/card-brands/itau.svg')
+    expect(within(dialog).getByLabelText('Apelido (opcional)')).toHaveValue('Itaú')
 
     await userEvent.type(within(dialog).getByLabelText('Dia de vencimento (1 a 31)'), '8')
     replies['GET /api/cards'] = { body: [{ id: 3, year: 2026, name: 'Itaú', dueDay: 8, active: true, brand: 'itau' }] }
@@ -285,6 +294,74 @@ describe('card brands and free colors (TASK-070/071: REQ-052)', () => {
     await waitFor(() => expect(calls.find((c) => c.key === 'POST /api/cards')?.body).toEqual({ name: 'Itaú', dueDay: 8, brand: 'itau' }))
     const row = (await screen.findByText('Itaú')).closest('li') as HTMLElement
     expect(row.querySelector('[data-brand="itau"] img')).toHaveAttribute('src', '/card-brands/itau.svg')
+  })
+
+  it('a nickname keeps the brand, so two cards of the same bank are possible', async () => {
+    const calls = stubApi({
+      ...baseReplies(),
+      'GET /api/cards': { body: [] },
+      'POST /api/cards': { status: 201, body: { id: 4, name: 'Nubank Mainha', dueDay: 5, active: true, brand: 'nubank' } },
+    })
+    renderApp('/cards', { signedIn: true })
+    await userEvent.click(await screen.findByRole('button', { name: 'Novo cartão' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Novo cartão' })
+    await userEvent.click(within(dialog).getByRole('button', { name: /Selecionar cartão/ }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Nubank' }))
+    const nickname = within(dialog).getByLabelText('Apelido (opcional)')
+    await userEvent.clear(nickname)
+    await userEvent.type(nickname, 'Nubank Mainha')
+    await userEvent.type(within(dialog).getByLabelText('Dia de vencimento (1 a 31)'), '5')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }))
+    await waitFor(() =>
+      expect(calls.find((c) => c.key === 'POST /api/cards')?.body).toEqual({ name: 'Nubank Mainha', dueDay: 5, brand: 'nubank' }),
+    )
+  })
+
+  it('asks for a card first; "Adicionar um novo cartão" asks for the name and saves no brand', async () => {
+    const calls = stubApi({
+      ...baseReplies(),
+      'GET /api/cards': { body: [] },
+      'POST /api/cards': { status: 201, body: { id: 5, name: 'Loja X', dueDay: 3, active: true, brand: null } },
+    })
+    renderApp('/cards', { signedIn: true })
+    await userEvent.click(await screen.findByRole('button', { name: 'Novo cartão' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Novo cartão' })
+    await userEvent.type(within(dialog).getByLabelText('Dia de vencimento (1 a 31)'), '3')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }))
+    expect(within(dialog).getByText('Selecione um cartão ou adicione um novo.')).toBeInTheDocument()
+
+    await userEvent.click(within(dialog).getByRole('button', { name: /Selecionar cartão/ }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Adicionar um novo cartão' }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }))
+    expect(within(dialog).getByText('Informe um nome.')).toBeInTheDocument()
+    expect(calls.some((c) => c.key.startsWith('POST'))).toBe(false)
+
+    await userEvent.type(within(dialog).getByLabelText('Nome do cartão'), 'Loja X')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }))
+    await waitFor(() => expect(calls.find((c) => c.key === 'POST /api/cards')?.body).toEqual({ name: 'Loja X', dueDay: 3 }))
+  })
+
+  it('editing opens on the saved brand and nickname, or on the name of a card without a brand', async () => {
+    stubApi({
+      ...baseReplies(),
+      'GET /api/cards': {
+        body: [
+          { id: 1, name: 'Roxinho', dueDay: 10, active: true, brand: 'nubank' },
+          { id: 2, name: 'Loja', dueDay: 10, active: true, brand: null },
+        ],
+      },
+    })
+    renderApp('/cards', { signedIn: true })
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar Roxinho' }))
+    let dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByRole('button', { name: /Selecionar cartão/ })).toHaveAccessibleName('Selecionar cartão Nubank')
+    expect(within(dialog).getByLabelText('Apelido (opcional)')).toHaveValue('Roxinho')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }))
+
+    await userEvent.click(screen.getByRole('button', { name: 'Editar Loja' }))
+    dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByRole('button', { name: /Selecionar cartão/ })).toHaveAccessibleName('Selecionar cartão Adicionar um novo cartão')
+    expect(within(dialog).getByLabelText('Nome do cartão')).toHaveValue('Loja')
   })
 
   it('shows the saved logo of a brand, the initials of one without a logo, and no upload field', async () => {
@@ -368,7 +445,9 @@ describe('cards screen (REQ-013)', () => {
     renderApp('/cards', { signedIn: true })
     await userEvent.click(await screen.findByRole('button', { name: 'Novo cartão' }))
     const dialog = await screen.findByRole('dialog', { name: 'Novo cartão' })
-    await userEvent.type(within(dialog).getByLabelText('Nome'), 'Nubank')
+    await userEvent.click(within(dialog).getByRole('button', { name: /Selecionar cartão/ }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Adicionar um novo cartão' }))
+    await userEvent.type(within(dialog).getByLabelText('Nome do cartão'), 'Nubank')
 
     for (const invalid of ['0', '32', '']) {
       const day = within(dialog).getByLabelText('Dia de vencimento (1 a 31)')

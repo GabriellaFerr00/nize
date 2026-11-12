@@ -17,6 +17,7 @@ import { apiErrorMessage } from '../lib/apiErrorMessage'
 import { centsToInput, parseCents } from '../lib/money'
 import { useDefaultMonth } from '../lib/useMonth'
 import { BrandPicker } from './BrandPicker'
+import { useCardIdentity } from '../lib/cardIdentity'
 import { CardBadge } from './CardBadge'
 import { ColorPicker } from './ColorPicker'
 import { Dialog } from './Dialog'
@@ -244,7 +245,7 @@ function ItemFormDialog({ kind, fields, item, onClose, onSaved }: FormProps) {
   const [dueDay, setDueDay] = useState(item?.dueDay !== undefined ? String(item.dueDay) : '')
   const [limit, setLimit] = useState(item?.monthlyLimitCents !== undefined ? centsToInput(item.monthlyLimitCents) : '')
   const [color, setColor] = useState(item?.color ?? '')
-  const [brand, setBrand] = useState(item?.brand ?? '')
+  const card = useCardIdentity(item)
   const [errors, setErrors] = useState<{ name?: string; description?: string; dueDay?: string; limit?: string }>({})
 
   const save = useMutation({
@@ -260,21 +261,22 @@ function ItemFormDialog({ kind, fields, item, onClose, onSaved }: FormProps) {
     const typedLimit = limit.trim() === '' ? null : parseCents(limit)
     const limitCents = typedLimit === null ? (limit.trim() === '' ? null : undefined) : typedLimit > 0 ? typedLimit : undefined
     const next = {
-      name: !name.trim() ? t('catalog.errors.nameRequired') : name.trim().length > 80 ? t('catalog.errors.nameTooLong') : undefined,
+      // a card's name comes from the card picker (REQ-052, 2026-11-12)
+      name: fields.brand ? undefined : !name.trim() ? t('catalog.errors.nameRequired') : name.trim().length > 80 ? t('catalog.errors.nameTooLong') : undefined,
       description: fields.description && description.length > 255 ? t('catalog.errors.descriptionTooLong') : undefined,
       dueDay: fields.dueDay && !(Number.isInteger(day) && day >= 1 && day <= 31) ? t('catalog.errors.dueDay') : undefined,
       // empty = no limit; otherwise a positive amount (REQ-051)
       limit: fields.monthlyLimit && limitCents === undefined ? t('catalog.errors.limit') : undefined,
     }
     setErrors(next)
-    if (next.name || next.description || next.dueDay || next.limit) return
+    const identity = fields.brand ? card.validate() : { name: name.trim() }
+    if (!identity || next.name || next.description || next.dueDay || next.limit) return
     save.mutate({
-      name: name.trim(),
+      ...identity,
       ...(fields.description && { description: description.trim() }),
       ...(fields.dueDay && { dueDay: day }),
       ...(fields.monthlyLimit && limitCents !== null && limitCents !== undefined && { monthlyLimitCents: limitCents }),
       ...(fields.color && color && { color }),
-      ...(fields.brand && brand && { brand }),
     })
   }
 
@@ -282,7 +284,11 @@ function ItemFormDialog({ kind, fields, item, onClose, onSaved }: FormProps) {
     <Dialog title={t(item ? `catalog.${kind}.edit` : `catalog.${kind}.new`)} onClose={onClose}>
       <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
         {save.isError && <FormMessage kind="error">{apiErrorMessage(t, save.error)}</FormMessage>}
-        <TextField label={t('catalog.fields.name')} value={name} onChange={(e) => setName(e.target.value)} error={errors.name} />
+        {fields.brand ? (
+          <BrandPicker identity={card} />
+        ) : (
+          <TextField label={t('catalog.fields.name')} value={name} onChange={(e) => setName(e.target.value)} error={errors.name} />
+        )}
         {fields.description && (
           <TextField
             label={t('catalog.fields.description')}
@@ -301,16 +307,6 @@ function ItemFormDialog({ kind, fields, item, onClose, onSaved }: FormProps) {
           />
         )}
         {fields.color && <ColorPicker value={color} onChange={setColor} />}
-        {fields.brand && (
-          <BrandPicker
-            value={brand}
-            onChange={(picked) => {
-              setBrand(picked?.key ?? '')
-              // a known brand fills an empty name, so a new card is one tap away
-              if (picked && !name.trim()) setName(picked.name)
-            }}
-          />
-        )}
         {fields.dueDay && (
           <TextField
             label={t('catalog.fields.dueDay')}

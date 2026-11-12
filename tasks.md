@@ -287,6 +287,10 @@ Nomes em inglês: ver "Nomenclatura em inglês" em `design.md` (os termos em por
   - _Verify_: testes de regra/API (ajuste vale no mês, sem ajuste vale o padrão, tirar volta ao padrão, isolamento) e de tela.
   - _Feito_: `category_month_limit` (V12), `CategoryLimitService`/`CategoryLimitController` (`GET/PUT/DELETE /api/months/{m}/category-limits`), o resumo do mês usa o ajuste do mês ou o padrão; 6 testes de API novos em `CategoryLimitApiTest`. Tela: botão "Limites do mês" com a janela `MonthLimitsDialog` (padrão de cada categoria e campo só para o mês; vazio = padrão); 2 testes. 407 testes back (verify ok), 170 front.
 
+- [x] **TASK-075** [REQ-052, D-21]: Ajuste 18 (pedido da usuária, 2026-11-12): no formulário do cartão, "Selecionar cartão" (lista com logotipos e busca) + "Apelido (opcional)" no lugar de nome + banco; "Adicionar um novo cartão" pede só o nome. Marca `amazon` entra, `will` sai (V13 põe `brand` NULL).
+  - _Verify_: `CardBrandSyncTest` e `CardBrandApiTest` (`will` recusado, `amazon` aceito); testes de tela (marca escolhida vira o nome, apelido, novo cartão sem marca, edição) na tela Cartões e no "+ Novo cartão"; contraste do selo Amazon.
+  - _Feito_: `BrandPicker` virou o campo "Selecionar cartão" (lista com logotipo e busca, "Adicionar um novo cartão" no fim) e o estado foi para `lib/cardIdentity.ts` (marca + "Apelido (opcional)" ou "Nome do cartão"), usado na tela Cartões e no "+ Novo cartão". Amazon com selo "Amz" (#ff9900 / #111111, 8,82:1; o Simple Icons 16.36.0 não tem ícone da Amazon); Will Bank fora, V13 põe `brand` NULL. 408 testes back, 173 front (4 novos), lint e build ok; conferido no navegador (claro 1280, escuro 390, sem rolagem horizontal nem erro de CSP).
+
 ---
 
 ## Completed Tasks Archive

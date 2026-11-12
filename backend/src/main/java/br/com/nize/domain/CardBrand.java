@@ -21,13 +21,13 @@ public final class CardBrand {
             "picpay",
             "pagbank",
             "neon",
-            "will",
             "btg",
             "xp",
             "sicredi",
             "sicoob",
             "porto",
             "carrefour",
+            "amazon",
             "amex",
             "diners",
             "visa",
@@ -36,7 +36,7 @@ public final class CardBrand {
             "hipercard");
 
     /** For {@code @Pattern}: one of the keys. */
-    public static final String PATTERN = "nubank|itau|bradesco|santander|bb|caixa|inter|c6|mercadopago|picpay|pagbank|neon|will|btg|xp|sicredi|sicoob|porto|carrefour|amex|diners|visa|mastercard|elo|hipercard";
+    public static final String PATTERN = "nubank|itau|bradesco|santander|bb|caixa|inter|c6|mercadopago|picpay|pagbank|neon|btg|xp|sicredi|sicoob|porto|carrefour|amazon|amex|diners|visa|mastercard|elo|hipercard";
 
     private CardBrand() {
     }
