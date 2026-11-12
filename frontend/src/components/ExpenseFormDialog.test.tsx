@@ -161,11 +161,12 @@ describe('new expense window (REQ-016..019, REQ-042)', () => {
 
     const fields = within(dialog).getByRole('group', { name: 'Novo cartão' })
     await userEvent.click(within(fields).getByRole('button', { name: 'Criar cartão' }))
-    expect(within(fields).getByText('Informe um nome.')).toBeInTheDocument()
+    expect(within(fields).getByText('Selecione um cartão ou adicione um novo.')).toBeInTheDocument()
     expect(within(fields).getByText('Informe um dia de 1 a 31.')).toBeInTheDocument()
 
-    await userEvent.click(within(fields).getByRole('radio', { name: 'Inter' }))
-    expect(within(fields).getByLabelText('Nome')).toHaveValue('Inter')
+    await userEvent.click(within(fields).getByRole('button', { name: /Selecionar cartão/ }))
+    await userEvent.click(within(fields).getByRole('button', { name: 'Inter' }))
+    expect(within(fields).getByLabelText('Apelido (opcional)')).toHaveValue('Inter')
     await userEvent.type(within(fields).getByLabelText('Dia de vencimento (1 a 31)'), '20')
     map['GET /api/cards'] = {
       body: [

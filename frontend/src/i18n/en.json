@@ -214,10 +214,14 @@
       "custom": "Another color (device picker)"
     },
     "brand": {
-      "title": "Bank or card",
+      "title": "Select card",
+      "placeholder": "Choose your card",
       "search": "Search bank or card",
-      "none": "None",
-      "noMatch": "No bank found. Type the card name below.",
+      "newCard": "Add a new card",
+      "nickname": "Nickname (optional)",
+      "cardName": "Card name",
+      "required": "Select a card or add a new one.",
+      "noMatch": "No card found. Use \"Add a new card\".",
       "notice": "Names and logos belong to their owners and only help you recognise your cards."
     }
   },

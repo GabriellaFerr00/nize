@@ -214,10 +214,14 @@
       "custom": "Outra cor (seletor do aparelho)"
     },
     "brand": {
-      "title": "Banco ou cartão",
+      "title": "Selecionar cartão",
+      "placeholder": "Escolha o seu cartão",
       "search": "Buscar banco ou cartão",
-      "none": "Nenhuma",
-      "noMatch": "Nenhum banco encontrado. Digite o nome do cartão abaixo.",
+      "newCard": "Adicionar um novo cartão",
+      "nickname": "Apelido (opcional)",
+      "cardName": "Nome do cartão",
+      "required": "Selecione um cartão ou adicione um novo.",
+      "noMatch": "Nenhum cartão encontrado. Use \"Adicionar um novo cartão\".",
       "notice": "Nomes e logotipos são marcas dos seus donos e servem só para você reconhecer seus cartões."
     }
   },

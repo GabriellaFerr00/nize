@@ -17,6 +17,7 @@ import { centsToInput, parseCents } from '../lib/money'
 import { defaultDate } from '../lib/month'
 import { selectable, useRefreshMonths, useCatalogs } from '../lib/useMonth'
 import { BrandPicker } from './BrandPicker'
+import { useCardIdentity } from '../lib/cardIdentity'
 import { Dialog } from './Dialog'
 import { FormMessage } from './FormMessage'
 import { TextField } from './TextField'
@@ -346,18 +347,17 @@ export function ExpenseFormDialog({ month, expense, onClose }: Props) {
 }
 
 /**
- * Creates a card without leaving the entry (REQ-016, 2026-11-09): name and due day, the same rules as the Cards
+ * Creates a card without leaving the entry (REQ-016, 2026-11-09): card (list or new) and due day, the same rules as the Cards
  * screen. The new card is selected right away.
  */
 function NewCardFields({ onCreated }: { onCreated: (id: number) => void }) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
-  const [name, setName] = useState('')
+  const card = useCardIdentity()
   const [dueDay, setDueDay] = useState('')
-  const [brand, setBrand] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const create = useMutation({
-    mutationFn: () => createItem('cards', { name: name.trim(), dueDay: Number(dueDay), ...(brand && { brand }) }),
+    mutationFn: (identity: { name: string; brand?: string }) => createItem('cards', { ...identity, dueDay: Number(dueDay) }),
     onSuccess: async (card) => {
       await queryClient.invalidateQueries({ queryKey: ['catalog', 'cards'] })
       onCreated(card.id)
@@ -367,24 +367,17 @@ function NewCardFields({ onCreated }: { onCreated: (id: number) => void }) {
   function submit() {
     const next: Record<string, string> = {}
     const day = Number(dueDay)
-    if (!name.trim()) next.name = t('catalog.errors.nameRequired')
     if (!Number.isInteger(day) || day < 1 || day > 31) next.dueDay = t('catalog.errors.dueDay')
     setErrors(next)
-    if (Object.keys(next).length === 0) create.mutate()
+    const identity = card.validate()
+    if (identity && Object.keys(next).length === 0) create.mutate(identity)
   }
 
   return (
     <fieldset className="mt-2 flex flex-col gap-3 rounded-xl border border-line p-3">
       <legend className="px-1 text-sm font-medium text-ink">{t('expense.newCard.title')}</legend>
       {create.isError && <FormMessage kind="error">{apiErrorMessage(t, create.error)}</FormMessage>}
-      <BrandPicker
-        value={brand}
-        onChange={(picked) => {
-          setBrand(picked?.key ?? '')
-          if (picked && !name.trim()) setName(picked.name)
-        }}
-      />
-      <TextField label={t('catalog.fields.name')} value={name} onChange={(e) => setName(e.target.value)} error={errors.name} />
+      <BrandPicker identity={card} />
       <TextField
         label={t('catalog.fields.dueDay')}
         type="number"
