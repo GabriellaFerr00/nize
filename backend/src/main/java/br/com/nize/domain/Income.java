@@ -12,7 +12,10 @@ import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDate;
 
-/** One income of one month (REQ-024..026); with a person it is a reimbursement. Money is cents (NFR-001). */
+/**
+ * One income of one month (REQ-024..026); with a person it is a reimbursement; a fixed one is copied to the next
+ * month by the month load (REQ-053). Money is cents (NFR-001).
+ */
 @Entity
 @Table(name = "income")
 public class Income {
@@ -54,11 +57,19 @@ public class Income {
     @Column(name = "installment_group_id", length = 36)
     private String installmentGroupId;
 
+    @Column(nullable = false)
+    private boolean fixed;
+
+    // shared by a fixed item and its copies in other months (REQ-054, V15)
+    @JdbcTypeCode(SqlTypes.CHAR)
+    @Column(name = "recurrence_id", length = 36)
+    private String recurrenceId;
+
     protected Income() {
     }
 
     public Income(Long userId, String month, String name, LocalDate date, long amountCents, Long personId,
-                  Integer installmentNumber, Integer installmentCount, String installmentGroupId) {
+                  Integer installmentNumber, Integer installmentCount, String installmentGroupId, boolean fixed) {
         this.userId = userId;
         this.month = month;
         this.name = name;
@@ -68,14 +79,31 @@ public class Income {
         this.installmentNumber = installmentNumber;
         this.installmentCount = installmentCount;
         this.installmentGroupId = installmentGroupId;
+        this.fixed = fixed;
     }
 
     /** Edits what the user may change; month and installment data stay as they were. */
-    public void update(String name, LocalDate date, long amountCents, Long personId) {
+    public void update(String name, LocalDate date, long amountCents, Long personId, boolean fixed) {
+        this.fixed = fixed;
         this.name = name;
         this.date = date;
         this.amountCents = amountCents;
         this.personId = personId;
+    }
+
+    public String getRecurrenceId() { return recurrenceId; }
+
+    /** The recurrence of this fixed item, created on first use (REQ-054). */
+    public String ensureRecurrence() {
+        if (recurrenceId == null) {
+            recurrenceId = java.util.UUID.randomUUID().toString();
+        }
+        return recurrenceId;
+    }
+
+    /** Makes this row a copy of a fixed item of another month (REQ-054). */
+    public void joinRecurrence(String recurrenceId) {
+        this.recurrenceId = recurrenceId;
     }
 
     public Long getId() { return id; }
@@ -88,4 +116,5 @@ public class Income {
     public Integer getInstallmentNumber() { return installmentNumber; }
     public Integer getInstallmentCount() { return installmentCount; }
     public String getInstallmentGroupId() { return installmentGroupId; }
+    public boolean isFixed() { return fixed; }
 }

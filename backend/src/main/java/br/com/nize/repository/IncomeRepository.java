@@ -17,4 +17,7 @@ public interface IncomeRepository extends JpaRepository<Income, Long> {
     List<Income> findByUserIdAndMonthIn(Long userId, Collection<String> months);
 
     List<Income> findByUserIdAndInstallmentGroupIdIn(Long userId, Collection<String> groups);
+
+    /** A fixed income and its copies in other months (REQ-054). */
+    List<Income> findByUserIdAndRecurrenceId(Long userId, String recurrenceId);
 }

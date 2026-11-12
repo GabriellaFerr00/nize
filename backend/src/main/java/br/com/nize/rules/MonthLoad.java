@@ -1,6 +1,8 @@
 package br.com.nize.rules;
 
+import java.time.YearMonth;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
@@ -55,6 +57,23 @@ public final class MonthLoad {
             }
         }
         return decisions;
+    }
+
+    /**
+     * The months already opened after {@code month} that do not have a copy of a fixed item yet, oldest first
+     * (REQ-054): where a fixed item that was just created (or just became fixed) must be copied. Earlier months and
+     * {@code month} itself never change.
+     */
+    public static List<String> monthsToFill(String month, Collection<String> openedMonths, Set<String> monthsWithCopy) {
+        return openedMonths.stream()
+                .filter(m -> isAfter(m, month) && !monthsWithCopy.contains(m))
+                .sorted()
+                .toList();
+    }
+
+    /** {@code month} comes after {@code reference} (both {@code AAAA-MM}). */
+    public static boolean isAfter(String month, String reference) {
+        return YearMonth.parse(month).isAfter(YearMonth.parse(reference));
     }
 
     private static boolean hasNextInstallment(PreviousExpense expense) {

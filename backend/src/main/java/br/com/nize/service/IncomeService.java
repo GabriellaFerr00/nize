@@ -15,16 +15,17 @@ import java.util.UUID;
 
 /**
  * Income rules (REQ-024..026). The user id comes from the token (D-6); a person of another user is
- * "not found". An installment income (N of M) gets its own group so the month load continues it (REQ-025, D-8).
+ * "not found". An installment income (N of M) gets its own group so the month load continues it (REQ-025, D-8);
+ * a fixed income is copied by the month load (REQ-053) and is never in installments.
  */
 @Service
 public class IncomeService {
 
     public record NewIncome(String name, long amountCents, LocalDate date, Long personId,
-                            Integer installmentNumber, Integer installmentCount) {
+                            Integer installmentNumber, Integer installmentCount, boolean fixed) {
     }
 
-    public record IncomeEdit(String name, long amountCents, LocalDate date, Long personId) {
+    public record IncomeEdit(String name, long amountCents, LocalDate date, Long personId, boolean fixed) {
     }
 
     private final IncomeRepository incomes;
@@ -46,10 +47,15 @@ public class IncomeService {
         yearGuard.requireYear(userId, month.getYear());
         requireDateInMonth(in.date(), month);
         validateInstallments(in.installmentNumber(), in.installmentCount());
+        requireNotFixedAndInstallment(in.fixed(), in.installmentNumber());
         Long personId = resolvePerson(userId, in.personId(), null);
         String group = in.installmentNumber() != null ? UUID.randomUUID().toString() : null;
-        return incomes.save(new Income(userId, month.toString(), in.name(), in.date(), in.amountCents(), personId,
-                in.installmentNumber(), in.installmentCount(), group));
+        Income saved = incomes.save(new Income(userId, month.toString(), in.name(), in.date(), in.amountCents(), personId,
+                in.installmentNumber(), in.installmentCount(), group, in.fixed()));
+        if (saved.isFixed()) {
+            monthLoad.spreadFixed(userId, saved); // REQ-054
+        }
+        return saved;
     }
 
     @Transactional
@@ -57,8 +63,16 @@ public class IncomeService {
         Income income = incomes.findByIdAndUserId(id, userId).orElseThrow(ResourceNotFoundException::new);
         YearMonth month = YearMonth.parse(income.getMonth());
         requireDateInMonth(in.date(), month);
+        requireNotFixedAndInstallment(in.fixed(), income.getInstallmentNumber());
         Long personId = resolvePerson(userId, in.personId(), income.getPersonId());
-        income.update(in.name(), in.date(), in.amountCents(), personId);
+        boolean wasFixed = income.isFixed();
+        income.update(in.name(), in.date(), in.amountCents(), personId, in.fixed());
+        // a fixed income reaches the later months already opened; unchecking takes it out of them (REQ-054)
+        if (in.fixed() && !wasFixed) {
+            monthLoad.spreadFixed(userId, income);
+        } else if (wasFixed && !in.fixed()) {
+            monthLoad.withdrawFixed(userId, income);
+        }
         return income;
     }
 
@@ -74,6 +88,17 @@ public class IncomeService {
                     .toList());
             return;
         }
+        if (income.isFixed()) {
+            // REQ-054, REQ-050: a fixed income asks "this month" or "this month and the next ones"
+            if (scope == DeleteScope.FOLLOWING) {
+                monthLoad.withdrawFixed(userId, income);
+            }
+            incomes.delete(income);
+            if (scope != DeleteScope.FOLLOWING) {
+                monthLoad.keepFixedComing(userId, income);
+            }
+            return;
+        }
         incomes.delete(income);
         monthLoad.keepInstallmentsComing(userId, income);
     }
@@ -81,6 +106,13 @@ public class IncomeService {
     private static void requireDateInMonth(LocalDate date, YearMonth month) {
         if (!month.equals(YearMonth.from(date))) {
             throw new InvalidExpenseException("DATE_OUT_OF_MONTH");
+        }
+    }
+
+    /** A fixed income repeats every month on its own, so it has no installments (REQ-053). */
+    private static void requireNotFixedAndInstallment(boolean fixed, Integer installmentNumber) {
+        if (fixed && installmentNumber != null) {
+            throw new InvalidExpenseException("INVALID_INCOME");
         }
     }
 

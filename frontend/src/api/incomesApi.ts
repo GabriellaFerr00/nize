@@ -9,10 +9,12 @@ export type NewIncome = {
   personId?: number
   installmentNumber?: number
   installmentCount?: number
+  /** Copied to the next months by the month load (REQ-053); never with installments. */
+  fixed?: boolean
 }
 
 /** The month and the installment data cannot change (REQ-023). */
-export type IncomeEdit = { name: string; amountCents: number; date: string; personId?: number }
+export type IncomeEdit = { name: string; amountCents: number; date: string; personId?: number; fixed: boolean }
 
 export type Income = {
   id: number
@@ -26,6 +28,8 @@ export type Income = {
   installmentCount?: number
   /** "N/M", formatted by the API (REQ-021). */
   installmentLabel?: string
+  /** A fixed income repeats in the next months (REQ-053). */
+  fixed: boolean
 }
 
 export const createIncome = (month: string, income: NewIncome) =>

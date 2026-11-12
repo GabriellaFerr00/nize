@@ -17,6 +17,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -173,6 +174,43 @@ class IncomeApiTest extends IsolationTestBase {
         update(userA, id, """
                 {"name":"Mainha devolveu","amountCents":20000,"date":"%s","personId":%d}""".formatted(MONTH.atDay(21), mainha))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.amountCents").value(20_000));
+    }
+
+    // ---- fixed income (REQ-053) ----
+
+    @Test
+    void anIncomeCanBeFixedAndEditedBackToOneOff() throws Exception {
+        long id = createdId(create(userA, MONTH.toString(), """
+                {"name":"Salário","amountCents":500000,"date":"%s","fixed":true}""".formatted(MONTH.atDay(5)))
+                .andExpect(jsonPath("$.fixed").value(true)));
+        assertThat(row(id).get("FIXED")).isEqualTo(true);
+
+        update(userA, id, """
+                {"name":"Salário","amountCents":500000,"date":"%s"}""".formatted(MONTH.atDay(5)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.fixed").value(false));
+        update(userA, id, """
+                {"name":"Salário","amountCents":500000,"date":"%s","fixed":true}""".formatted(MONTH.atDay(5)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.fixed").value(true));
+        // without the field an income is not fixed
+        long plain = salary(userA);
+        assertThat(row(plain).get("FIXED")).isEqualTo(false);
+        as(userA, get("/api/months/" + MONTH))
+                .andExpect(jsonPath("$.incomes[?(@.id == %d)].fixed".formatted(id)).value(true))
+                .andExpect(jsonPath("$.incomes[?(@.id == %d)].fixed".formatted(plain)).value(false));
+    }
+
+    @Test
+    void aFixedIncomeCannotBeInInstallments() throws Exception {
+        create(userA, MONTH.toString(), """
+                {"name":"x","amountCents":100,"date":"%s","fixed":true,"installmentNumber":1,"installmentCount":3}"""
+                .formatted(MONTH.atDay(5)))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INVALID_INCOME"));
+        long installment = createdId(create(userA, MONTH.toString(), """
+                {"name":"Venda","amountCents":100,"date":"%s","installmentNumber":1,"installmentCount":3}""".formatted(MONTH.atDay(5))));
+        update(userA, installment, """
+                {"name":"Venda","amountCents":100,"date":"%s","fixed":true}""".formatted(MONTH.atDay(5)))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INVALID_INCOME"));
+        assertThat(row(installment).get("FIXED")).isEqualTo(false);
     }
 
     // ---- edit and delete (REQ-023) ----

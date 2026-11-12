@@ -58,8 +58,8 @@ const november = (): MonthView => ({
     { id: 13, month: '2026-11', name: 'Roupa da mãe', categoryId: 1, amountCents: 20_000, type: 'CARD', paymentMethod: 'CREDIT', personId: 7, paid: false, date: '2026-11-12' },
   ],
   incomes: [
-    { id: 21, month: '2026-11', name: 'Salário', date: '2026-11-05', amountCents: 643_358, reimbursement: false },
-    { id: 22, month: '2026-11', name: 'Devolução', date: '2026-11-20', amountCents: 19_000, personId: 7, reimbursement: true, installmentNumber: 1, installmentCount: 3, installmentLabel: '1/3' },
+    { id: 21, month: '2026-11', name: 'Salário', date: '2026-11-05', amountCents: 643_358, reimbursement: false, fixed: true },
+    { id: 22, month: '2026-11', name: 'Devolução', date: '2026-11-20', amountCents: 19_000, personId: 7, reimbursement: true, installmentNumber: 1, installmentCount: 3, installmentLabel: '1/3', fixed: false },
   ],
 })
 
@@ -357,6 +357,21 @@ describe('month lists (TASK-040: REQ-015, REQ-016, REQ-021, REQ-023, REQ-024)', 
     expect(within(incomes).getByText('Salário')).toBeInTheDocument()
     expect(within(incomes).getByText('1/3')).toBeInTheDocument()
     expect(within(incomes).getByText(/Reembolso de Mainha/)).toBeInTheDocument()
+    // a fixed income is marked (REQ-053)
+    const salary = within(incomes).getByText('Salário').closest('li') as HTMLElement
+    expect(within(salary).getByText('Fixa')).toBeInTheDocument()
+    const refund = within(incomes).getByText('Devolução').closest('li') as HTMLElement
+    expect(within(refund).queryByText(/Fixa/)).not.toBeInTheDocument()
+  })
+
+  it('shows Entradas first, right after the closings, then Fixos and Cartão (REQ-041)', async () => {
+    await openMonth()
+    const titles = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
+    const lists = titles.filter((title) => ['Entradas', 'Fixos', 'Cartão'].includes(title ?? ''))
+    expect(lists).toEqual(['Entradas', 'Fixos', 'Cartão'])
+    // nothing between the closings and the income list
+    const income = section('Entradas')
+    expect(income.compareDocumentPosition(section('Fixos')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('shows an empty message for each list of an empty month', async () => {
@@ -487,7 +502,8 @@ describe('month lists (TASK-040: REQ-015, REQ-016, REQ-021, REQ-023, REQ-024)', 
     replies['DELETE /api/incomes/22?scope=following'] = { status: 204 }
     const { calls } = await openMonth(replies)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Excluir Aluguel' }))
+    // a one-off card expense without installments does not ask
+    await userEvent.click(screen.getByRole('button', { name: 'Excluir Roupa da mãe' }))
     let dialog = await screen.findByRole('dialog', { name: 'Excluir' })
     expect(within(dialog).queryByRole('radio')).not.toBeInTheDocument()
     await userEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }))
@@ -497,6 +513,26 @@ describe('month lists (TASK-040: REQ-015, REQ-016, REQ-021, REQ-023, REQ-024)', 
     await userEvent.click(within(dialog).getByRole('radio', { name: 'Esta e as próximas (1/3 até 3/3)' }))
     await userEvent.click(within(dialog).getByRole('button', { name: 'Excluir' }))
     await waitFor(() => expect(sent(calls, 'DELETE /api/incomes/22?scope=following')).toHaveLength(1))
+  })
+
+  it('a fixed expense or income asks: only this month (default) or this month and the next ones (REQ-054)', async () => {
+    const replies = baseReplies()
+    replies['DELETE /api/expenses/11?scope=following'] = { status: 204 }
+    replies['DELETE /api/incomes/21'] = { status: 204 }
+    const { calls } = await openMonth(replies)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Excluir Aluguel' }))
+    let dialog = await screen.findByRole('dialog', { name: 'Excluir' })
+    expect(within(dialog).getByRole('radio', { name: 'Só este mês' })).toBeChecked()
+    await userEvent.click(within(dialog).getByRole('radio', { name: 'Este mês e os próximos' }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Excluir' }))
+    await waitFor(() => expect(sent(calls, 'DELETE /api/expenses/11?scope=following')).toHaveLength(1))
+
+    await userEvent.click(screen.getByRole('button', { name: 'Excluir Salário' }))
+    dialog = await screen.findByRole('dialog', { name: 'Excluir' })
+    expect(within(dialog).getByRole('radio', { name: 'Só este mês' })).toBeChecked()
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Excluir' }))
+    await waitFor(() => expect(sent(calls, 'DELETE /api/incomes/21')).toHaveLength(1))
   })
 
   it('deletes an expense after confirming and the list updates at once', async () => {
@@ -544,10 +580,12 @@ describe('month lists (TASK-040: REQ-015, REQ-016, REQ-021, REQ-023, REQ-024)', 
     expect(within(dialog).getByLabelText('Valor (R$)')).toHaveValue('190,00')
     expect(within(dialog).getByText(/Parcela 1\/3/)).toBeInTheDocument()
     expect(within(dialog).queryByLabelText('É uma entrada parcelada')).not.toBeInTheDocument()
+    // an installment does not become fixed (REQ-053)
+    expect(within(dialog).queryByLabelText('Entrada fixa (repete todo mês)')).not.toBeInTheDocument()
     await userEvent.selectOptions(within(dialog).getByLabelText('Reembolso de (pessoa)'), '')
     await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
-    expect(sent(calls, 'PUT /api/incomes/22')).toEqual([{ name: 'Devolução', amountCents: 19_000, date: '2026-11-20' }])
+    expect(sent(calls, 'PUT /api/incomes/22')).toEqual([{ name: 'Devolução', amountCents: 19_000, date: '2026-11-20', fixed: false }])
 
     await userEvent.click(screen.getByRole('button', { name: 'Excluir Devolução' }))
     await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Excluir' }))
@@ -631,6 +669,35 @@ describe('quick entry of income (TASK-042: REQ-042, REQ-024, REQ-026)', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     expect(sent(calls, POST)).toEqual([{ name: 'Salário', amountCents: 643_358, date: '2026-11-05' }])
     await waitFor(() => expect(monthLoads(calls)).toBe(2))
+  })
+
+  it('records a fixed income; fixed and installments exclude each other (REQ-053)', async () => {
+    const { calls, dialog } = await openIncome()
+    await userEvent.type(within(dialog).getByLabelText('Nome'), 'Salário')
+    await userEvent.type(within(dialog).getByLabelText('Valor (R$)'), '5000')
+    fireEvent.change(within(dialog).getByLabelText('Data'), { target: { value: '2026-11-05' } })
+    await userEvent.click(within(dialog).getByLabelText('É uma entrada parcelada'))
+    expect(within(dialog).queryByLabelText('Entrada fixa (repete todo mês)')).not.toBeInTheDocument()
+    await userEvent.click(within(dialog).getByLabelText('É uma entrada parcelada'))
+    await userEvent.click(within(dialog).getByLabelText('Entrada fixa (repete todo mês)'))
+    expect(within(dialog).queryByLabelText('É uma entrada parcelada')).not.toBeInTheDocument()
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }))
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(sent(calls, POST)).toEqual([{ name: 'Salário', amountCents: 500_000, date: '2026-11-05', fixed: true }])
+  })
+
+  it('editing a fixed income can stop it from repeating', async () => {
+    const replies = baseReplies()
+    replies['PUT /api/incomes/21'] = { body: { ...november().incomes[0], fixed: false } }
+    const { calls } = await openMonth(replies)
+    await userEvent.click(screen.getByRole('button', { name: 'Editar Salário' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Editar entrada' })
+    const fixed = within(dialog).getByLabelText('Entrada fixa (repete todo mês)')
+    expect(fixed).toBeChecked()
+    await userEvent.click(fixed)
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }))
+    await waitFor(() => expect(sent(calls, 'PUT /api/incomes/21')).toEqual([{ name: 'Salário', amountCents: 643_358, date: '2026-11-05', fixed: false }]))
   })
 
   it('records a reimbursement in installments and "save and add another" keeps the window open', async () => {

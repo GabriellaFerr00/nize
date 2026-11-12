@@ -277,6 +277,7 @@
       "FIXED": "Fixed",
       "CARD": "Credit card"
     },
+    "fixedHelp": "It also goes into the next months, including the ones you already opened. Making it not fixed takes it out of the next months.",
     "payment": {
       "PIX": "Pix",
       "CREDIT": "Credit"
@@ -334,6 +335,10 @@
       "date": "Choose a date within {{month}}.",
       "count": "Enter the number of installments, from 2 to 120.",
       "number": "The current installment must be between 1 and the total."
+    },
+    "fixed": {
+      "enable": "Fixed income (repeats every month)",
+      "help": "It also goes into the next months, including the ones you already opened. Unchecking takes it out of the next months."
     }
   },
   "month": {
@@ -365,6 +370,7 @@
     "installment": "Installment {{label}}",
     "thirdParty": "spent by {{name}}",
     "reimbursementFrom": "Reimbursement from {{name}}",
+    "fixedIncome": "Fixed",
     "paid": "{{name}} paid",
     "edit": "Edit {{name}}",
     "delete": "Delete {{name}}",
@@ -373,7 +379,11 @@
     "deleteScope": {
       "title": "What to delete",
       "this": "Only this installment ({{number}}/{{count}})",
-      "following": "This one and the next ones ({{number}}/{{count}} to {{count}}/{{count}})"
+      "following": "This one and the next ones ({{number}}/{{count}} to {{count}}/{{count}})",
+      "fixed": {
+        "this": "Only this month",
+        "following": "This month and the next ones"
+      }
     },
     "summary": {
       "title": "Summaries",

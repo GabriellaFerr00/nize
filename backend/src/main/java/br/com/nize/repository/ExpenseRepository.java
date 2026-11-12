@@ -21,4 +21,7 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
     List<Expense> findByUserIdAndMonthIn(Long userId, Collection<String> months);
 
     List<Expense> findByUserIdAndInstallmentGroupIdIn(Long userId, Collection<String> groups);
+
+    /** A fixed expense and its copies in other months (REQ-054). */
+    List<Expense> findByUserIdAndRecurrenceId(Long userId, String recurrenceId);
 }

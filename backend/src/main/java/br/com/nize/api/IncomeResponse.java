@@ -9,12 +9,12 @@ import java.time.LocalDate;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record IncomeResponse(Long id, String month, String name, LocalDate date, long amountCents, Long personId,
                              boolean reimbursement, Integer installmentNumber, Integer installmentCount,
-                             String installmentLabel) {
+                             String installmentLabel, boolean fixed) {
 
     static IncomeResponse from(Income i) {
         String label = InstallmentIndicator.format(i.getInstallmentNumber(), i.getInstallmentCount());
         return new IncomeResponse(i.getId(), i.getMonth(), i.getName(), i.getDate(), i.getAmountCents(),
                 i.getPersonId(), i.getPersonId() != null, i.getInstallmentNumber(), i.getInstallmentCount(),
-                label.isEmpty() ? null : label);
+                label.isEmpty() ? null : label, i.isFixed());
     }
 }

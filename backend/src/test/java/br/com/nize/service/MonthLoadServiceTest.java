@@ -324,4 +324,64 @@ class MonthLoadServiceTest extends IsolationTestBase {
         assertThat(january).hasSize(1);
         assertThat(((Number) january.get(0).get("PERSON_ID")).longValue()).isEqualTo(mainha);
     }
+
+    // ---- fixed incomes (REQ-053) ----
+
+    @Test
+    void aFixedIncomeIsCarriedToTheNextMonthsAndStaysFixed() throws Exception {
+        long mainha = personOf(userA, YEAR, "Mainha");
+        income(userA, JUNE, "{\"name\":\"Salário\",\"amountCents\":500000,\"date\":\"%s-05\",\"fixed\":true,\"personId\":%d}"
+                .formatted(JUNE, mainha));
+        income(userA, JUNE, "{\"name\":\"Bico\",\"amountCents\":9000,\"date\":\"%s-06\"}".formatted(JUNE));
+        String august = YEAR + "-08";
+
+        open(userA, JULY);
+        open(userA, JULY);
+        open(userA, august);
+
+        List<Map<String, Object>> july = incomesOf(userA, JULY);
+        assertThat(july).hasSize(1);
+        Map<String, Object> copy = july.get(0);
+        assertThat(copy.get("NAME")).isEqualTo("Salário");
+        assertThat(cents(copy.get("AMOUNT"))).isEqualTo(500_000L);
+        assertThat(copy.get("FIXED")).isEqualTo(true);
+        assertThat(copy.get("INCOME_DATE").toString()).isEqualTo(JULY + "-05");
+        assertThat(((Number) copy.get("PERSON_ID")).longValue()).isEqualTo(mainha);
+        assertThat(copy.get("INSTALLMENT_GROUP_ID")).isNull();
+        assertThat(incomesOf(userA, august)).extracting(r -> r.get("NAME")).containsExactly("Salário");
+    }
+
+    @Test
+    void aFixedIncomeOnThe31stLandsOnTheLastDayOfAShorterMonth() throws Exception {
+        String march = YEAR + "-03";
+        String april = YEAR + "-04";
+        income(userA, march, "{\"name\":\"Aluguel recebido\",\"amountCents\":120000,\"date\":\"%s-31\",\"fixed\":true}".formatted(march));
+
+        open(userA, april);
+
+        assertThat(incomesOf(userA, april).get(0).get("INCOME_DATE").toString()).isEqualTo(april + "-30");
+    }
+
+    @Test
+    void aMonthAlreadyOpenedAlsoReceivesAFixedIncomeCreatedLaterOnlyOnce() throws Exception {
+        open(userA, JULY);
+        income(userA, JUNE, "{\"name\":\"Salário\",\"amountCents\":500000,\"date\":\"%s-05\",\"fixed\":true}".formatted(JUNE));
+
+        open(userA, JULY);
+
+        // REQ-054 (2026-11-12): the months already opened get it too
+        assertThat(incomesOf(userA, JULY)).hasSize(1);
+    }
+
+    @Test
+    void uncheckingFixedStopsTheCopiesFromThatMonthOn() throws Exception {
+        long salary = income(userA, JUNE, "{\"name\":\"Salário\",\"amountCents\":500000,\"date\":\"%s-05\",\"fixed\":true}".formatted(JUNE));
+        as(userA, put("/api/incomes/" + salary).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Salário\",\"amountCents\":500000,\"date\":\"%s-05\",\"fixed\":false}".formatted(JUNE)))
+                .andExpect(status().isOk());
+
+        open(userA, JULY);
+
+        assertThat(incomesOf(userA, JULY)).isEmpty();
+    }
 }
