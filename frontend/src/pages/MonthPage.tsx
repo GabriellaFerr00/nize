@@ -44,7 +44,7 @@ const hasNextInstallments = (target: DeleteTarget) =>
 
 /**
  * The month screen (REQ-041): header with totals and closing positions, month/year navigation (REQ-040), lists of
- * fixed, card and income entries, summaries with the own balance, and quick entry (REQ-042). Opening a month runs
+ * income, fixed and card entries, summaries with the own balance, and quick entry (REQ-042). Opening a month runs
  * the month load on the server (REQ-022). Every number shown comes from `GET /api/months/{month}` (D-1).
  */
 export function MonthPage() {
@@ -127,6 +127,14 @@ export function MonthPage() {
           <MonthHeader view={view} />
           <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
             <EntryLists>
+              {/* Entradas first, right after the closings of the header (REQ-041, 2026-11-12) */}
+              <IncomeList
+                incomes={view.incomes}
+                catalogs={catalogs}
+                totalCents={view.totals.totalIncomeCents}
+                onEdit={(i) => setDialog({ kind: 'income', income: i })}
+                onDelete={(i) => askDelete('income', i)}
+              />
               <ExpenseList
                 kind="FIXED"
                 expenses={view.expenses.filter((e) => e.type === 'FIXED')}
@@ -143,13 +151,6 @@ export function MonthPage() {
                 onTogglePaid={(e) => togglePaid.mutate(e)}
                 onEdit={(e) => setDialog({ kind: 'expense', expense: e })}
                 onDelete={(e) => askDelete('expense', e)}
-              />
-              <IncomeList
-                incomes={view.incomes}
-                catalogs={catalogs}
-                totalCents={view.totals.totalIncomeCents}
-                onEdit={(i) => setDialog({ kind: 'income', income: i })}
-                onDelete={(i) => askDelete('income', i)}
               />
             </EntryLists>
             <SummaryPanel view={view} catalogs={catalogs} />

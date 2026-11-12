@@ -12,7 +12,10 @@ import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDate;
 
-/** One income of one month (REQ-024..026); with a person it is a reimbursement. Money is cents (NFR-001). */
+/**
+ * One income of one month (REQ-024..026); with a person it is a reimbursement; a fixed one is copied to the next
+ * month by the month load (REQ-053). Money is cents (NFR-001).
+ */
 @Entity
 @Table(name = "income")
 public class Income {
@@ -54,11 +57,14 @@ public class Income {
     @Column(name = "installment_group_id", length = 36)
     private String installmentGroupId;
 
+    @Column(nullable = false)
+    private boolean fixed;
+
     protected Income() {
     }
 
     public Income(Long userId, String month, String name, LocalDate date, long amountCents, Long personId,
-                  Integer installmentNumber, Integer installmentCount, String installmentGroupId) {
+                  Integer installmentNumber, Integer installmentCount, String installmentGroupId, boolean fixed) {
         this.userId = userId;
         this.month = month;
         this.name = name;
@@ -68,10 +74,12 @@ public class Income {
         this.installmentNumber = installmentNumber;
         this.installmentCount = installmentCount;
         this.installmentGroupId = installmentGroupId;
+        this.fixed = fixed;
     }
 
     /** Edits what the user may change; month and installment data stay as they were. */
-    public void update(String name, LocalDate date, long amountCents, Long personId) {
+    public void update(String name, LocalDate date, long amountCents, Long personId, boolean fixed) {
+        this.fixed = fixed;
         this.name = name;
         this.date = date;
         this.amountCents = amountCents;
@@ -88,4 +96,5 @@ public class Income {
     public Integer getInstallmentNumber() { return installmentNumber; }
     public Integer getInstallmentCount() { return installmentCount; }
     public String getInstallmentGroupId() { return installmentGroupId; }
+    public boolean isFixed() { return fixed; }
 }

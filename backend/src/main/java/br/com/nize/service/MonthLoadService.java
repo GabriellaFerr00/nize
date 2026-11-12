@@ -29,8 +29,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Opens a month for the first time: carries over what {@link MonthLoad} decides, for expenses and for incomes in
- * installments (REQ-022, REQ-025). Runs once per user and
+ * Opens a month for the first time: carries over what {@link MonthLoad} decides, for expenses and for incomes
+ * (fixed ones, REQ-053, and installments, REQ-025; REQ-022). Runs once per user and
  * month (D-7); opening again does nothing, even if the user deleted what was carried over.
  */
 @Service
@@ -101,7 +101,7 @@ public class MonthLoadService {
         int nextNumber = deleted.getInstallmentNumber() + 1;
         boolean exists = incomes.findByUserIdAndInstallmentGroupIdIn(userId, Set.of(deleted.getInstallmentGroupId()))
                 .stream().anyMatch(i -> Integer.valueOf(nextNumber).equals(i.getInstallmentNumber()));
-        Income created = exists ? null : copy(userId, next, deleted, nextNumber);
+        Income created = exists ? null : copy(userId, next, deleted, Integer.valueOf(nextNumber));
         if (created != null) {
             incomes.save(created);
         }
@@ -143,37 +143,43 @@ public class MonthLoadService {
         expenses.saveAll(created);
     }
 
-    /** Incomes are never copied as such; only the next installment of an income in installments is created. */
+    /**
+     * Fixed incomes are copied (REQ-053) and incomes in installments get their next installment (REQ-025), by the
+     * same {@link MonthLoad} decision as expenses; one-off incomes are not carried over.
+     */
     private void loadIncomes(Long userId, YearMonth month, List<Income> previous, boolean automaticInstallments) {
-        List<Income> inInstallments = previous.stream().filter(i -> i.getInstallmentGroupId() != null).toList();
-        if (inInstallments.isEmpty()) {
+        List<Income> carried = previous.stream().filter(i -> i.isFixed() || i.getInstallmentGroupId() != null).toList();
+        if (carried.isEmpty()) {
             return;
         }
         Map<String, Income> byKey = new HashMap<>();
-        inInstallments.forEach(i -> byKey.put(String.valueOf(i.getId()), i));
+        carried.forEach(i -> byKey.put(String.valueOf(i.getId()), i));
+        Set<String> groups = carried.stream().map(Income::getInstallmentGroupId)
+                .filter(java.util.Objects::nonNull).collect(Collectors.toSet());
         Set<InstallmentKey> existing = new HashSet<>();
-        incomes.findByUserIdAndInstallmentGroupIdIn(userId,
-                        inInstallments.stream().map(Income::getInstallmentGroupId).collect(Collectors.toSet()))
-                .forEach(i -> existing.add(new InstallmentKey(i.getInstallmentGroupId(), i.getInstallmentNumber())));
+        if (!groups.isEmpty()) {
+            incomes.findByUserIdAndInstallmentGroupIdIn(userId, groups)
+                    .forEach(i -> existing.add(new InstallmentKey(i.getInstallmentGroupId(), i.getInstallmentNumber())));
+        }
 
         List<Decision> decisions = MonthLoad.decide(
-                inInstallments.stream().map(i -> new PreviousExpense(String.valueOf(i.getId()), false,
+                carried.stream().map(i -> new PreviousExpense(String.valueOf(i.getId()), i.isFixed(),
                         i.getInstallmentGroupId(), i.getInstallmentNumber(), i.getInstallmentCount())).toList(),
                 existing, automaticInstallments);
 
-        List<Income> created = decisions.stream()
-                .map(d -> copy(userId, month, byKey.get(d.sourceKey()), d.nextNumber()))
-                .filter(java.util.Objects::nonNull)
-                .toList();
-        incomes.saveAll(created);
+        incomes.saveAll(decisions.stream().map(d -> copy(userId, month, byKey.get(d.sourceKey()), d.nextNumber())).toList());
     }
 
-    /** The next installment of an income, with the same person (catalogs have no year, D-22). */
-    private Income copy(Long userId, YearMonth month, Income source, int nextNumber) {
-        Long personId = source.getPersonId();
+    /**
+     * A fixed income copied as fixed ({@code nextNumber} null), or the next installment of an income, with the same
+     * person (catalogs have no year, D-22).
+     */
+    private Income copy(Long userId, YearMonth month, Income source, Integer nextNumber) {
         LocalDate date = month.atDay(Math.min(source.getDate().getDayOfMonth(), month.lengthOfMonth()));
-        return new Income(userId, month.toString(), source.getName(), date, source.getAmountCents(), personId,
-                nextNumber, source.getInstallmentCount(), source.getInstallmentGroupId());
+        boolean installment = nextNumber != null;
+        return new Income(userId, month.toString(), source.getName(), date, source.getAmountCents(), source.getPersonId(),
+                nextNumber, installment ? source.getInstallmentCount() : null,
+                installment ? source.getInstallmentGroupId() : null, !installment && source.isFixed());
     }
 
     private static PreviousExpense toRuleInput(Expense e) {

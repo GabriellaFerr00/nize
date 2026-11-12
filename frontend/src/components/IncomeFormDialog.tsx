@@ -16,7 +16,8 @@ type Props = { month: string; income?: Income; onClose: () => void }
 
 /**
  * The "Nova entrada" window (REQ-024..026, REQ-042): salary or other income, optionally installment N of M
- * (the month load creates the next ones, REQ-025) or a reimbursement from a person (REQ-026).
+ * (the month load creates the next ones, REQ-025), fixed (copied to the next months, REQ-053) or a reimbursement
+ * from a person (REQ-026). Fixed and installments exclude each other.
  */
 export function IncomeFormDialog({ month, income, onClose }: Props) {
   const { t } = useTranslation()
@@ -29,6 +30,7 @@ export function IncomeFormDialog({ month, income, onClose }: Props) {
   const [amount, setAmount] = useState(income ? centsToInput(income.amountCents) : '')
   const [date, setDate] = useState(() => income?.date ?? defaultDate(month))
   const [personId, setPersonId] = useState(income?.personId ? String(income.personId) : '')
+  const [fixed, setFixed] = useState(income?.fixed ?? false)
   const [inInstallments, setInInstallments] = useState(false)
   const [number, setNumber] = useState('')
   const [count, setCount] = useState('')
@@ -36,7 +38,8 @@ export function IncomeFormDialog({ month, income, onClose }: Props) {
   const [savedMessage, setSavedMessage] = useState(false)
 
   const save = useMutation({
-    mutationFn: (body: NewIncome) => (editing ? updateIncome(income.id, body) : createIncome(month, body)),
+    mutationFn: (body: NewIncome) =>
+      editing ? updateIncome(income.id, { ...body, fixed: body.fixed ?? false }) : createIncome(month, body),
   })
 
   function validate(): NewIncome | null {
@@ -46,7 +49,7 @@ export function IncomeFormDialog({ month, income, onClose }: Props) {
     if (cents === null) next.amount = t('income.errors.amount')
     if (!date || !date.startsWith(`${month}-`)) next.date = t('income.errors.date', { month })
     let installments: Partial<NewIncome> = {}
-    if (inInstallments && !editing) {
+    if (inInstallments && !editing && !fixed) {
       const current = Number(number)
       const total = Number(count)
       if (!Number.isInteger(total) || total < 2 || total > 120) next.count = t('income.errors.count')
@@ -61,6 +64,7 @@ export function IncomeFormDialog({ month, income, onClose }: Props) {
       date,
       ...(personId && { personId: Number(personId) }),
       ...installments,
+      ...(fixed && { fixed }),
     }
   }
 
@@ -125,11 +129,27 @@ export function IncomeFormDialog({ month, income, onClose }: Props) {
           </select>
         </label>
 
+        {!inInstallments && !income?.installmentLabel && (
+          <div className="flex flex-col gap-1">
+            <label className="flex items-center gap-2 text-sm font-medium text-ink">
+              <input
+                type="checkbox"
+                checked={fixed}
+                onChange={(e) => setFixed(e.target.checked)}
+                className="size-4 accent-brand-text"
+              />
+              {t('income.fixed.enable')}
+            </label>
+            <p className="text-sm text-ink-soft">{t('income.fixed.help')}</p>
+          </div>
+        )}
+
         {editing ? (
           income.installmentLabel && (
             <p className="text-sm text-ink-soft">{t('income.installmentFixed', { label: income.installmentLabel })}</p>
           )
         ) : (
+          !fixed && (
           <fieldset className="flex flex-col gap-3 rounded-xl border border-line p-3">
             <legend className="px-1 text-sm font-medium text-ink">{t('income.installments.title')}</legend>
             <label className="flex items-center gap-2 text-sm text-ink">
@@ -167,6 +187,7 @@ export function IncomeFormDialog({ month, income, onClose }: Props) {
               </>
             )}
           </fieldset>
+          )
         )}
 
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end">

@@ -334,6 +334,10 @@
       "date": "Choose a date within {{month}}.",
       "count": "Enter the number of installments, from 2 to 120.",
       "number": "The current installment must be between 1 and the total."
+    },
+    "fixed": {
+      "enable": "Fixed income (repeats every month)",
+      "help": "It shows up again in the next months, when you open each one. Changing or deleting it in one month does not change the others."
     }
   },
   "month": {
@@ -365,6 +369,7 @@
     "installment": "Installment {{label}}",
     "thirdParty": "spent by {{name}}",
     "reimbursementFrom": "Reimbursement from {{name}}",
+    "fixedIncome": "Fixed",
     "paid": "{{name}} paid",
     "edit": "Edit {{name}}",
     "delete": "Delete {{name}}",

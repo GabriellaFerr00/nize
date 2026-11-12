@@ -1,5 +1,5 @@
 # design.md
-> Nize — Version 0.4.1 (MVP web) — 2026-11-12
+> Nize — Version 0.4.2 (MVP web) — 2026-11-12
 
 ## Architecture Overview
 Monorepo com dois módulos independentes: `backend` (API REST) e `frontend` (SPA). **Toda regra de cálculo vive só no back-end** (totais, saldo, posição nos fechamentos, parcelas, carga do mês, saldo próprio, porcentagens). O front apenas exibe o que a API devolve e nunca recalcula valores. Como back (Java) e front (TypeScript) não compartilham código, o "pacote de regras compartilhado" do PDF vira o pacote Java `br.com.nize.rules`, puro (sem Spring, sem JPA), testado antes do código.
@@ -213,6 +213,7 @@ Regras de consistência do lançamento (validadas no serviço; as CHECK do banco
 | parcela_atual | SMALLINT | NULL | ex.: 1/3 |
 | parcelas_total | SMALLINT | NULL | |
 | grupo_parcela_id | CHAR(36) | NULL | UNIQUE com parcela_atual |
+| fixa | BOOLEAN | NOT NULL DEFAULT FALSE | REQ-053; coluna `fixed` (V14). Copiada pela carga do mês; nunca junto com parcela (400 `INVALID_INCOME`) |
 
 ### mes_carregado
 | Field | Type | Constraints | Notes |
@@ -261,7 +262,7 @@ Semeadas em `category` para cada ano novo (REQ-010). A usuária pode renomear, d
 | limiteDaCategoria | `CategoryLimit.of(gasto, limite)`: sem limite → `NONE`; gasto > limite → `OVER`; gasto ≥ 80% do limite (`gasto × 100 ≥ limite × 80`, inteiros) → `NEAR`; senão `UNDER`. Na API, cada item de `byCategory` traz `limitCents` e `limitStatus` (só com limite). A tela do mês notifica (aviso passageiro, `LimitToast`, ~8 s ou fechar) quando o status de uma categoria sobe para `NEAR`/`OVER` depois de buscar o mês de novo; abrir o mês só memoriza os status. O resumo mostra "usado de limite"; nada bloqueia o lançamento | REQ-051 |
 | resumoPorForma / PorCartão | Σ por forma de pagamento; Σ por cartão, só cartões (sem grupo "Sem cartão"; linha antiga sem cartão fica só no total de crédito) | REQ-036/037 |
 | resumoPorPessoa | Σ gastos com pessoa_id, por pessoa e por cartão | REQ-038 |
-| cargaDoMês(mesAnterior, mês) | copia os fixos (pago=false; gastos avulsos não são copiados); para cada parcela N/M do mês anterior com N < M cria a parcela N+1, **se a permissão de parcelas automáticas está ligada**, e se `(grupo, N+1)` ainda não existe (vale também para parcelas lançadas à mão, que recebem grupo próprio ao serem criadas); idem entradas parceladas; só se o mês não está em `loaded_month`. Referências (categoria, cartão, pessoa) trocam de ano pelo nome; item cuja categoria não existe no ano novo é ignorado | REQ-022 |
+| cargaDoMês(mesAnterior, mês) | copia os fixos (pago=false; gastos avulsos não são copiados); para cada parcela N/M do mês anterior com N < M cria a parcela N+1, **se a permissão de parcelas automáticas está ligada**, e se `(grupo, N+1)` ainda não existe (vale também para parcelas lançadas à mão, que recebem grupo próprio ao serem criadas); copia as entradas fixas (REQ-053; mesma decisão de `MonthLoad.decide`, com `fixed` da entrada; a cópia continua fixa, dia limitado ao fim do mês); idem entradas parceladas; só se o mês não está em `loaded_month`. Referências (categoria, cartão, pessoa) trocam de ano pelo nome; item cuja categoria não existe no ano novo é ignorado | REQ-022 |
 
 Porcentagem é o único valor não inteiro e só existe na resposta da API/exibição; nunca é usada para somar.
 
@@ -296,8 +297,8 @@ REST JSON sob `/api`. Todos os endpoints exceto `/api/auth/**` exigem `Authoriza
 | PUT | /api/lancamentos/{id} | sim | REQ-023 | edita |
 | PATCH | /api/lancamentos/{id}/pago | sim | REQ-015, REQ-033 | marca/desmarca pago |
 | DELETE | /api/lancamentos/{id} | sim | REQ-023, REQ-050 | exclui (204). Parcela: `?scope=this` (padrão) só ela; `?scope=following` ela e as de número maior do mesmo `installment_group_id` (meses seguintes). Com `this`, se a parcela seguinte ainda não existe e o mês seguinte ainda não foi carregado (parcelas automáticas ligadas), ela é criada na hora no mês seguinte, para a carga não perder a sequência |
-| POST | /api/meses/{aaaa-mm}/entradas | sim | REQ-024..026 | cria entrada (parcelada ou reembolso) |
-| PUT/DELETE | /api/entradas/{id} | sim | REQ-023, REQ-050 | edita / exclui; `scope` como em lançamentos |
+| POST | /api/meses/{aaaa-mm}/entradas | sim | REQ-024..026 | cria entrada (parcelada, fixa ou reembolso); `fixed` opcional (padrão `false`), recusado junto com parcela (400 `INVALID_INCOME`) |
+| PUT/DELETE | /api/entradas/{id} | sim | REQ-023, REQ-050 | edita / exclui; `scope` como em lançamentos. O `PUT` aceita `fixed` (ausente = `false`); parcela não vira fixa (400 `INVALID_INCOME`). A resposta traz `fixed` |
 | GET | /api/anos/{ano}/panorama | sim | REQ-039 | `GET /api/years/{year}/overview` → `{year, months: [{month, totalExpensesCents, totalIncomeCents, balanceCents}]}` (12 meses, janeiro primeiro; mesma regra `MonthTotals` do mês); faz a carga dos meses até o vigente (D-19); ano que a usuária não tem → 404 |
 | GET | /actuator/health | não | D-18 | `{"status":"UP"}`; usado pelo Docker e pelo smoke test |
 
@@ -316,7 +317,7 @@ Limite de tentativas (REQ-047): os quatro `POST /api/auth/**` devolvem 429 `{cod
 
 Navegação: menu lateral (≥ 768px) e barra inferior (< 768px) — REQ-043. Mês padrão (`/`, menu "Mês" e "Panorama"): o mês do calendário dentro do ano vigente da usuária (nov/2026 com ano vigente 2027 → `2027-11`; `lib/month.defaultMonth`) — REQ-006, decisão da usuária 2026-11-04. Identidade visual própria "Verde Nize", modo claro/escuro com seletor de tema ao lado do idioma (D-20) — REQ-045. Link "Pular para o conteúdo" no topo; ações com área de toque ≥ 44px.
 
-Layout da tela do mês (REQ-041, D-20; aprovado pela usuária em 2026-11-05): uma faixa de topo com o saldo do mês primeiro e maior, os outros totais numa linha logo abaixo (entradas, gastos, fixos) e, com os fechamentos ligados, uma lista simples com o total de cada intervalo ("Do dia A ao B" e "Gastos R$ X"), sem barra nem marca de hoje (decisão da usuária 2026-11-05). Com os fechamentos desligados a lista não aparece. As listas (Fixos, Cartão, Entradas) ficam numa só superfície, em estilo de livro-caixa: a data do lançamento (dia/mês, com a legenda "lançado" embaixo; pedido da usuária 2026-11-09) em destaque à esquerda de cada linha. Os resumos ficam numa superfície verde suave, com uma barra fina por categoria do tamanho da porcentagem que a API devolveu. Só os tokens de cor existentes; fonte do sistema.
+Layout da tela do mês (REQ-041, D-20; aprovado pela usuária em 2026-11-05): uma faixa de topo com o saldo do mês primeiro e maior, os outros totais numa linha logo abaixo (entradas, gastos, fixos) e, com os fechamentos ligados, uma lista simples com o total de cada intervalo ("Do dia A ao B" e "Gastos R$ X"), sem barra nem marca de hoje (decisão da usuária 2026-11-05). Com os fechamentos desligados a lista não aparece. As listas (Entradas, Fixos, Cartão, nessa ordem: entradas logo depois dos fechamentos, pedido da usuária 2026-11-12) ficam numa só superfície, em estilo de livro-caixa: a data do lançamento (dia/mês, com a legenda "lançado" embaixo; pedido da usuária 2026-11-09) em destaque à esquerda de cada linha. Os resumos ficam numa superfície verde suave, com uma barra fina por categoria do tamanho da porcentagem que a API devolveu. Só os tokens de cor existentes; fonte do sistema.
 
 Layout das demais telas (D-20; aprovado pela usuária em 2026-11-05), no mesmo estilo da tela do mês (título grande, uma superfície por bloco, linhas de livro-caixa, só os tokens de cor, fonte do sistema):
 - **Base comum**: classes de botão (primário, secundário, perigo, ícone) e de campo em `lib/ui.ts`, usadas por todas as telas.
@@ -433,6 +434,7 @@ GitHub Actions (detalhes em `docs/ci-cd.md`; NFR-010). **Um workflow por tema**,
 | 0.1.7 | 2026-11-01 | Fixo pode ser no crédito (tipo e forma de pagamento independentes); regras de consistência do lançamento; Open Questions da Phase 3 resolvidas |
 | 0.1.8 | 2026-11-01 | `month` reservado no H2: coluna `month_ref`; data do lançamento `expense_date` |
 | 0.1.9 | 2026-11-01 | Carga do mês: continua parcelas à mão (grupo próprio) e respeita a permissão de parcelas automáticas |
+| 0.4.2 | 2026-11-12 | Entrada fixa: V14 `income.fixed`, carga do mês copia (REQ-053, REQ-022); `fixed` em criar/editar/resposta de entradas. Tela do mês: Entradas é a primeira lista (REQ-041). Pedidos da usuária |
 | 0.4.1 | 2026-11-12 | D-21: campo "Selecionar cartão" com logotipos + apelido opcional (no lugar de nome + banco) e "Adicionar um novo cartão"; marca `amazon` entra, `will` sai (V13 limpa `card.brand`). Pedido da usuária |
 | 0.4.0 | 2026-11-09 | D-22: categorias, cartões e pessoas sem ano (V12 une as listas), rotas sem ano, ano novo não copia; limite padrão + ajuste por mês (`category_month_limit`, `/api/months/{m}/category-limits`). Decisões da usuária |
 | 0.3.2 | 2026-11-09 | Logotipos do Open Finance Brasil para 9 bancos (quadrado branco); fim do envio de imagem própria: V11 apaga `card_logo`, saem `/api/cards/{id}/logo`, `ImageFormat` e `hasLogo` (pedido da usuária) |

@@ -334,6 +334,10 @@
       "date": "Escolha uma data dentro do mês {{month}}.",
       "count": "Informe o total de parcelas, de 2 a 120.",
       "number": "A parcela atual deve estar entre 1 e o total."
+    },
+    "fixed": {
+      "enable": "Entrada fixa (repete todo mês)",
+      "help": "Ela aparece de novo nos meses seguintes, quando você abrir cada um. Mudar ou excluir num mês não muda os outros."
     }
   },
   "month": {
@@ -365,6 +369,7 @@
     "installment": "Parcela {{label}}",
     "thirdParty": "gasto de {{name}}",
     "reimbursementFrom": "Reembolso de {{name}}",
+    "fixedIncome": "Fixa",
     "paid": "{{name}} pago",
     "edit": "Editar {{name}}",
     "delete": "Excluir {{name}}",

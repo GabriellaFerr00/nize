@@ -11,7 +11,7 @@ import { TagDot } from './TagDot'
 type ListProps = { title: string; empty: string; totalCents?: number; children: ReactNode[] }
 
 /**
- * A titled list of the month (Fixos, Cartão, Entradas); the optional total comes from the API. The lists share one
+ * A titled list of the month (Entradas, Fixos, Cartão); the optional total comes from the API. The lists share one
  * surface (`EntryLists`), like the pages of a ledger.
  */
 function EntryList({ title, empty, totalCents, children }: ListProps) {
@@ -177,7 +177,7 @@ type IncomeListProps = {
   onDelete: (income: Income) => void
 }
 
-/** Entradas of the month (REQ-024..026), reimbursements show who paid back. */
+/** Entradas of the month (REQ-024..026, REQ-053): fixed ones are marked, reimbursements show who paid back. */
 export function IncomeList({ incomes, catalogs, totalCents, onEdit, onDelete }: IncomeListProps) {
   const { t } = useTranslation()
   return (
@@ -193,6 +193,7 @@ export function IncomeList({ incomes, catalogs, totalCents, onEdit, onDelete }: 
             tone
             date={i.date}
             details={[
+              i.fixed ? t('month.fixedIncome') : undefined,
               i.reimbursement ? t('month.reimbursementFrom', { name: person ?? '' }) : undefined,
             ]}
             onEdit={() => onEdit(i)}

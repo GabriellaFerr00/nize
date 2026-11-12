@@ -291,6 +291,10 @@ Nomes em inglês: ver "Nomenclatura em inglês" em `design.md` (os termos em por
   - _Verify_: `CardBrandSyncTest` e `CardBrandApiTest` (`will` recusado, `amazon` aceito); testes de tela (marca escolhida vira o nome, apelido, novo cartão sem marca, edição) na tela Cartões e no "+ Novo cartão"; contraste do selo Amazon.
   - _Feito_: `BrandPicker` virou o campo "Selecionar cartão" (lista com logotipo e busca, "Adicionar um novo cartão" no fim) e o estado foi para `lib/cardIdentity.ts` (marca + "Apelido (opcional)" ou "Nome do cartão"), usado na tela Cartões e no "+ Novo cartão". Amazon com selo "Amz" (#ff9900 / #111111, 8,82:1; o Simple Icons 16.36.0 não tem ícone da Amazon); Will Bank fora, V13 põe `brand` NULL. 408 testes back, 173 front (4 novos), lint e build ok; conferido no navegador (claro 1280, escuro 390, sem rolagem horizontal nem erro de CSP).
 
+- [x] **TASK-076** [REQ-053, REQ-022, REQ-041]: Entradas fixas (V14 `income.fixed`, carga do mês copia, `fixed` na API, caixa "Entrada fixa" no formulário e marca "Fixa" na lista) e lista de Entradas primeiro na tela do mês.
+  - _Verify_: testes da regra/serviço de carga primeiro (fixa copiada, não fixa não, dia 31 → fim do mês, idempotente, mês já aberto não recebe), testes de API (`fixed` criado/editado, fixa + parcela → 400, isolamento), testes de tela (ordem das listas, caixa, marca); V14 no MySQL 8.4.
+  - _Feito_: testes escritos antes (4 em `MonthLoadServiceTest`, 2 em `IncomeApiTest`, falhando antes do código). V14 `income.fixed`; `MonthLoadService.loadIncomes` usa `MonthLoad.decide` com `fixed` da entrada (cópia continua fixa, dia limitado ao fim do mês); `fixed` em `CreateIncomeRequest`/`UpdateIncomeRequest`/`IncomeResponse`; fixa + parcela → 400 `INVALID_INCOME`. Tela: caixa "Entrada fixa (repete todo mês)" (some com parcelas e vice-versa), marca "Fixa" na lista, Entradas é a primeira lista. 414 testes back, 176 front, lint e build ok. Validado em MySQL 8.4 (V14, entrada fixa de 31/10 vira 30/11) e no navegador (claro 1280, escuro 390).
+
 ---
 
 ## Completed Tasks Archive

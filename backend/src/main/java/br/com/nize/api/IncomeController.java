@@ -27,13 +27,15 @@ public class IncomeController {
     @ResponseStatus(HttpStatus.CREATED)
     public IncomeResponse create(@PathVariable String month, @Valid @RequestBody CreateIncomeRequest r) {
         return IncomeResponse.from(service.create(CurrentUser.id(), month, new IncomeService.NewIncome(
-                r.name(), r.amountCents(), r.date(), r.personId(), r.installmentNumber(), r.installmentCount())));
+                r.name(), r.amountCents(), r.date(), r.personId(), r.installmentNumber(), r.installmentCount(),
+                Boolean.TRUE.equals(r.fixed()))));
     }
 
     @PutMapping("/api/incomes/{id}")
     public IncomeResponse update(@PathVariable Long id, @Valid @RequestBody UpdateIncomeRequest r) {
         return IncomeResponse.from(service.update(CurrentUser.id(), id,
-                new IncomeService.IncomeEdit(r.name(), r.amountCents(), r.date(), r.personId())));
+                new IncomeService.IncomeEdit(r.name(), r.amountCents(), r.date(), r.personId(),
+                        Boolean.TRUE.equals(r.fixed()))));
     }
 
     /** {@code ?scope=following} also deletes the next installments of the same purchase (REQ-050); default "this". */

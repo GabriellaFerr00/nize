@@ -1,5 +1,5 @@
 # requirements.md
-> Nize — Version 0.3.1 (MVP web) — 2026-11-12
+> Nize — Version 0.3.2 (MVP web) — 2026-11-12
 
 Fonte: `Nize — Funcionalidades e escopo do MVP web.pdf` (1 nov 2026). Em caso de dúvida entre este arquivo e o PDF, pergunte antes de implementar.
 
@@ -76,7 +76,7 @@ Categorias, cartões e pessoas existem **uma vez por conta**, independentes de a
   - _Acceptance_: R$ 100,00 em 3 parcelas = 3333, 3333 e 3334 centavos; a soma das parcelas é sempre o valor total.
 - **REQ-021**: O sistema shall exibir o indicador de parcela no formato "N/M" no mês.
   - _Acceptance_: lançamento com parcela 7 de 12 aparece como "7/12".
-- **REQ-022**: Ao abrir um mês pela primeira vez, o sistema shall copiar os fixos do mês anterior com "pago" desmarcado e criar as parcelas (de gastos e de entradas parceladas) que caem nele.
+- **REQ-022**: Ao abrir um mês pela primeira vez, o sistema shall copiar os fixos do mês anterior com "pago" desmarcado, copiar as entradas fixas (REQ-053) e criar as parcelas (de gastos e de entradas parceladas) que caem nele.
   - _Acceptance_: a próxima parcela também é criada para parcelas lançadas à mão, mas só com a permissão de parcelas automáticas ligada (desligada: só os fixos são copiados); cenários "Carga ao abrir um mês" do PDF passam; gastos avulsos não são copiados; parcela 12/12 não gera nova parcela; parcelas já geradas não são recriadas; abrir o mesmo mês duas vezes não duplica nada; a virada dez→jan segue a mesma regra e abre o novo ano.
 - **REQ-023**: A usuária shall poder editar e excluir qualquer dado (lançamentos, entradas, categorias, cartões, pessoas), inclusive o que foi carregado automaticamente.
   - _Acceptance_: editar um fixo carregado no mês não altera o mês anterior.
@@ -88,6 +88,8 @@ Categorias, cartões e pessoas existem **uma vez por conta**, independentes de a
   - _Acceptance_: a carga automática cria as próximas parcelas da entrada nos meses seguintes.
 - **REQ-026**: A usuária shall poder registrar reembolso de terceiro como entrada ligada a uma pessoa.
   - _Acceptance_: entrada com `pessoa_id` é tratada como reembolso e entra no cálculo do saldo próprio.
+- **REQ-053**: A usuária shall poder marcar uma entrada como **fixa** (ex.: salário), e ela shall ser incluída nos meses seguintes. (Pedido da usuária em 2026-11-12.)
+  - _Acceptance_: entrada fixa de 500000 com data 05/04 → ao abrir maio pela primeira vez, maio tem a mesma entrada (mesmo nome, valor e pessoa; dia 5; também fixa); entrada que não é fixa não é copiada; abrir o mês de novo não duplica; o dia 31 vira o último dia do mês mais curto; um mês já aberto não recebe a cópia. A cópia é independente: editá-la ou excluí-la não muda os outros meses, e desmarcar "fixa" num mês faz os meses abertos depois dele não a receberem. Entrada fixa não pode ser parcelada (400 `INVALID_INCOME`). A lista mostra a marca "Fixa".
 
 ### Totais e posição do mês
 - **REQ-027**: O sistema shall calcular o total de gastos do mês como a soma de fixos e cartão.
@@ -124,7 +126,7 @@ Categorias, cartões e pessoas existem **uma vez por conta**, independentes de a
   - _Acceptance_: trocar de mês/ano atualiza cabeçalho, listas e resumos.
 
 ### Telas
-- **REQ-041**: A tela do mês shall concentrar cabeçalho (mês, total de gastos, total de fixos, saldo, posições nos dias de fechamento), listas de fixos, cartão e entradas, e painel de resumos com saldo próprio.
+- **REQ-041**: A tela do mês shall concentrar cabeçalho (mês, total de gastos, total de fixos, saldo, posições nos dias de fechamento), listas de entradas, fixos e cartão (nessa ordem: entradas logo depois dos fechamentos; pedido da usuária em 2026-11-12), e painel de resumos com saldo próprio.
   - _Acceptance_: todos os itens acima visíveis na mesma tela.
 - **REQ-042**: A usuária shall poder lançar gasto ou entrada numa janela sobre o mês, com "salvar e lançar outro em seguida".
   - _Acceptance_: um gasto é lançado em poucos segundos sem sair da tela do mês.
@@ -189,6 +191,7 @@ Categorias, cartões e pessoas existem **uma vez por conta**, independentes de a
 | 0.1.1 | 2026-11-01 | REQ-046 (idioma da interface en/pt) |
 | 0.1.2 | 2026-11-01 | REQ-015: fixo pode ser pago no crédito; glossário "Total de crédito" |
 | 0.1.3 | 2026-11-01 | REQ-022: carga continua parcelas à mão e respeita a permissão |
+| 0.3.2 | 2026-11-12 | REQ-053: entrada fixa, copiada pela carga do mês (REQ-022); REQ-041: lista de Entradas primeiro, logo depois dos fechamentos (pedidos da usuária) |
 | 0.3.1 | 2026-11-12 | REQ-052: "Selecionar cartão" com logotipos e apelido opcional no lugar de nome + banco; "Adicionar um novo cartão" para cartão fora da lista; entra Amazon, sai Will Bank (pedido da usuária) |
 | 0.3.0 | 2026-11-09 | Categorias, cartões e pessoas sem ano (uma lista por conta; REQ-007, REQ-010..014); limite da categoria = padrão + ajuste por mês (REQ-051). Decisões da usuária |
 | 0.2.2 | 2026-11-09 | REQ-052: logotipos do Open Finance para Itaú, Bradesco, Santander, BB, Caixa, Inter, C6, PicPay e Mercado Pago; fim do envio de imagem própria (pedido da usuária) |
