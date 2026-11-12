@@ -1,5 +1,5 @@
 # requirements.md
-> Nize — Version 0.3.2 (MVP web) — 2026-11-12
+> Nize — Version 0.3.3 (MVP web) — 2026-11-12
 
 Fonte: `Nize — Funcionalidades e escopo do MVP web.pdf` (1 nov 2026). Em caso de dúvida entre este arquivo e o PDF, pergunte antes de implementar.
 
@@ -88,8 +88,10 @@ Categorias, cartões e pessoas existem **uma vez por conta**, independentes de a
   - _Acceptance_: a carga automática cria as próximas parcelas da entrada nos meses seguintes.
 - **REQ-026**: A usuária shall poder registrar reembolso de terceiro como entrada ligada a uma pessoa.
   - _Acceptance_: entrada com `pessoa_id` é tratada como reembolso e entra no cálculo do saldo próprio.
+- **REQ-054**: Um gasto fixo ou uma entrada fixa shall valer também nos meses seguintes **já abertos**, e não só nos abertos depois. (Pedido da usuária em 2026-11-12.)
+  - _Acceptance_: novembro e dezembro já abertos; ao criar em outubro um fixo (gasto ou entrada) — ou ao marcar como fixo um lançamento que não era —, novembro e dezembro recebem a cópia na hora (gasto com "pago" desmarcado; dia limitado ao fim do mês); um mês que já tem a cópia não recebe outra. Ao desmarcar "fixo" em outubro (gasto que deixa de ser Fixo ou entrada que deixa de ser fixa), as cópias de novembro e dezembro são retiradas. Ao excluir um fixo, a tela pergunta "só este mês" (padrão) ou "este mês e os próximos" (REQ-050); com "só este mês", o próximo mês ainda não aberto continua recebendo a cópia, se o fixo já vinha de um mês anterior (um fixo excluído no mês em que foi criado não volta). Meses anteriores nunca mudam.
 - **REQ-053**: A usuária shall poder marcar uma entrada como **fixa** (ex.: salário), e ela shall ser incluída nos meses seguintes. (Pedido da usuária em 2026-11-12.)
-  - _Acceptance_: entrada fixa de 500000 com data 05/04 → ao abrir maio pela primeira vez, maio tem a mesma entrada (mesmo nome, valor e pessoa; dia 5; também fixa); entrada que não é fixa não é copiada; abrir o mês de novo não duplica; o dia 31 vira o último dia do mês mais curto; um mês já aberto não recebe a cópia. A cópia é independente: editá-la ou excluí-la não muda os outros meses, e desmarcar "fixa" num mês faz os meses abertos depois dele não a receberem. Entrada fixa não pode ser parcelada (400 `INVALID_INCOME`). A lista mostra a marca "Fixa".
+  - _Acceptance_: entrada fixa de 500000 com data 05/04 → ao abrir maio pela primeira vez, maio tem a mesma entrada (mesmo nome, valor e pessoa; dia 5; também fixa); entrada que não é fixa não é copiada; abrir o mês de novo não duplica; o dia 31 vira o último dia do mês mais curto; meses seguintes que já foram abertos também a recebem (REQ-054). Editar o valor ou o nome de uma cópia não muda os outros meses. Entrada fixa não pode ser parcelada (400 `INVALID_INCOME`). A lista mostra a marca "Fixa".
 
 ### Totais e posição do mês
 - **REQ-027**: O sistema shall calcular o total de gastos do mês como a soma de fixos e cartão.
@@ -142,6 +144,7 @@ Categorias, cartões e pessoas existem **uma vez por conta**, independentes de a
 - **REQ-049**: A usuária shall poder ocultar e mostrar os valores em dinheiro com um botão de olho.
   - _Acceptance_: com os valores ocultos, todo valor em dinheiro das telas (mês, resumos, panorama, gráfico, avisos de limite) aparece como "R$ ••••" e não pode ser lido por leitor de tela; a escolha vale para todas as telas e é lembrada neste navegador; campos de formulário em edição continuam visíveis. Nada muda nos dados nem nos cálculos.
 - **REQ-050**: Ao excluir uma parcela (gasto ou entrada parcelada), a usuária shall poder escolher entre excluir só aquela ou aquela e as dos meses seguintes da mesma compra.
+  - Vale também para fixos (gastos e entradas, REQ-054): "só este mês" (padrão) ou "este mês e os próximos" (apaga as cópias dos meses seguintes já abertos, e os meses ainda não abertos não a recebem).
   - _Acceptance_: compra em 10 parcelas, exclusão da 4/10 em abril: "só esta" (padrão, se ela só confirmar) apaga a 4/10 e mantém as demais; "esta e as próximas" apaga da 4/10 à 10/10 e as que ainda não foram criadas não são criadas pela carga dos meses seguintes (REQ-022). As parcelas 1/10 a 3/10 continuam. Lançamento sem parcela não mostra a escolha.
 - **REQ-051**: A usuária shall poder definir, se quiser, um limite mensal de gasto por categoria, e o sistema shall avisar quando o gasto da categoria no mês chegar perto do limite ou passar dele, sem bloquear o lançamento.
   - _Acceptance_: o limite é opcional (categoria sem limite funciona como antes), em centavos. Cada categoria tem um **limite padrão** que vale para todos os meses e, em qualquer mês, a usuária pode **ajustar o limite só daquele mês** (ex.: Lazer 50000 sempre, 120000 em dezembro); tirar o ajuste volta ao padrão; um mês pode ter limite mesmo com a categoria sem padrão (decisão da usuária em 2026-11-09). Com limite de 100000: gastos de 80000 no mês → aviso "perto do limite" (≥ 80%); 100001 → aviso "limite passou"; o lançamento é salvo nos dois casos. O aviso é uma notificação passageira (some sozinha em alguns segundos ou ao fechar) que aparece só quando um lançamento leva a categoria a "perto" ou "passou"; abrir o mês não mostra aviso e nada fica fixo na tela (decisão da usuária 2026-11-09). O resumo por categoria mostra "usado de limite". O cálculo fica no back-end.
@@ -191,6 +194,7 @@ Categorias, cartões e pessoas existem **uma vez por conta**, independentes de a
 | 0.1.1 | 2026-11-01 | REQ-046 (idioma da interface en/pt) |
 | 0.1.2 | 2026-11-01 | REQ-015: fixo pode ser pago no crédito; glossário "Total de crédito" |
 | 0.1.3 | 2026-11-01 | REQ-022: carga continua parcelas à mão e respeita a permissão |
+| 0.3.3 | 2026-11-12 | REQ-054: fixos (gastos e entradas) entram também nos meses seguintes já abertos; desmarcar retira; excluir pergunta "só este mês" ou "este mês e os próximos" (REQ-050). Decisões da usuária |
 | 0.3.2 | 2026-11-12 | REQ-053: entrada fixa, copiada pela carga do mês (REQ-022); REQ-041: lista de Entradas primeiro, logo depois dos fechamentos (pedidos da usuária) |
 | 0.3.1 | 2026-11-12 | REQ-052: "Selecionar cartão" com logotipos e apelido opcional no lugar de nome + banco; "Adicionar um novo cartão" para cartão fora da lista; entra Amazon, sai Will Bank (pedido da usuária) |
 | 0.3.0 | 2026-11-09 | Categorias, cartões e pessoas sem ano (uma lista por conta; REQ-007, REQ-010..014); limite da categoria = padrão + ajuste por mês (REQ-051). Decisões da usuária |

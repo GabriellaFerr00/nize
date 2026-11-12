@@ -90,4 +90,32 @@ class MonthLoadTest {
     void nothingToLoadGivesNothing() {
         assertThat(load(List.of(), Set.of(), true)).isEmpty();
     }
+
+    // ---- a fixed item reaches the months already opened (REQ-054) ----
+
+    @Test
+    void aNewFixedItemGoesToEveryLaterOpenedMonthWithoutACopyInOrder() {
+        List<String> opened = List.of("2026-12", "2026-09", "2026-10", "2027-01", "2026-11");
+
+        assertThat(MonthLoad.monthsToFill("2026-10", opened, Set.of("2026-12")))
+                .containsExactly("2026-11", "2027-01");
+    }
+
+    @Test
+    void earlierMonthsAndTheMonthItselfNeverChange() {
+        assertThat(MonthLoad.monthsToFill("2026-10", List.of("2026-08", "2026-09", "2026-10"), Set.of())).isEmpty();
+    }
+
+    @Test
+    void withNoLaterMonthOpenedThereIsNothingToFill() {
+        assertThat(MonthLoad.monthsToFill("2026-10", List.of(), Set.of())).isEmpty();
+    }
+
+    @Test
+    void laterMonthsAreTheOnesAfterTheGivenOne() {
+        assertThat(MonthLoad.isAfter("2026-11", "2026-10")).isTrue();
+        assertThat(MonthLoad.isAfter("2027-01", "2026-12")).isTrue();
+        assertThat(MonthLoad.isAfter("2026-10", "2026-10")).isFalse();
+        assertThat(MonthLoad.isAfter("2026-09", "2026-10")).isFalse();
+    }
 }

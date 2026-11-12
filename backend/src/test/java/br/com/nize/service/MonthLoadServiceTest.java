@@ -363,13 +363,14 @@ class MonthLoadServiceTest extends IsolationTestBase {
     }
 
     @Test
-    void aMonthAlreadyOpenedDoesNotReceiveAFixedIncomeCreatedLater() throws Exception {
+    void aMonthAlreadyOpenedAlsoReceivesAFixedIncomeCreatedLaterOnlyOnce() throws Exception {
         open(userA, JULY);
         income(userA, JUNE, "{\"name\":\"Salário\",\"amountCents\":500000,\"date\":\"%s-05\",\"fixed\":true}".formatted(JUNE));
 
         open(userA, JULY);
 
-        assertThat(incomesOf(userA, JULY)).isEmpty();
+        // REQ-054 (2026-11-12): the months already opened get it too
+        assertThat(incomesOf(userA, JULY)).hasSize(1);
     }
 
     @Test

@@ -34,6 +34,8 @@ type DeleteTarget = {
   name: string
   installmentNumber?: number
   installmentCount?: number
+  /** A fixed expense or income: it may also be in the next months (REQ-054). */
+  fixed: boolean
 }
 
 /** Only an installment that is not the last one offers "this one and the next ones" (REQ-050). */
@@ -41,6 +43,9 @@ const hasNextInstallments = (target: DeleteTarget) =>
   target.installmentNumber !== undefined &&
   target.installmentCount !== undefined &&
   target.installmentNumber < target.installmentCount
+
+/** A fixed item or an installment with others after it asks what to delete (REQ-050, REQ-054). */
+const asksScope = (target: DeleteTarget) => target.fixed || hasNextInstallments(target)
 
 /**
  * The month screen (REQ-041): header with totals and closing positions, month/year navigation (REQ-040), lists of
@@ -80,6 +85,7 @@ export function MonthPage() {
   const askDelete = (
     type: 'expense' | 'income',
     item: { id: number; name: string; installmentNumber?: number; installmentCount?: number },
+    fixed: boolean,
   ) => {
     remove.reset()
     setDeleteScope('this')
@@ -91,6 +97,7 @@ export function MonthPage() {
         name: item.name,
         installmentNumber: item.installmentNumber,
         installmentCount: item.installmentCount,
+        fixed,
       },
     })
   }
@@ -133,7 +140,7 @@ export function MonthPage() {
                 catalogs={catalogs}
                 totalCents={view.totals.totalIncomeCents}
                 onEdit={(i) => setDialog({ kind: 'income', income: i })}
-                onDelete={(i) => askDelete('income', i)}
+                onDelete={(i) => askDelete('income', i, i.fixed)}
               />
               <ExpenseList
                 kind="FIXED"
@@ -142,7 +149,7 @@ export function MonthPage() {
                 totalCents={view.totals.totalFixedCents}
                 onTogglePaid={(e) => togglePaid.mutate(e)}
                 onEdit={(e) => setDialog({ kind: 'expense', expense: e })}
-                onDelete={(e) => askDelete('expense', e)}
+                onDelete={(e) => askDelete('expense', e, e.type === 'FIXED')}
               />
               <ExpenseList
                 kind="CARD"
@@ -150,7 +157,7 @@ export function MonthPage() {
                 catalogs={catalogs}
                 onTogglePaid={(e) => togglePaid.mutate(e)}
                 onEdit={(e) => setDialog({ kind: 'expense', expense: e })}
-                onDelete={(e) => askDelete('expense', e)}
+                onDelete={(e) => askDelete('expense', e, e.type === 'FIXED')}
               />
             </EntryLists>
             <SummaryPanel view={view} catalogs={catalogs} />
@@ -166,7 +173,7 @@ export function MonthPage() {
           <div className="flex flex-col gap-4">
             {remove.isError && <FormMessage kind="error">{apiErrorMessage(t, remove.error)}</FormMessage>}
             <p className="text-ink">{t('month.deleteQuestion', { name: dialog.target.name })}</p>
-            {hasNextInstallments(dialog.target) && (
+            {asksScope(dialog.target) && (
               <fieldset className="flex flex-col gap-1 rounded-xl border border-line p-3">
                 <legend className="px-1 text-sm font-medium text-ink">{t('month.deleteScope.title')}</legend>
                 {(['this', 'following'] as const).map((scope) => (
@@ -179,7 +186,7 @@ export function MonthPage() {
                       onChange={() => setDeleteScope(scope)}
                       className="size-4 accent-brand"
                     />
-                    {t(`month.deleteScope.${scope}`, {
+                    {t(dialog.target.fixed ? `month.deleteScope.fixed.${scope}` : `month.deleteScope.${scope}`, {
                       number: dialog.target.installmentNumber,
                       count: dialog.target.installmentCount,
                     })}
@@ -197,7 +204,7 @@ export function MonthPage() {
                 onClick={() =>
                   remove.mutate({
                     ...dialog.target,
-                    scope: hasNextInstallments(dialog.target) ? deleteScope : 'this',
+                    scope: asksScope(dialog.target) ? deleteScope : 'this',
                   })
                 }
                 className={dangerButton}

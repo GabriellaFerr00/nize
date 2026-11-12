@@ -102,7 +102,11 @@ public class ExpenseService {
         if (!generate) {
             // a manual installment gets its own group, so the month load can continue it without duplicating (D-8)
             String group = single.installmentNumber() != null ? UUID.randomUUID().toString() : null;
-            return List.of(expenses.save(build(userId, month, single, payment, in.amountCents(), refs, null, null, group, in.date())));
+            Expense saved = expenses.save(build(userId, month, single, payment, in.amountCents(), refs, null, null, group, in.date()));
+            if (saved.getType() == ExpenseType.FIXED) {
+                monthLoad.spreadFixed(userId, saved); // REQ-054
+            }
+            return List.of(saved);
         }
         return generateInstallments(userId, month, in, payment, refs);
     }
@@ -242,9 +246,17 @@ public class ExpenseService {
                 expense.getInstallmentCount(), false, true), payment, false);
         References refs = resolve(userId, in.categoryId(), in.cardId(), in.personId(), expense);
 
+        boolean wasFixed = expense.getType() == ExpenseType.FIXED;
         expense.update(in.name(), refs.category().getId(), in.amountCents(), in.type(), payment,
                 refs.card() == null ? null : refs.card().getId(),
                 refs.person() == null ? null : refs.person().getId(), in.paid(), in.date());
+        boolean fixed = expense.getType() == ExpenseType.FIXED;
+        // a fixed item reaches the later months already opened; unchecking takes it out of them (REQ-054)
+        if (fixed && !wasFixed) {
+            monthLoad.spreadFixed(userId, expense);
+        } else if (wasFixed && !fixed) {
+            monthLoad.withdrawFixed(userId, expense);
+        }
         return expense;
     }
 
@@ -265,6 +277,17 @@ public class ExpenseService {
             expenses.deleteAll(expenses.findByUserIdAndInstallmentGroupIdIn(userId, List.of(group)).stream()
                     .filter(e -> e.getInstallmentNumber() != null && e.getInstallmentNumber() >= number)
                     .toList());
+            return;
+        }
+        if (expense.getType() == ExpenseType.FIXED) {
+            // REQ-054, REQ-050: a fixed item asks "this month" or "this month and the next ones"
+            if (scope == DeleteScope.FOLLOWING) {
+                monthLoad.withdrawFixed(userId, expense);
+            }
+            expenses.delete(expense);
+            if (scope != DeleteScope.FOLLOWING) {
+                monthLoad.keepFixedComing(userId, expense);
+            }
             return;
         }
         expenses.delete(expense);

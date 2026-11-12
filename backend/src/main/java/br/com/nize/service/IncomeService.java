@@ -50,8 +50,12 @@ public class IncomeService {
         requireNotFixedAndInstallment(in.fixed(), in.installmentNumber());
         Long personId = resolvePerson(userId, in.personId(), null);
         String group = in.installmentNumber() != null ? UUID.randomUUID().toString() : null;
-        return incomes.save(new Income(userId, month.toString(), in.name(), in.date(), in.amountCents(), personId,
+        Income saved = incomes.save(new Income(userId, month.toString(), in.name(), in.date(), in.amountCents(), personId,
                 in.installmentNumber(), in.installmentCount(), group, in.fixed()));
+        if (saved.isFixed()) {
+            monthLoad.spreadFixed(userId, saved); // REQ-054
+        }
+        return saved;
     }
 
     @Transactional
@@ -61,7 +65,14 @@ public class IncomeService {
         requireDateInMonth(in.date(), month);
         requireNotFixedAndInstallment(in.fixed(), income.getInstallmentNumber());
         Long personId = resolvePerson(userId, in.personId(), income.getPersonId());
+        boolean wasFixed = income.isFixed();
         income.update(in.name(), in.date(), in.amountCents(), personId, in.fixed());
+        // a fixed income reaches the later months already opened; unchecking takes it out of them (REQ-054)
+        if (in.fixed() && !wasFixed) {
+            monthLoad.spreadFixed(userId, income);
+        } else if (wasFixed && !in.fixed()) {
+            monthLoad.withdrawFixed(userId, income);
+        }
         return income;
     }
 
@@ -75,6 +86,17 @@ public class IncomeService {
             incomes.deleteAll(incomes.findByUserIdAndInstallmentGroupIdIn(userId, List.of(group)).stream()
                     .filter(i -> i.getInstallmentNumber() != null && i.getInstallmentNumber() >= number)
                     .toList());
+            return;
+        }
+        if (income.isFixed()) {
+            // REQ-054, REQ-050: a fixed income asks "this month" or "this month and the next ones"
+            if (scope == DeleteScope.FOLLOWING) {
+                monthLoad.withdrawFixed(userId, income);
+            }
+            incomes.delete(income);
+            if (scope != DeleteScope.FOLLOWING) {
+                monthLoad.keepFixedComing(userId, income);
+            }
             return;
         }
         incomes.delete(income);

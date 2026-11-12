@@ -1,5 +1,5 @@
 # design.md
-> Nize — Version 0.4.2 (MVP web) — 2026-11-12
+> Nize — Version 0.4.3 (MVP web) — 2026-11-12
 
 ## Architecture Overview
 Monorepo com dois módulos independentes: `backend` (API REST) e `frontend` (SPA). **Toda regra de cálculo vive só no back-end** (totais, saldo, posição nos fechamentos, parcelas, carga do mês, saldo próprio, porcentagens). O front apenas exibe o que a API devolve e nunca recalcula valores. Como back (Java) e front (TypeScript) não compartilham código, o "pacote de regras compartilhado" do PDF vira o pacote Java `br.com.nize.rules`, puro (sem Spring, sem JPA), testado antes do código.
@@ -191,6 +191,7 @@ Tabela `category_month_limit` (V12): ajuste do limite de uma categoria só num m
 | parcela_atual | SMALLINT | NULL | |
 | parcelas_total | SMALLINT | NULL | CHECK parcela_atual ≤ parcelas_total |
 | grupo_parcela_id | CHAR(36) | NULL | UUID comum às parcelas de uma compra |
+| recorrencia_id | CHAR(36) | NULL | REQ-054; coluna `recurrence_id` (V15), índice (`user_id`, `recurrence_id`). Comum a um fixo e às suas cópias nos outros meses; o serviço a cria quando o fixo nasce (ou quando a carga copia um fixo que ainda não tinha). A V15 liga os fixos antigos por usuária + nome (`legacy-<menor id>`); dois fixos com o mesmo nome no mesmo mês ficam na mesma recorrência |
 
 Restrições: UNIQUE (`grupo_parcela_id`, `parcela_atual`) onde não nulos; `parcela_atual` e `parcelas_total` ambos nulos ou ambos preenchidos.
 
@@ -214,6 +215,7 @@ Regras de consistência do lançamento (validadas no serviço; as CHECK do banco
 | parcelas_total | SMALLINT | NULL | |
 | grupo_parcela_id | CHAR(36) | NULL | UNIQUE com parcela_atual |
 | fixa | BOOLEAN | NOT NULL DEFAULT FALSE | REQ-053; coluna `fixed` (V14). Copiada pela carga do mês; nunca junto com parcela (400 `INVALID_INCOME`) |
+| recorrencia_id | CHAR(36) | NULL | REQ-054; coluna `recurrence_id` (V15), como em lançamento |
 
 ### mes_carregado
 | Field | Type | Constraints | Notes |
@@ -264,6 +266,8 @@ Semeadas em `category` para cada ano novo (REQ-010). A usuária pode renomear, d
 | resumoPorPessoa | Σ gastos com pessoa_id, por pessoa e por cartão | REQ-038 |
 | cargaDoMês(mesAnterior, mês) | copia os fixos (pago=false; gastos avulsos não são copiados); para cada parcela N/M do mês anterior com N < M cria a parcela N+1, **se a permissão de parcelas automáticas está ligada**, e se `(grupo, N+1)` ainda não existe (vale também para parcelas lançadas à mão, que recebem grupo próprio ao serem criadas); copia as entradas fixas (REQ-053; mesma decisão de `MonthLoad.decide`, com `fixed` da entrada; a cópia continua fixa, dia limitado ao fim do mês); idem entradas parceladas; só se o mês não está em `loaded_month`. Referências (categoria, cartão, pessoa) trocam de ano pelo nome; item cuja categoria não existe no ano novo é ignorado | REQ-022 |
 
+| fixosNosMesesAbertos | `MonthLoad.monthsToFill(mês, mesesAbertos, mesesComCópia)`: os meses abertos (`loaded_month`) **depois** de `mês` que ainda não têm linha da recorrência, em ordem. Usado quando um fixo nasce (criado como fixo, ou editado de não fixo para fixo): o serviço cria a cópia em cada um (gasto com pago=false; dia limitado ao fim do mês). Fixo que deixa de ser fixo: apaga as linhas da recorrência em meses depois de `mês`. Exclusão `following` de um fixo: ela e as linhas da recorrência nos meses depois; `this`: só ela, e — se a recorrência já existia num mês anterior — quando o mês seguinte ainda não foi aberto (e o ano existe) a cópia é criada nele na hora, para a carga não perder o fixo; um fixo excluído no seu primeiro mês (ex.: lançado por engano) não volta. Meses anteriores nunca mudam | REQ-054, REQ-050 |
+
 Porcentagem é o único valor não inteiro e só existe na resposta da API/exibição; nunca é usada para somar.
 
 ## API / Interface Design
@@ -296,7 +300,7 @@ REST JSON sob `/api`. Todos os endpoints exceto `/api/auth/**` exigem `Authoriza
 | POST | /api/meses/{aaaa-mm}/lancamentos | sim | REQ-015..020 | cria gasto; gera parcelas se `gerarParcelas` e permissão ligada |
 | PUT | /api/lancamentos/{id} | sim | REQ-023 | edita |
 | PATCH | /api/lancamentos/{id}/pago | sim | REQ-015, REQ-033 | marca/desmarca pago |
-| DELETE | /api/lancamentos/{id} | sim | REQ-023, REQ-050 | exclui (204). Parcela: `?scope=this` (padrão) só ela; `?scope=following` ela e as de número maior do mesmo `installment_group_id` (meses seguintes). Com `this`, se a parcela seguinte ainda não existe e o mês seguinte ainda não foi carregado (parcelas automáticas ligadas), ela é criada na hora no mês seguinte, para a carga não perder a sequência |
+| DELETE | /api/lancamentos/{id} | sim | REQ-023, REQ-050, REQ-054 | exclui (204). Fixo: `?scope=following` também apaga as cópias dos meses seguintes (mesmo `recurrence_id`); `this` mantém a sequência (ver `fixosNosMesesAbertos`). Parcela: `?scope=this` (padrão) só ela; `?scope=following` ela e as de número maior do mesmo `installment_group_id` (meses seguintes). Com `this`, se a parcela seguinte ainda não existe e o mês seguinte ainda não foi carregado (parcelas automáticas ligadas), ela é criada na hora no mês seguinte, para a carga não perder a sequência |
 | POST | /api/meses/{aaaa-mm}/entradas | sim | REQ-024..026 | cria entrada (parcelada, fixa ou reembolso); `fixed` opcional (padrão `false`), recusado junto com parcela (400 `INVALID_INCOME`) |
 | PUT/DELETE | /api/entradas/{id} | sim | REQ-023, REQ-050 | edita / exclui; `scope` como em lançamentos. O `PUT` aceita `fixed` (ausente = `false`); parcela não vira fixa (400 `INVALID_INCOME`). A resposta traz `fixed` |
 | GET | /api/anos/{ano}/panorama | sim | REQ-039 | `GET /api/years/{year}/overview` → `{year, months: [{month, totalExpensesCents, totalIncomeCents, balanceCents}]}` (12 meses, janeiro primeiro; mesma regra `MonthTotals` do mês); faz a carga dos meses até o vigente (D-19); ano que a usuária não tem → 404 |
@@ -434,6 +438,7 @@ GitHub Actions (detalhes em `docs/ci-cd.md`; NFR-010). **Um workflow por tema**,
 | 0.1.7 | 2026-11-01 | Fixo pode ser no crédito (tipo e forma de pagamento independentes); regras de consistência do lançamento; Open Questions da Phase 3 resolvidas |
 | 0.1.8 | 2026-11-01 | `month` reservado no H2: coluna `month_ref`; data do lançamento `expense_date` |
 | 0.1.9 | 2026-11-01 | Carga do mês: continua parcelas à mão (grupo próprio) e respeita a permissão de parcelas automáticas |
+| 0.4.3 | 2026-11-12 | REQ-054: V15 `recurrence_id` em `expense` e `income` (fixos antigos ligados por nome); `MonthLoad.monthsToFill`; criar/marcar fixo copia para os meses seguintes já abertos, desmarcar retira, `DELETE ?scope=following` vale para fixos. Tela: pergunta "só este mês"/"este mês e os próximos" ao excluir fixo. Decisões da usuária |
 | 0.4.2 | 2026-11-12 | Entrada fixa: V14 `income.fixed`, carga do mês copia (REQ-053, REQ-022); `fixed` em criar/editar/resposta de entradas. Tela do mês: Entradas é a primeira lista (REQ-041). Pedidos da usuária |
 | 0.4.1 | 2026-11-12 | D-21: campo "Selecionar cartão" com logotipos + apelido opcional (no lugar de nome + banco) e "Adicionar um novo cartão"; marca `amazon` entra, `will` sai (V13 limpa `card.brand`). Pedido da usuária |
 | 0.4.0 | 2026-11-09 | D-22: categorias, cartões e pessoas sem ano (V12 une as listas), rotas sem ano, ano novo não copia; limite padrão + ajuste por mês (`category_month_limit`, `/api/months/{m}/category-limits`). Decisões da usuária |

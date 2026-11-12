@@ -277,6 +277,7 @@
       "FIXED": "Fixed",
       "CARD": "Credit card"
     },
+    "fixedHelp": "It also goes into the next months, including the ones you already opened. Making it not fixed takes it out of the next months.",
     "payment": {
       "PIX": "Pix",
       "CREDIT": "Credit"
@@ -337,7 +338,7 @@
     },
     "fixed": {
       "enable": "Fixed income (repeats every month)",
-      "help": "It shows up again in the next months, when you open each one. Changing or deleting it in one month does not change the others."
+      "help": "It also goes into the next months, including the ones you already opened. Unchecking takes it out of the next months."
     }
   },
   "month": {
@@ -378,7 +379,11 @@
     "deleteScope": {
       "title": "What to delete",
       "this": "Only this installment ({{number}}/{{count}})",
-      "following": "This one and the next ones ({{number}}/{{count}} to {{count}}/{{count}})"
+      "following": "This one and the next ones ({{number}}/{{count}} to {{count}}/{{count}})",
+      "fixed": {
+        "this": "Only this month",
+        "following": "This month and the next ones"
+      }
     },
     "summary": {
       "title": "Summaries",

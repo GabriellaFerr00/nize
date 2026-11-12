@@ -60,6 +60,11 @@ public class Income {
     @Column(nullable = false)
     private boolean fixed;
 
+    // shared by a fixed item and its copies in other months (REQ-054, V15)
+    @JdbcTypeCode(SqlTypes.CHAR)
+    @Column(name = "recurrence_id", length = 36)
+    private String recurrenceId;
+
     protected Income() {
     }
 
@@ -84,6 +89,21 @@ public class Income {
         this.date = date;
         this.amountCents = amountCents;
         this.personId = personId;
+    }
+
+    public String getRecurrenceId() { return recurrenceId; }
+
+    /** The recurrence of this fixed item, created on first use (REQ-054). */
+    public String ensureRecurrence() {
+        if (recurrenceId == null) {
+            recurrenceId = java.util.UUID.randomUUID().toString();
+        }
+        return recurrenceId;
+    }
+
+    /** Makes this row a copy of a fixed item of another month (REQ-054). */
+    public void joinRecurrence(String recurrenceId) {
+        this.recurrenceId = recurrenceId;
     }
 
     public Long getId() { return id; }

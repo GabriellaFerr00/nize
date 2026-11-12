@@ -107,6 +107,86 @@ public class MonthLoadService {
         }
     }
 
+    // ---- fixed items in the months already opened (REQ-054) ----
+
+    /** A fixed expense was created or became fixed: it is copied to the later months already opened. */
+    @Transactional
+    public void spreadFixed(Long userId, Expense fixed) {
+        String recurrence = fixed.ensureRecurrence();
+        Set<String> withCopy = expenses.findByUserIdAndRecurrenceId(userId, recurrence).stream()
+                .map(Expense::getMonth).collect(Collectors.toSet());
+        for (String month : MonthLoad.monthsToFill(fixed.getMonth(), loaded.findMonthsByUserId(userId), withCopy)) {
+            expenses.save(copy(userId, YearMonth.parse(month), fixed, null));
+        }
+    }
+
+    /** The same as {@link #spreadFixed(Long, Expense)}, for a fixed income. */
+    @Transactional
+    public void spreadFixed(Long userId, Income fixed) {
+        String recurrence = fixed.ensureRecurrence();
+        Set<String> withCopy = incomes.findByUserIdAndRecurrenceId(userId, recurrence).stream()
+                .map(Income::getMonth).collect(Collectors.toSet());
+        for (String month : MonthLoad.monthsToFill(fixed.getMonth(), loaded.findMonthsByUserId(userId), withCopy)) {
+            incomes.save(copy(userId, YearMonth.parse(month), fixed, null));
+        }
+    }
+
+    /** The copies of a fixed expense in the months after {@code item} (unchecked or deleted with the next ones). */
+    @Transactional
+    public void withdrawFixed(Long userId, Expense item) {
+        if (item.getRecurrenceId() != null) {
+            expenses.deleteAll(expenses.findByUserIdAndRecurrenceId(userId, item.getRecurrenceId()).stream()
+                    .filter(e -> MonthLoad.isAfter(e.getMonth(), item.getMonth())).toList());
+        }
+    }
+
+    /** The same as {@link #withdrawFixed(Long, Expense)}, for a fixed income. */
+    @Transactional
+    public void withdrawFixed(Long userId, Income item) {
+        if (item.getRecurrenceId() != null) {
+            incomes.deleteAll(incomes.findByUserIdAndRecurrenceId(userId, item.getRecurrenceId()).stream()
+                    .filter(i -> MonthLoad.isAfter(i.getMonth(), item.getMonth())).toList());
+        }
+    }
+
+    /**
+     * After deleting only this month of a fixed expense that already came from an earlier month: the load copies fixed
+     * items from the previous month, so if the next month was not opened yet the copy is made there now; otherwise the
+     * fixed item would stop. A fixed item deleted in its first month (e.g. entered by mistake) does not come back.
+     */
+    @Transactional
+    public void keepFixedComing(Long userId, Expense deleted) {
+        boolean earlier = deleted.getRecurrenceId() != null
+                && expenses.findByUserIdAndRecurrenceId(userId, deleted.getRecurrenceId()).stream()
+                .anyMatch(e -> MonthLoad.isAfter(deleted.getMonth(), e.getMonth()));
+        YearMonth next = earlier ? unopenedNextMonth(userId, deleted.getMonth()) : null;
+        if (next != null) {
+            expenses.save(copy(userId, next, deleted, null));
+        }
+    }
+
+    /** The same as {@link #keepFixedComing(Long, Expense)}, for a fixed income. */
+    @Transactional
+    public void keepFixedComing(Long userId, Income deleted) {
+        boolean earlier = deleted.getRecurrenceId() != null
+                && incomes.findByUserIdAndRecurrenceId(userId, deleted.getRecurrenceId()).stream()
+                .anyMatch(i -> MonthLoad.isAfter(deleted.getMonth(), i.getMonth()));
+        YearMonth next = earlier ? unopenedNextMonth(userId, deleted.getMonth()) : null;
+        if (next != null) {
+            incomes.save(copy(userId, next, deleted, null));
+        }
+    }
+
+    /** The next month when it was not opened yet and its year exists (a year is not created here). */
+    private YearMonth unopenedNextMonth(Long userId, String monthRef) {
+        YearMonth next = ExpenseService.parseMonth(monthRef).plusMonths(1);
+        if (loaded.existsById(new LoadedMonthId(userId, next.toString()))
+                || !years.existsById(new UserYearId(userId, next.getYear()))) {
+            return null;
+        }
+        return next;
+    }
+
     /** The next month, when an installment that is not the last was deleted and that month was not opened yet. */
     private YearMonth nextMonthToFill(Long userId, String monthRef, String group, Integer number, Integer count) {
         if (group == null || number == null || count == null || number >= count) {
@@ -177,9 +257,13 @@ public class MonthLoadService {
     private Income copy(Long userId, YearMonth month, Income source, Integer nextNumber) {
         LocalDate date = month.atDay(Math.min(source.getDate().getDayOfMonth(), month.lengthOfMonth()));
         boolean installment = nextNumber != null;
-        return new Income(userId, month.toString(), source.getName(), date, source.getAmountCents(), source.getPersonId(),
+        Income copy = new Income(userId, month.toString(), source.getName(), date, source.getAmountCents(), source.getPersonId(),
                 nextNumber, installment ? source.getInstallmentCount() : null,
                 installment ? source.getInstallmentGroupId() : null, !installment && source.isFixed());
+        if (!installment && source.isFixed()) {
+            copy.joinRecurrence(source.ensureRecurrence());
+        }
+        return copy;
     }
 
     private static PreviousExpense toRuleInput(Expense e) {
@@ -215,9 +299,13 @@ public class MonthLoadService {
     private Expense copy(Long userId, YearMonth month, Expense source, Integer nextNumber) {
         LocalDate date = month.atDay(Math.min(source.getDate().getDayOfMonth(), month.lengthOfMonth()));
         boolean installment = nextNumber != null;
-        return new Expense(userId, month.toString(), source.getName(), source.getCategoryId(), source.getAmountCents(),
+        Expense copy = new Expense(userId, month.toString(), source.getName(), source.getCategoryId(), source.getAmountCents(),
                 source.getType(), source.getPaymentMethod(), source.getCardId(), source.getPersonId(), false, date,
                 installment ? nextNumber : null, installment ? source.getInstallmentCount() : null,
                 installment ? source.getInstallmentGroupId() : null);
+        if (!installment && source.getType() == ExpenseType.FIXED) {
+            copy.joinRecurrence(source.ensureRecurrence());
+        }
+        return copy;
     }
 }

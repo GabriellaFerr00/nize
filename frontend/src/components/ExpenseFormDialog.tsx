@@ -163,6 +163,7 @@ export function ExpenseFormDialog({ month, expense, onClose }: Props) {
             <option value="CARD">{t('expense.type.CARD')}</option>
           </select>
         </label>
+        {type === 'FIXED' && <p className="-mt-2 text-sm text-ink-soft">{t('expense.fixedHelp')}</p>}
 
         {!isCard && (
           <label className="flex flex-col gap-1 text-sm font-medium text-ink">

@@ -277,6 +277,7 @@
       "FIXED": "Fixo",
       "CARD": "Cartão de crédito"
     },
+    "fixedHelp": "Ele entra também nos meses seguintes, inclusive nos que você já abriu. Deixar de ser fixo tira dos próximos meses.",
     "payment": {
       "PIX": "Pix",
       "CREDIT": "Crédito"
@@ -337,7 +338,7 @@
     },
     "fixed": {
       "enable": "Entrada fixa (repete todo mês)",
-      "help": "Ela aparece de novo nos meses seguintes, quando você abrir cada um. Mudar ou excluir num mês não muda os outros."
+      "help": "Ela entra também nos meses seguintes, inclusive nos que você já abriu. Desmarcar tira dos próximos meses."
     }
   },
   "month": {
@@ -378,7 +379,11 @@
     "deleteScope": {
       "title": "O que excluir",
       "this": "Só esta parcela ({{number}}/{{count}})",
-      "following": "Esta e as próximas ({{number}}/{{count}} até {{count}}/{{count}})"
+      "following": "Esta e as próximas ({{number}}/{{count}} até {{count}}/{{count}})",
+      "fixed": {
+        "this": "Só este mês",
+        "following": "Este mês e os próximos"
+      }
     },
     "summary": {
       "title": "Resumos",

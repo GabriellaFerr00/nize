@@ -502,7 +502,8 @@ describe('month lists (TASK-040: REQ-015, REQ-016, REQ-021, REQ-023, REQ-024)', 
     replies['DELETE /api/incomes/22?scope=following'] = { status: 204 }
     const { calls } = await openMonth(replies)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Excluir Aluguel' }))
+    // a one-off card expense without installments does not ask
+    await userEvent.click(screen.getByRole('button', { name: 'Excluir Roupa da mãe' }))
     let dialog = await screen.findByRole('dialog', { name: 'Excluir' })
     expect(within(dialog).queryByRole('radio')).not.toBeInTheDocument()
     await userEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }))
@@ -512,6 +513,26 @@ describe('month lists (TASK-040: REQ-015, REQ-016, REQ-021, REQ-023, REQ-024)', 
     await userEvent.click(within(dialog).getByRole('radio', { name: 'Esta e as próximas (1/3 até 3/3)' }))
     await userEvent.click(within(dialog).getByRole('button', { name: 'Excluir' }))
     await waitFor(() => expect(sent(calls, 'DELETE /api/incomes/22?scope=following')).toHaveLength(1))
+  })
+
+  it('a fixed expense or income asks: only this month (default) or this month and the next ones (REQ-054)', async () => {
+    const replies = baseReplies()
+    replies['DELETE /api/expenses/11?scope=following'] = { status: 204 }
+    replies['DELETE /api/incomes/21'] = { status: 204 }
+    const { calls } = await openMonth(replies)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Excluir Aluguel' }))
+    let dialog = await screen.findByRole('dialog', { name: 'Excluir' })
+    expect(within(dialog).getByRole('radio', { name: 'Só este mês' })).toBeChecked()
+    await userEvent.click(within(dialog).getByRole('radio', { name: 'Este mês e os próximos' }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Excluir' }))
+    await waitFor(() => expect(sent(calls, 'DELETE /api/expenses/11?scope=following')).toHaveLength(1))
+
+    await userEvent.click(screen.getByRole('button', { name: 'Excluir Salário' }))
+    dialog = await screen.findByRole('dialog', { name: 'Excluir' })
+    expect(within(dialog).getByRole('radio', { name: 'Só este mês' })).toBeChecked()
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Excluir' }))
+    await waitFor(() => expect(sent(calls, 'DELETE /api/incomes/21')).toHaveLength(1))
   })
 
   it('deletes an expense after confirming and the list updates at once', async () => {
