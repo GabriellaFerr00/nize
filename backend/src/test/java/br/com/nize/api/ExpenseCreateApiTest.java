@@ -179,11 +179,66 @@ class ExpenseCreateApiTest extends IsolationTestBase {
     }
 
     @Test
-    void aPersonOnlyMakesSenseOnACardExpense() throws Exception {
+    void aFixedPixExpenseCanBeAThirdPartyAndCountsForThePersonWithoutACardLine() throws Exception {
+        // REQ-017 (2026-11-12): rent shared with someone, paid by Pix
         long person = createPerson(userA, "Mainha");
         Map<String, String> fields = base(categoryId(userA, "Aluguel"));
         fields.put("personId", String.valueOf(person));
-        create(userA, fields).andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INVALID_EXPENSE"));
+
+        create(userA, fields).andExpect(status().isCreated())
+                .andExpect(jsonPath("$.personId").value(person)).andExpect(jsonPath("$.paymentMethod").value("PIX"));
+
+        as(userA, get("/api/months/" + MONTH)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.totals.thirdPartyExpensesCents").value(150_000))
+                .andExpect(jsonPath("$.summaries.byPerson[0].personName").value("Mainha"))
+                .andExpect(jsonPath("$.summaries.byPerson[0].amountCents").value(150_000))
+                .andExpect(jsonPath("$.summaries.byPerson[0].byCard", org.hamcrest.Matchers.hasSize(0)))
+                .andExpect(jsonPath("$.summaries.byPerson[0].pixCents").value(150_000));
+    }
+
+    @Test
+    void aFixedCreditExpenseCanBeAThirdPartyWithItsCard() throws Exception {
+        long card = createCard(userA, "Nubank", 10);
+        long person = createPerson(userA, "Mainha");
+        Map<String, String> fields = base(categoryId(userA, "Aluguel"));
+        fields.put("paymentMethod", "\"CREDIT\"");
+        fields.put("cardId", String.valueOf(card));
+        fields.put("personId", String.valueOf(person));
+
+        create(userA, fields).andExpect(status().isCreated())
+                .andExpect(jsonPath("$.personId").value(person)).andExpect(jsonPath("$.cardId").value(card));
+    }
+
+    @Test
+    void aThirdPartyFixedIsCopiedToTheNextMonthWithThePerson() throws Exception {
+        long person = createPerson(userA, "Mainha");
+        Map<String, String> fields = base(categoryId(userA, "Aluguel"));
+        fields.put("personId", String.valueOf(person));
+        create(userA, fields).andExpect(status().isCreated());
+
+        as(userA, get("/api/months/" + MONTH.plusMonths(1))).andExpect(status().isOk());
+        entityManager.flush();
+        List<Map<String, Object>> next = jdbc.queryForList(
+                "SELECT * FROM expense WHERE user_id = ? AND month_ref = ?", userA.id(), MONTH.plusMonths(1).toString());
+        assertThat(next).hasSize(1);
+        assertThat(((Number) next.get(0).get("PERSON_ID")).longValue()).isEqualTo(person);
+    }
+
+    @Test
+    void aCardThirdPartyExpenseEditedIntoAFixedKeepsThePerson() throws Exception {
+        long person = createPerson(userA, "Mainha");
+        Map<String, String> fields = base(categoryId(userA, "Roupa"));
+        fields.put("type", "\"CARD\"");
+        fields.put("personId", String.valueOf(person));
+        String body = create(userA, fields).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        long id = ((Number) JsonPath.read(body, "$.id")).longValue();
+
+        Map<String, String> edit = base(categoryId(userA, "Roupa"));
+        edit.put("personId", String.valueOf(person));
+        edit.put("paid", "false");
+        as(userA, put("/api/expenses/" + id).contentType(MediaType.APPLICATION_JSON).content(json(edit)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.personId").value(person))
+                .andExpect(jsonPath("$.type").value("FIXED"));
     }
 
     // ---- manual installments (REQ-019, REQ-021) ----

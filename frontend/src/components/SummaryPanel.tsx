@@ -150,6 +150,8 @@ export function SummaryPanel({ view, catalogs }: { view: MonthView; catalogs?: Y
                 {p.byCard.map((c) => (
                   <Line sub key={c.cardId} label={cardName(c)} cents={c.amountCents} />
                 ))}
+                {/* the person's Pix expenses, as the API summed them (REQ-038, 2026-11-12) */}
+                {p.pixCents > 0 && <Line sub label={t('expense.payment.PIX')} cents={p.pixCents} />}
               </ul>
             </li>
           ))}

@@ -365,7 +365,9 @@
       "income": "Income",
       "fixedEmpty": "No fixed expenses this month.",
       "cardEmpty": "No card expenses this month.",
-      "incomeEmpty": "No income this month."
+      "incomeEmpty": "No income this month.",
+      "thirdParty": "Third parties",
+      "thirdPartyEmpty": "No third-party expenses this month."
     },
     "installment": "Installment {{label}}",
     "thirdParty": "spent by {{name}}",

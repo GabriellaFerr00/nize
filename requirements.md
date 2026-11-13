@@ -1,5 +1,5 @@
 # requirements.md
-> Nize — Version 0.3.3 (MVP web) — 2026-11-12
+> Nize — Version 0.3.4 (MVP web) — 2026-11-12
 
 Fonte: `Nize — Funcionalidades e escopo do MVP web.pdf` (1 nov 2026). Em caso de dúvida entre este arquivo e o PDF, pergunte antes de implementar.
 
@@ -66,8 +66,9 @@ Categorias, cartões e pessoas existem **uma vez por conta**, independentes de a
 - **REQ-016**: A usuária shall poder lançar gasto de cartão de crédito com nome, categoria, valor, cartão, data e parcelas.
   - _Acceptance_: o gasto aparece na lista de Cartão do mês e entra no total de gastos.
   - **Cartão obrigatório no crédito** (pedido da usuária em 2026-11-09): todo gasto no crédito, fixo ou de cartão, novo ou editado, exige um cartão (sem cartão → 400 `CARD_REQUIRED`). No formulário, a usuária escolhe um cartão existente ou cria um ali mesmo, sem sair do lançamento. Não existe mais "Sem cartão". Lançamentos antigos no crédito sem cartão continuam contando nos totais (gastos e crédito) até a usuária ajustá-los à mão, mas não aparecem em nenhum cartão do resumo; ao editá-los, o cartão passa a ser exigido. A carga do mês (REQ-022) continua copiando-os como estão.
-- **REQ-017**: A usuária shall poder marcar um gasto de terceiro informando a pessoa e o cartão usado.
+- **REQ-017**: A usuária shall poder marcar um gasto de terceiro informando a pessoa (e o cartão usado, quando no crédito).
   - _Acceptance_: o gasto fica no total do mês e aparece no resumo por pessoa.
+  - **Pessoa em qualquer gasto** (pedido da usuária em 2026-11-12): gasto fixo também pode ser de terceiro, no Pix ou no crédito (ex.: aluguel dividido com outra pessoa pago por Pix). Gasto de terceiro no Pix entra no valor da pessoa no resumo, numa linha "Pix" (REQ-038). A carga do mês copia o fixo com a mesma pessoa (REQ-022).
 - **REQ-018**: Com a permissão de parcelas automáticas ligada, a usuária shall poder lançar a compra uma vez, informando número de parcelas e valor total ou valor da parcela, e o sistema shall criar uma parcela por mês a partir do mês escolhido.
   - _Acceptance_: cenários "Parcelas automáticas" do PDF passam (R$ 100,00 em 3x → 3333, 3333, 3334; 4x de R$ 50,00 → 4×5000; sem parcelas → 1 lançamento; permissão desligada → 1 lançamento).
 - **REQ-019**: A usuária shall poder lançar parcelas mês a mês, digitando cada parcela manualmente.
@@ -120,6 +121,7 @@ Categorias, cartões e pessoas existem **uma vez por conta**, independentes de a
   - _Acceptance_: a soma por cartão é igual ao total de crédito; não há grupo "Sem cartão" (crédito sem cartão é recusado desde 2026-11-09, decisão da usuária; o PDF previa o grupo).
 - **REQ-038**: O sistema shall exibir o resumo de gastos de terceiros por pessoa e por cartão.
   - _Acceptance_: a soma por pessoa é igual ao total de gastos de terceiros do mês.
+  - **Linha Pix** (pedido da usuária em 2026-11-12): a linha da pessoa mostra só a soma dos gastos dela (reembolsos não entram aqui); embaixo, uma linha por cartão e uma linha "Pix" com os gastos dela pagos no Pix. Ex.: Nubank 20000 + Pix 150000 → pessoa 170000. Gasto antigo no crédito sem cartão continua sem linha.
 
 ### Panorama anual e navegação
 - **REQ-039**: O sistema shall exibir o panorama anual com gráfico de gastos e entradas dos 12 meses e tabela com saldo mensal.
@@ -128,8 +130,9 @@ Categorias, cartões e pessoas existem **uma vez por conta**, independentes de a
   - _Acceptance_: trocar de mês/ano atualiza cabeçalho, listas e resumos.
 
 ### Telas
-- **REQ-041**: A tela do mês shall concentrar cabeçalho (mês, total de gastos, total de fixos, saldo, posições nos dias de fechamento), listas de entradas, fixos e cartão (nessa ordem: entradas logo depois dos fechamentos; pedido da usuária em 2026-11-12), e painel de resumos com saldo próprio.
+- **REQ-041**: A tela do mês shall concentrar cabeçalho (mês, total de gastos, total de fixos, saldo, posições nos dias de fechamento), listas de entradas, fixos, cartão e terceiros (nessa ordem: entradas logo depois dos fechamentos; pedido da usuária em 2026-11-12), e painel de resumos com saldo próprio.
   - _Acceptance_: todos os itens acima visíveis na mesma tela.
+  - **Quadro Terceiros** (pedido da usuária em 2026-11-12): depois de Cartão, um quadro com cada pessoa (nome e o valor dela que a API devolve no resumo por pessoa) e, abaixo, os gastos dela no mês, Pix ou crédito. É só visualização: os gastos continuam em Fixos ou Cartão, nenhum total muda e o quadro não tem editar nem excluir. Sem gastos de terceiros, o quadro diz que não há.
 - **REQ-042**: A usuária shall poder lançar gasto ou entrada numa janela sobre o mês, com "salvar e lançar outro em seguida".
   - _Acceptance_: um gasto é lançado em poucos segundos sem sair da tela do mês.
 - **REQ-043**: O sistema shall oferecer menu lateral no computador e barra inferior no celular.
@@ -194,6 +197,7 @@ Categorias, cartões e pessoas existem **uma vez por conta**, independentes de a
 | 0.1.1 | 2026-11-01 | REQ-046 (idioma da interface en/pt) |
 | 0.1.2 | 2026-11-01 | REQ-015: fixo pode ser pago no crédito; glossário "Total de crédito" |
 | 0.1.3 | 2026-11-01 | REQ-022: carga continua parcelas à mão e respeita a permissão |
+| 0.3.4 | 2026-11-12 | REQ-017: gasto fixo (Pix ou crédito) também pode ser de terceiro; antes só gasto de cartão. REQ-038: linha "Pix" sob a pessoa no resumo por pessoa e cartão. REQ-041: quadro Terceiros só de visualização, depois de Cartão (pedidos da usuária) |
 | 0.3.3 | 2026-11-12 | REQ-054: fixos (gastos e entradas) entram também nos meses seguintes já abertos; desmarcar retira; excluir pergunta "só este mês" ou "este mês e os próximos" (REQ-050). Decisões da usuária |
 | 0.3.2 | 2026-11-12 | REQ-053: entrada fixa, copiada pela carga do mês (REQ-022); REQ-041: lista de Entradas primeiro, logo depois dos fechamentos (pedidos da usuária) |
 | 0.3.1 | 2026-11-12 | REQ-052: "Selecionar cartão" com logotipos e apelido opcional no lugar de nome + banco; "Adicionar um novo cartão" para cartão fora da lista; entra Amazon, sai Will Bank (pedido da usuária) |

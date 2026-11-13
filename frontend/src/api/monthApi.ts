@@ -40,7 +40,8 @@ export type MonthSummaries = {
   }[]
   byPayment: { pixCents: number; creditCents: number }
   byCard: CardEntry[]
-  byPerson: { personId: number; personName: string | null; amountCents: number; byCard: CardEntry[] }[]
+  /** Per person: cards and Pix (`pixCents`) add up to `amountCents` (REQ-038). */
+  byPerson: { personId: number; personName: string | null; amountCents: number; byCard: CardEntry[]; pixCents: number }[]
 }
 
 /** Everything the month screen shows (REQ-041), as `GET /api/months/{month}` returns it. */

@@ -99,7 +99,8 @@ export function ExpenseFormDialog({ month, expense, onClose }: Props) {
       type,
       paymentMethod: effectivePayment,
       ...(usesCredit && { cardId: Number(cardId) }),
-      ...(isCard && personId && { personId: Number(personId) }),
+      // any expense can be of a third party: card, or fixed by Pix or credit (REQ-017, 2026-11-12)
+      ...(personId && { personId: Number(personId) }),
       // editing replaces every field, so a card expense keeps the mark it had
       ...(type === 'FIXED' ? { paid } : editing && { paid: expense.paid }),
       date,
@@ -231,19 +232,17 @@ export function ExpenseFormDialog({ month, expense, onClose }: Props) {
           </div>
         )}
 
-        {isCard && (
-          <label className="flex flex-col gap-1 text-sm font-medium text-ink">
-            {t('expense.fields.person')}
-            <select className={field} value={personId} onChange={(e) => setPersonId(e.target.value)}>
-              <option value="">{t('expense.nobody')}</option>
-              {selectable(catalogs.people, expense?.personId).map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
+        <label className="flex flex-col gap-1 text-sm font-medium text-ink">
+          {t('expense.fields.person')}
+          <select className={field} value={personId} onChange={(e) => setPersonId(e.target.value)}>
+            <option value="">{t('expense.nobody')}</option>
+            {selectable(catalogs.people, expense?.personId).map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </label>
 
         <TextField
           label={t('expense.fields.date')}

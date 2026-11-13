@@ -6,7 +6,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { deleteExpense, setExpensePaid, type DeleteScope, type Expense } from '../api/expensesApi'
 import { deleteIncome, type Income } from '../api/incomesApi'
 import { Dialog } from '../components/Dialog'
-import { EntryLists, ExpenseList, IncomeList } from '../components/EntryLists'
+import { EntryLists, ExpenseList, IncomeList, ThirdPartyList } from '../components/EntryLists'
 import { ExpenseFormDialog } from '../components/ExpenseFormDialog'
 import { FormMessage } from '../components/FormMessage'
 import { IncomeFormDialog } from '../components/IncomeFormDialog'
@@ -159,6 +159,7 @@ export function MonthPage() {
                 onEdit={(e) => setDialog({ kind: 'expense', expense: e })}
                 onDelete={(e) => askDelete('expense', e, e.type === 'FIXED')}
               />
+              <ThirdPartyList expenses={view.expenses} byPerson={view.summaries.byPerson} catalogs={catalogs} />
             </EntryLists>
             <SummaryPanel view={view} catalogs={catalogs} />
           </div>

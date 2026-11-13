@@ -4,7 +4,7 @@
 
 ## ⚡ Resume from here
 
-**Active task:** PR #18 (TASK-075, ajuste 18 do cartão) e PR #19 (TASK-076 entradas fixas + Entradas primeiro; TASK-077 fixos nos meses já abertos; empilhado sobre o #18) aguardando merge/deploy.
+**Active task:** PR de TASK-078 (pessoa em qualquer gasto, linha Pix no resumo por pessoa, quadro Terceiros) aguardando merge/deploy. #18 e #19 já em produção (back V13–V15 e front publicados em 2026-11-12).
 **Phase:** Phase 4 — TASK-030..034 e 061 [x]. Fechamentos opcionais (REQ-048, design 0.2.4): padrão 15 e 31, quantos dias quiser, liga/desliga; data do lançamento continua obrigatória.
 **Status:** Produção no ar (https://nize.pages.dev, API https://nize-api.onrender.com). `GET /api/months/{m}` abre o mês (carga) e devolve listas, totais, posições, saldo próprio e resumos (categoria com %, forma, cartão com "Sem cartão" = `cardId` null, terceiros por pessoa e cartão). Tela do mês ainda não usa esse endpoint (Phase 6).
 **Blocker (if any):** contas e segredos externos só a usuária pode criar.
@@ -21,6 +21,7 @@ Para rodar o app é preciso `export NIZE_JWT_SECRET=<>=32 bytes>` (os testes usa
 | # | Date | What was done | Files changed |
 |---|---|---|---|
 | 12c | 2026-11-12 | TASK-077 (decisões da usuária: vale para gastos e entradas; excluir pergunta, desmarcar retira): V15 `recurrence_id` (fixos antigos ligados por nome), `monthsToFill`, criar/marcar fixo copia para meses já abertos, desmarcar retira, `?scope=following` para fixos; fixo excluído no 1º mês não volta. 427 back, 177 front; V15 validada em MySQL 8.4 | specs, MonthLoad, MonthLoadService, Expense/IncomeService, entidades, repos, V15, MonthPage, ExpenseFormDialog, i18n, testes |
+| 12d | 2026-11-12 | TASK-078 (pedidos da usuária): `personId` aceito em qualquer gasto (fixo Pix/crédito); campo Pessoa em todo tipo no formulário; `ThirdPartySummary` com `pixCents` (linha "Pix" sob a pessoa); quadro Terceiros só de visualização depois de Cartão (agrupa por pessoa na ordem de `byPerson`, valor da API, sem editar/excluir). 431 back, 181 front | specs, ThirdPartySummary, MonthService, ExpenseService, EntryLists, SummaryPanel, ExpenseFormDialog, MonthPage, i18n, testes |
 | 12b | 2026-11-12 | TASK-076: entrada fixa (V14 `income.fixed`, carga do mês copia; fixa + parcela → 400), caixa no formulário, marca "Fixa", lista de Entradas primeiro. Mês já aberto não recebe cópia (como os gastos fixos). 414 back, 176 front; V14 validada em MySQL 8.4 | specs, Income*, MonthLoadService, V14, IncomeFormDialog, EntryLists, MonthPage, i18n, testes |
 | 12 | 2026-11-12 | 502 em nize.pages.dev: API do Render dormindo (plano grátis, ~90 s para subir), não o banco; sugerido ping externo em `/actuator/health`. TASK-075: "Selecionar cartão" (`BrandPicker` + `lib/cardIdentity.ts`), apelido opcional, "Adicionar um novo cartão"; `amazon` entra, `will` sai (V13). 408 back, 173 front | specs, CardBrand, V13, cardBrands.ts, BrandPicker, CatalogManager, ExpenseFormDialog, i18n, testes |
 | 11e | 2026-11-09 | No PR #17 (decisão da usuária): categorias, cartões e pessoas sem ano (V12 une as listas; D-22; rotas `/api/categories|cards|people`); limite padrão + ajuste por mês (`category_month_limit`, janela "Limites do mês"). Validado em MySQL 8.4 com `sql_require_primary_key=ON`. 407 testes back, 170 front | specs, backend/**, frontend/**, scripts/ci |
