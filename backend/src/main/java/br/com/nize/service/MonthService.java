@@ -57,7 +57,7 @@ public class MonthService {
     public record PaymentEntry(long pixCents, long creditCents) {
     }
 
-    public record PersonEntry(Long personId, String personName, long amountCents, List<CardEntry> byCard) {
+    public record PersonEntry(Long personId, String personName, long amountCents, List<CardEntry> byCard, long pixCents) {
     }
 
     /** Σ byCategory = total expenses; pix + credit = total expenses; Σ byCard = credit; Σ byPerson = third party. */
@@ -153,10 +153,12 @@ public class MonthService {
                 .map(c -> new CardEntry(c.cardId(), c.cardId() == null ? null : cardNames.get(c.cardId()), c.amountCents()))
                 .toList();
         List<PersonEntry> byPerson = ThirdPartySummary.of(monthExpenses.stream().filter(e -> e.getPersonId() != null)
-                        .map(e -> new ThirdPartySummary.Item(e.getPersonId(), e.getCardId(), e.getAmountCents())).toList())
+                        .map(e -> new ThirdPartySummary.Item(e.getPersonId(), e.getPaymentMethod() == PaymentMethod.PIX,
+                                e.getPaymentMethod() == PaymentMethod.PIX ? null : e.getCardId(), e.getAmountCents())).toList())
                 .stream().map(p -> new PersonEntry(p.personId(), personNames.get(p.personId()), p.amountCents(),
                         p.byCard().stream().map(c -> new CardEntry(c.cardId(),
-                                c.cardId() == null ? null : cardNames.get(c.cardId()), c.amountCents())).toList()))
+                                c.cardId() == null ? null : cardNames.get(c.cardId()), c.amountCents())).toList(),
+                        p.pixCents()))
                 .toList();
         return new Summaries(byCategory, new PaymentEntry(payments.pixCents(), payments.creditCents()), byCard, byPerson);
     }

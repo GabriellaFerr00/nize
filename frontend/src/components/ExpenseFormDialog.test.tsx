@@ -98,6 +98,19 @@ describe('new expense window (REQ-016..019, REQ-042)', () => {
     })
   })
 
+  it('a fixed Pix expense can be of a third party too, like rent shared with someone (REQ-017, 2026-11-12)', async () => {
+    const { calls, dialog } = await openForm()
+    await userEvent.selectOptions(within(dialog).getByLabelText('Pessoa (gasto de terceiro)'), 'Mainha')
+    await fillBasics(dialog, 'Aluguel dividido', '1.500')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }))
+
+    await waitFor(() => expect(posted(calls)).toHaveLength(1))
+    expect(posted(calls)[0]).toEqual({
+      name: 'Aluguel dividido', categoryId: 1, amountCents: 150_000, type: 'FIXED', paymentMethod: 'PIX',
+      personId: 7, paid: false, date: '2026-11-15',
+    })
+  })
+
   it('"save and add another" keeps the window open and lets three expenses go in a row', async () => {
     const { calls, dialog } = await openForm()
     await fillBasics(dialog, 'Um', '10')

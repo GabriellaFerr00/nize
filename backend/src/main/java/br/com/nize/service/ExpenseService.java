@@ -191,9 +191,6 @@ public class ExpenseService {
         if (payment == PaymentMethod.CREDIT && in.cardId() == null) {
             throw new InvalidExpenseException("CARD_REQUIRED");
         }
-        if (in.personId() != null && in.type() != ExpenseType.CARD) {
-            throw new InvalidExpenseException("INVALID_EXPENSE");
-        }
         if (generating) {
             boolean ok = in.type() == ExpenseType.CARD && in.installmentCount() <= MAX_INSTALLMENTS;
             if (!ok) {

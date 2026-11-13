@@ -365,7 +365,9 @@
       "income": "Entradas",
       "fixedEmpty": "Nenhum gasto fixo neste mês.",
       "cardEmpty": "Nenhum gasto de cartão neste mês.",
-      "incomeEmpty": "Nenhuma entrada neste mês."
+      "incomeEmpty": "Nenhuma entrada neste mês.",
+      "thirdParty": "Terceiros",
+      "thirdPartyEmpty": "Nenhum gasto de terceiros neste mês."
     },
     "installment": "Parcela {{label}}",
     "thirdParty": "gasto de {{name}}",

@@ -46,6 +46,7 @@ const november = (): MonthView => ({
           { cardId: 5, cardName: 'Nubank', amountCents: 15_000 },
           { cardId: 6, cardName: 'Inter', amountCents: 5_000 },
         ],
+        pixCents: 0,
       },
     ],
   },
@@ -75,6 +76,23 @@ const empty = (month: string): MonthView => ({
   expenses: [],
   incomes: [],
 })
+
+/** November plus a rent shared with Mainha, paid by Pix (REQ-017/038, 2026-11-12); numbers as the API sends them. */
+const withSharedRent = (): MonthView => {
+  const view = november()
+  view.expenses = view.expenses.map((e) => (e.id === 13 ? { ...e, cardId: 5 } : e))
+  view.expenses.push({
+    id: 14, month: '2026-11', name: 'Aluguel dividido', categoryId: 1, amountCents: 150_000, type: 'FIXED',
+    paymentMethod: 'PIX', personId: 7, paid: false, date: '2026-11-03',
+  })
+  view.summaries.byPerson = [
+    {
+      personId: 7, personName: 'Mainha', amountCents: 170_000,
+      byCard: [{ cardId: 5, cardName: 'Nubank', amountCents: 20_000 }], pixCents: 150_000,
+    },
+  ]
+  return view
+}
 
 const baseReplies = (view: MonthView = november()): Replies => ({
   'GET /api/me': { body: { id: 1, name: 'Ana', email: 'a@x.com', onboardingSeen: true } },
@@ -617,6 +635,15 @@ describe('summaries panel and own balance (TASK-041: REQ-034..038)', () => {
     expect(line(byPerson, 'Inter')).toHaveTextContent('R$ 50,00')
   })
 
+  it('shows a Pix line under the person when the API sends one, and none when it is zero (REQ-038, 2026-11-12)', async () => {
+    await openMonth(baseReplies(withSharedRent()))
+    const byPerson = section('Terceiros por pessoa e cartão')
+    const pix = within(byPerson).getAllByText('Pix')
+    expect(pix).toHaveLength(1)
+    expect(pix[0].closest('li')).toHaveTextContent('R$ 1.500,00')
+    expect(line(byPerson, 'Mainha')).toHaveTextContent('R$ 1.700,00')
+  })
+
   it('shows the own balance and its parts as the API computed them', async () => {
     await openMonth()
     const own = section('Saldo próprio')
@@ -779,5 +806,32 @@ describe('quick entry of income (TASK-042: REQ-042, REQ-024, REQ-026)', () => {
     } finally {
       setLanguage('pt')
     }
+  })
+})
+
+describe('Terceiros board on the month screen (TASK-078: REQ-041, 2026-11-12)', () => {
+  it('groups the expenses of each person, Pix and credit, with the amount of the API and no actions', async () => {
+    await openMonth(baseReplies(withSharedRent()))
+    const board = section('Terceiros')
+    expect(within(board).getByRole('heading', { name: 'Mainha' }).closest('div')).toHaveTextContent('R$ 1.700,00')
+    const rows = within(board).getAllByRole('listitem')
+    expect(rows.map((r) => r.textContent)).toEqual([
+      expect.stringContaining('Aluguel dividido'),
+      expect.stringContaining('Roupa da mãe'),
+    ])
+    expect(rows[0]).toHaveTextContent('Pix')
+    expect(rows[0]).toHaveTextContent('R$ 1.500,00')
+    expect(rows[1]).toHaveTextContent('Nubank')
+    // only to look at: no paid mark, no edit, no delete
+    expect(within(board).queryByRole('button')).not.toBeInTheDocument()
+    expect(within(board).queryByRole('checkbox')).not.toBeInTheDocument()
+    // the expenses stay in their own lists
+    expect(within(section('Fixos')).getByText('Aluguel dividido')).toBeInTheDocument()
+    expect(within(section('Cartão')).getByText('Roupa da mãe')).toBeInTheDocument()
+  })
+
+  it('says there are no third-party expenses in a month without them', async () => {
+    await openMonth(baseReplies(empty('2026-11')))
+    expect(within(section('Terceiros')).getByText('Nenhum gasto de terceiros neste mês.')).toBeInTheDocument()
   })
 })

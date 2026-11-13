@@ -2,6 +2,7 @@ import { Pencil, Trash2 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Expense } from '../api/expensesApi'
+import type { MonthSummaries } from '../api/monthApi'
 import type { Income } from '../api/incomesApi'
 import { formatDay } from '../lib/format'
 import type { YearCatalogs } from '../lib/useMonth'
@@ -11,7 +12,7 @@ import { TagDot } from './TagDot'
 type ListProps = { title: string; empty: string; totalCents?: number; children: ReactNode[] }
 
 /**
- * A titled list of the month (Entradas, Fixos, Cartão); the optional total comes from the API. The lists share one
+ * A titled list of the month (Entradas, Fixos, Cartão, Terceiros); the optional total comes from the API. The lists share one
  * surface (`EntryLists`), like the pages of a ledger.
  */
 function EntryList({ title, empty, totalCents, children }: ListProps) {
@@ -40,8 +41,9 @@ type RowProps = {
   leading?: ReactNode
   /** Color of the category (REQ-052). */
   color?: string
-  onEdit: () => void
-  onDelete: () => void
+  /** Without them the row is only to look at (Terceiros, REQ-041). */
+  onEdit?: () => void
+  onDelete?: () => void
 }
 
 function Row({ name, date, details, installmentLabel, cents, tone = false, leading, color, onEdit, onDelete }: RowProps) {
@@ -76,7 +78,7 @@ function Row({ name, date, details, installmentLabel, cents, tone = false, leadi
         </div>
         <div className="flex min-w-0 items-center justify-between gap-2">
           <p className="min-w-0 text-xs break-words text-ink-soft">{details.filter(Boolean).join(' · ')}</p>
-          <RowActions name={name} onEdit={onEdit} onDelete={onDelete} />
+          {onEdit && onDelete && <RowActions name={name} onEdit={onEdit} onDelete={onDelete} />}
         </div>
       </div>
     </li>
@@ -205,7 +207,67 @@ export function IncomeList({ incomes, catalogs, totalCents, onEdit, onDelete }: 
   )
 }
 
-/** The one surface that holds the three lists of the month, separated by rules. */
+type ThirdPartyListProps = {
+  expenses: Expense[]
+  byPerson: MonthSummaries['byPerson']
+  catalogs: YearCatalogs
+}
+
+/**
+ * Terceiros (REQ-041, 2026-11-12): each person with the amount the API summed and, below, her expenses of the month,
+ * Pix or credit. Only to look at: the expenses stay in Fixos or Cartão, so no paid mark, edit or delete here, and the
+ * front only filters by person, it never adds up.
+ */
+export function ThirdPartyList({ expenses, byPerson, catalogs }: ThirdPartyListProps) {
+  const { t } = useTranslation()
+  const title = t('month.lists.thirdParty')
+  return (
+    <section aria-label={title} className="flex min-w-0 flex-col py-4">
+      <h2 className="text-lg font-semibold text-ink">{title}</h2>
+      {byPerson.length === 0 ? (
+        <p className="mt-3 text-sm text-ink-soft">{t('month.lists.thirdPartyEmpty')}</p>
+      ) : (
+        byPerson.map((p) => {
+          const name = p.personName ?? catalogs.name('people', p.personId) ?? '—'
+          const own = expenses
+            .filter((e) => e.personId === p.personId)
+            .sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id)
+          return (
+            <div key={p.personId} className="mt-3 flex flex-col">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <h3 className="flex items-center gap-2 font-semibold text-ink">
+                  <TagDot color={catalogs.people.find((x) => x.id === p.personId)?.color} />
+                  {name}
+                </h3>
+                <Money cents={p.amountCents} className="text-sm font-semibold text-ink-soft" />
+              </div>
+              <ul className="mt-1 divide-y divide-line">
+                {own.map((e) => (
+                  <Row
+                    key={e.id}
+                    name={e.name}
+                    installmentLabel={e.installmentLabel}
+                    cents={e.amountCents}
+                    date={e.date}
+                    color={catalogs.categories.find((c) => c.id === e.categoryId)?.color}
+                    details={[
+                      catalogs.name('categories', e.categoryId),
+                      e.paymentMethod === 'PIX'
+                        ? t('expense.payment.PIX')
+                        : (catalogs.name('cards', e.cardId) ?? t('expense.cardMissing')),
+                    ]}
+                  />
+                ))}
+              </ul>
+            </div>
+          )
+        })
+      )}
+    </section>
+  )
+}
+
+/** The one surface that holds the lists of the month, separated by rules. */
 export function EntryLists({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-w-0 flex-col divide-y divide-line rounded-2xl border border-line bg-card px-4 shadow-card sm:px-5">
