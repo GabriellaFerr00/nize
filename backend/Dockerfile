@@ -13,7 +13,7 @@ COPY src/ src/
 RUN ./mvnw -B -q -DskipTests -Djacoco.skip=true package \
     && cp target/nize-backend-*.jar /app.jar
 
-FROM eclipse-temurin:25-jre-alpine@sha256:56f273059de6b13a6b49fe0ded691ed2d0399bbee76156a8f2d385f7524a3d43
+FROM eclipse-temurin:25-jre-alpine@sha256:e1898fd6a11fc965a994d8ace186fd3585aeb636cf8f05f47a723fcfee0b0918
 # Security fixes from Alpine that the pinned base does not have yet (trivy gate). Drop a package
 # from this list once Dependabot bumps the base to a digest that already includes the fix.
 RUN apk upgrade --no-cache libexpat \
